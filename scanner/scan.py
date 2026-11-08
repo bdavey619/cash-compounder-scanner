@@ -86,6 +86,9 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             closes_by[futures[fut]["ticker"]] = fut.result()
             if k % 100 == 0:
                 log(f"  prices {k}/{len(quality)}")
+    mkt = price_stats(load_prices(fetcher, "SPY", breaker), C.DROP_LOOKBACK_DAYS) if C.DROP_RELATIVE_TO_MARKET else None
+    mkt_chg = mkt["chg"] if mkt else 0.0
+    log(f"market (SPY) {C.DROP_LOOKBACK_DAYS}-day change: {mkt_chg*100:+.1f}%" if mkt else "market: SPY unavailable, using absolute drops")
     missing = sum(1 for v in closes_by.values() if not v)
     log(f"prices: {len(quality) - missing} ok, {missing} missing; source failures: {breaker.fails}")
     funnel["price_missing"] = missing
@@ -98,8 +101,10 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         if mcap < C.MIN_MARKET_CAP_USD:
             continue
         g = implied_growth(co["fcf"], mcap - co["net_cash"], C.REQUIRED_RETURN, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
-        gap = (g - co["fcf_cagr"]) if (g is not None and math.isfinite(g) and co["fcf_cagr"] is not None) else None
-        priced.append({**co, **ps, "mcap": mcap, "p_fcf": mcap / co["fcf"], "implied_g": g, "gap": gap})
+        ref = reference_growth(co)
+        gap = (g - ref) if (g is not None and math.isfinite(g) and ref is not None) else None
+        priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "mcap": mcap, "p_fcf": mcap / co["fcf"],
+                       "implied_g": g, "ref_g": ref, "gap": gap})
     funnel["quality"] = len(priced)
     log(f"quality + priced + above market-cap floor: {len(priced)}")
 
@@ -130,9 +135,10 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         c["insider_buyers"] = sorted((n, r) for n, r in ins["buyers"].items()
                                      if ins["by_buyer"][n] >= C.MIN_BUY_VALUE_USD) if ins else []
         c["insider_value"] = ins["value"] if ins else 0.0
-        c["flag_drop"] = c["chg"] <= C.DROP_THRESHOLD
+        c["flag_drop"] = c["rel_chg"] <= C.DROP_THRESHOLD
         c["flag_cluster"] = len(c["insider_buyers"]) >= C.MIN_CLUSTER_BUYERS
-        c["flag_gap"] = c["gap"] is not None and c["gap"] <= C.GAP_THRESHOLD
+        c["flag_gap"] = (c["gap"] is not None and c["gap"] <= C.GAP_THRESHOLD
+                         and c["implied_g"] <= C.MAX_IMPLIED_GROWTH)
         c["triggered"] = c["flag_drop"] or c["flag_cluster"]
         c["score"] = score(c)
     shortlist = sorted([c for c in priced if c["triggered"] and c["flag_gap"]], key=lambda c: -c["score"])
@@ -146,10 +152,10 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
     log(f"shortlist: {len(shortlist)}  -> {out_dir/'report.html'}")
     log(f"triggers: {sum(c['flag_drop'] for c in priced)} sharp drops, {sum(c['flag_cluster'] for c in priced)} insider clusters; "
-        f"{sum(c['flag_gap'] for c in priced)} of {len(priced)} cheap vs track record")
+        f"{sum(c["flag_gap"] for c in priced)} of {len(priced)} with modest expectations vs reference growth")
     for c in shortlist[:60]:
         log(f"  {c['ticker']:<6} 5d {c['chg']*100:+6.1f}%  insiders {len(c['insider_buyers'])}  "
-            f"implied {c['implied_g']*100:5.1f}%  track {c['fcf_cagr']*100:5.1f}%  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
+            f"implied {c['implied_g']*100:5.1f}%  ref {c['ref_g']*100:5.1f}% (fcf {c['fcf_cagr']*100:.0f}%)  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
     write_step_summary(meta, shortlist)
     return meta, shortlist
 
@@ -163,11 +169,19 @@ def write_step_summary(meta, shortlist):
     f = meta["funnel"]
     lines = [f"## Daily scan · {meta['asof']}", "",
              f"{f.get('universe',0):,} companies → {f.get('quality',0):,} quality → {f.get('triggered',0):,} triggered → **{f.get('shortlist',0):,} shortlist**", "",
-             "| Ticker | 5-day | Insiders | Implied growth | Track record | P/FCF |", "|---|---:|---:|---:|---:|---:|"]
+             "| Ticker | 5-day | Insiders | Implied growth | Reference growth | P/FCF |", "|---|---:|---:|---:|---:|---:|"]
     for c in shortlist[:40]:
-        lines.append(f"| {c['ticker']} | {c['chg']*100:+.1f}% | {len(c['insider_buyers']) or '–'} | {c['implied_g']*100:.1f}% | {c['fcf_cagr']*100:.1f}% | {c['p_fcf']:.0f}x |")
+        lines.append(f"| {c['ticker']} | {c['chg']*100:+.1f}% | {len(c['insider_buyers']) or '–'} | {c['implied_g']*100:.1f}% | {c['ref_g']*100:.1f}% | {c['p_fcf']:.0f}x |")
     with open(path, "a") as fh:
         fh.write("\n".join(lines) + "\n")
+
+
+def reference_growth(co):
+    """A conservative growth yardstick: the lower of FCF and revenue growth, capped."""
+    cands = [x for x in (co.get("fcf_cagr"), co.get("rev_cagr")) if x is not None]
+    if not cands:
+        return None
+    return min(min(cands), C.TRACK_CAP)
 
 
 def quality_fail_reasons(fu) -> list[str]:
@@ -190,7 +204,7 @@ def score(c) -> float:
     s = 0.0
     if c["gap"] is not None and math.isfinite(c["gap"]):
         s += max(0.0, -c["gap"]) * 100
-    s += max(0.0, -c["chg"]) * 50
+    s += max(0.0, -c["rel_chg"]) * 50
     s += 3 * len(c["insider_buyers"])
     return round(s, 2)
 
@@ -200,13 +214,14 @@ def _row(c):
     return {
         "ticker": c["ticker"], "name": c["name"], "cik": c["cik"],
         "price": round(c["last"], 2), "price_date": c["last_date"],
-        "chg_5d": fin(c["chg"]), "off_52w_high": fin(c["off_high"]),
+        "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]), "off_52w_high": fin(c["off_high"]),
         "mcap_bn": round(c["mcap"] / 1e9, 2), "fcf_bn": round(c["fcf"] / 1e9, 3),
         "fy_end": c["fy_end"], "fcf_basis": c["fcf_basis"], "fcf_period_end": c["fcf_period_end"],
         "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3),
         "p_fcf": round(c["p_fcf"], 1), "net_cash_bn": round(c["net_cash"] / 1e9, 2),
         "fcf_margin": fin(c["fcf_margin"]), "cash_roc": fin(c["cash_roc"]),
-        "fcf_cagr": fin(c["fcf_cagr"]), "implied_g": fin(c["implied_g"]) if c["implied_g"] is not None else None,
+        "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]), "ref_g": fin(c["ref_g"]) if c["ref_g"] is not None else None,
+        "implied_g": fin(c["implied_g"]) if c["implied_g"] is not None else None,
         "gap": fin(c["gap"]) if c["gap"] is not None else None,
         "insider_buyers": [f"{n} ({r})" for n, r in c["insider_buyers"]],
         "insider_value": round(c["insider_value"]),
@@ -225,7 +240,7 @@ def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced):
             "all_quality": [_row(c) for c in priced]}
     (out_dir / "results.json").write_text(json.dumps(data, indent=1))
     cols = ["ticker", "name", "price", "chg_5d", "mcap_bn", "fcf_bn", "p_fcf", "fcf_margin", "cash_roc",
-            "fcf_cagr", "implied_g", "gap", "flag_drop", "flag_cluster", "flag_gap", "score"]
+            "fcf_cagr", "rev_cagr", "ref_g", "implied_g", "gap", "flag_drop", "flag_cluster", "flag_gap", "score"]
     with open(out_dir / "results.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
@@ -257,8 +272,8 @@ def render_explorer(data, max_companies=10) -> str:
             "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close",
             "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",
             "bases": bases,
-            "track": round((r["fcf_cagr"] or 0) * 100, 1),
-            "trackNote": f"3 fiscal years ago → {'TTM' if r['fcf_basis'] == 'TTM' else 'latest FY'}",
+            "track": round((r["ref_g"] or 0) * 100, 1),
+            "trackNote": f"lower of FCF ({(r['fcf_cagr'] or 0)*100:.0f}%) and revenue ({(r['rev_cagr'] or 0)*100:.0f}%) growth, capped at {int(C.TRACK_CAP*100)}%",
             "hist": hist,
         })
     tpl = (Path(__file__).parent / "explorer_template.html").read_text()

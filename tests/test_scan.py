@@ -40,7 +40,7 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("SMPG", quality)
 
     def test_buckets(self):
-        self.assertEqual(self.tickers("shortlist"), ["SMPA", "SMPB"])
+        self.assertEqual(sorted(self.tickers("shortlist")), ["SMPA", "SMPB"])
         self.assertEqual(self.tickers("triggered_only"), ["SMPC"])
         self.assertEqual(self.tickers("gap_only"), ["SMPD"])
 

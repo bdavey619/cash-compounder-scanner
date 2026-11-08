@@ -70,8 +70,10 @@ counts.
 
 - SEC publishes its bulk company-facts archive nightly, so a 10-Q filed today shows up in tomorrow's
   run. Raise `FUNDAMENTALS_CACHE_DAYS` in `config.py` to download less often.
-- **Track record** is FCF growth from three fiscal years ago to the trailing twelve months. That is noisy: a boom (or a capex
-  surge, as at the AI hyperscalers) distorts it in either direction.
+- **Reference growth** is the lower of FCF and revenue growth (three fiscal years ago → trailing twelve months), capped at
+  20%. Raw FCF growth is too noisy on its own: a rebound from a depressed base (memory chips, energy) made almost every
+  price look cheap in the first live run. The shortlist also requires the price to imply 10%/yr or less.
+- **Sharp drops** are measured against the S&P 500 (SPY), so a market-wide sell-off doesn't flag everything.
 - **Banks and insurers** don't fit a free-cash-flow screen and will mostly fail or mislead.
 - Companies with **several share classes** may be missing a share count and drop out.
 - **Stock-based compensation** isn't subtracted from free cash flow.

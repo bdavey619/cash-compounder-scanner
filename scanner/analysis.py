@@ -127,6 +127,9 @@ def fundamentals(facts: dict) -> dict | None:
     cagr = None
     if first["fcf"] > 0 and cur["fcf"] > 0 and yrs > 0.5:
         cagr = (cur["fcf"] / first["fcf"]) ** (1 / yrs) - 1
+    rev_cagr = None
+    if first.get("revenue") and cur.get("revenue") and first["revenue"] > 0 and yrs > 0.5:
+        rev_cagr = (cur["revenue"] / first["revenue"]) ** (1 / yrs) - 1
     history = rows + ([{"fy_end": cur["end"], "fcf": cur["fcf"], "ttm": True}] if cur["basis"] == "TTM" else [])
     return {
         "history": history,
@@ -139,6 +142,7 @@ def fundamentals(facts: dict) -> dict | None:
         "fcf_margin": (cur["fcf"] / cur["revenue"]) if cur["revenue"] else None,
         "positive_fcf_years": sum(1 for r in rows[-3:] if r["fcf"] > 0) - (0 if cur["fcf"] > 0 else 1),
         "fcf_cagr": cagr,
+        "rev_cagr": rev_cagr,
         "cash_roc": (cur["fcf"] / capital) if capital > 0 else None,
         "net_cash": (cash or 0) + (sti or 0) - (ltd or 0),
         "shares": shares,

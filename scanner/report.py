@@ -55,7 +55,7 @@ def funnel_svg(f):
     steps = [("All companies with SEC filings", f.get("universe", 0)),
              ("Pass quality filter", f.get("quality", 0)),
              ("Hit a trigger today", f.get("triggered", 0)),
-             ("Shortlist: trigger + cheap vs. track record", f.get("shortlist", 0))]
+             ("Shortlist: trigger + modest expectations", f.get("shortlist", 0))]
     mx = max(1, steps[0][1])
     out = ['<svg viewBox="0 0 1000 196" width="100%" role="img" aria-label="Screening funnel">']
     for i, (lab, n) in enumerate(steps):
@@ -105,7 +105,7 @@ def gap_svg(implied, track, w=320, h=66):
             f'<circle cx="{xt:.1f}" cy="30" r="6" fill="var(--grey)"><title>Track record {pct(track,1)}/yr</title></circle>'
             f'<circle cx="{xi:.1f}" cy="30" r="7" fill="var(--blue)"><title>Price implies {pct(implied,1)}/yr</title></circle>'
             f'<text x="{xi:.1f}" y="12" text-anchor="{anchor(xi)}" font-size="11" font-weight="600" fill="var(--blue)">implied {pct(implied)}{off(implied)}</text>'
-            f'<text x="{xt:.1f}" y="{ty}" text-anchor="{anchor(xt)}" font-size="11" fill="var(--t2)">track {pct(track)}{off(track)}</text></svg>')
+            f'<text x="{xt:.1f}" y="{ty}" text-anchor="{anchor(xt)}" font-size="11" fill="var(--t2)">reference {pct(track)}{off(track)}</text></svg>')
 
 
 def fcf_bars_svg(hist, w=320, h=84):
@@ -132,11 +132,11 @@ def fcf_bars_svg(hist, w=320, h=84):
 def company_card(r, explorer_url):
     chips = []
     if r["flag_drop"]:
-        chips.append(f'<span class="chip drop">Down {pct(-r["chg_5d"])} in 5 days</span>')
+        chips.append(f'<span class="chip drop">Down {pct(-r["chg_5d"])} in 5 days ({pct(r["rel_chg_5d"], 0, True)} vs. market)</span>')
     if r["flag_cluster"]:
         chips.append(f'<span class="chip ins">{len(r["insider_buyers"])} insiders bought ${r["insider_value"]/1e6:,.1f}M</span>')
     if r["flag_gap"]:
-        chips.append(f'<span class="chip gap">Price implies {pct(r["implied_g"])}/yr vs {pct(r["fcf_cagr"])} track record</span>')
+        chips.append(f'<span class="chip gap">Price implies {pct(r["implied_g"])}/yr vs {pct(r["ref_g"])} reference growth</span>')
     buyers = ""
     if r["insider_buyers"]:
         buyers = '<div class="small" style="margin-top:8px">Insider buyers: ' + esc("; ".join(r["insider_buyers"])) + "</div>"
@@ -156,7 +156,7 @@ def company_card(r, explorer_url):
   <div class="small" style="margin-top:10px"><a href="{edgar}">Insider filings</a> · <a href="{filings}">Annual & quarterly reports</a>{f' · <a href="{explorer_url}">Open the reverse-DCF explorer</a>' if explorer_url else ''}</div>
 </div>
 <div>
-  <div class="small">Growth the price requires vs. track record</div>{gap_svg(r['implied_g'], r['fcf_cagr'])}
+  <div class="small">Growth the price requires vs. reference growth (FCF {pct(r['fcf_cagr'])}, revenue {pct(r['rev_cagr'])}/yr)</div>{gap_svg(r['implied_g'], r['ref_g'])}
   <div class="small" style="margin-top:4px">Price, last 90 trading days</div>{spark_svg(r['spark'])}
   <div class="small" style="margin-top:4px">Free cash flow: fiscal years + trailing 12 months</div>{fcf_bars_svg(r['fcf_history'])}
 </div></div>"""
@@ -178,7 +178,7 @@ COLS = [
     ("P/FCF", lambda r: f"{r['p_fcf']:.0f}x"),
     ("FCF margin", lambda r: pct(r["fcf_margin"])),
     ("Implied", lambda r: pct(r["implied_g"], 1)),
-    ("Track", lambda r: pct(r["fcf_cagr"], 1)),
+    ("Reference", lambda r: pct(r["ref_g"], 1)),
     ("Gap", lambda r: pct(r["gap"], 1, True)),
 ]
 
@@ -198,22 +198,22 @@ def render_report(data):
 <div class="card">{funnel_svg(m['funnel'])}</div>
 
 <h2>Shortlist</h2>
-<p class="sub">Quality businesses that hit a trigger today <i>and</i> whose price implies cash flow growth at least {abs(cfg['GAP_THRESHOLD'])*100:.0f} points a year below their own track record. Each needs your judgment: is the problem temporary or permanent?</p>
+<p class="sub">Quality businesses that hit a trigger today <i>and</i> whose price implies modest cash flow growth (≤ {cfg['MAX_IMPLIED_GROWTH']*100:.0f}%/yr), at least {abs(cfg['GAP_THRESHOLD'])*100:.0f} points below a conservative reference: the lower of their free cash flow and revenue growth, capped at {cfg['TRACK_CAP']*100:.0f}%. Each needs your judgment: is the problem temporary or permanent?</p>
 {cards}
 
-<h2>Triggered, but not cheap vs. track record</h2>
-<p class="sub">Quality names that dropped sharply or saw insider buying, but the price still asks for about as much growth as they've delivered (or more).</p>
+<h2>Triggered, but the price still assumes a lot</h2>
+<p class="sub">Quality names that dropped sharply or saw insider buying, but the price still asks for a lot of growth.</p>
 {table(data['triggered_only'], COLS)}
 
-<h2>Watchlist: cheap vs. track record, no trigger yet</h2>
+<h2>Watchlist: modest expectations, no trigger yet</h2>
 <p class="sub">The price already assumes a slowdown, but nothing happened today. Worth knowing before a trigger arrives.</p>
 {table(data['gap_only'], COLS)}
 
 <details><summary>How this screen works and its thresholds</summary>
 <p><b>Quality:</b> latest fiscal-year revenue ≥ ${cfg['MIN_REVENUE_USD']/1e6:,.0f}M, free cash flow margin ≥ {cfg['MIN_FCF_MARGIN']*100:.0f}%, positive free cash flow in each of the last {cfg['MIN_POSITIVE_FCF_YEARS']} fiscal years, free cash flow ÷ (equity + long-term debt) ≥ {cfg['MIN_CASH_RETURN_ON_CAPITAL']*100:.0f}%, market cap ≥ ${cfg['MIN_MARKET_CAP_USD']/1e9:.0f}B.</p>
-<p><b>Triggers:</b> price down {abs(cfg['DROP_THRESHOLD'])*100:.0f}%+ over {cfg['DROP_LOOKBACK_DAYS']} trading days, or {cfg['MIN_CLUSTER_BUYERS']}+ distinct insiders making open-market purchases (Form 4, code P) in the last {cfg['INSIDER_LOOKBACK_DAYS']} days.</p>
+<p><b>Triggers:</b> price down {abs(cfg['DROP_THRESHOLD'])*100:.0f}%+ more than the S&amp;P 500 (SPY) over {cfg['DROP_LOOKBACK_DAYS']} trading days, or {cfg['MIN_CLUSTER_BUYERS']}+ distinct insiders making open-market purchases (Form 4, code P) in the last {cfg['INSIDER_LOOKBACK_DAYS']} days.</p>
 <p><b>Cash flow basis:</b> trailing twelve months, built from the latest 10-Q (last fiscal year + this year's year-to-date − last year's matching year-to-date). Falls back to the latest 10-K when no newer quarter is available.</p>
-<p><b>Reverse DCF:</b> {cfg['REQUIRED_RETURN']*100:.0f}% required return, {cfg['TERMINAL_GROWTH']*100:.0f}% growth after year {cfg['FORECAST_YEARS']}, trailing-twelve-month free cash flow, net cash added. Track record = free cash flow growth per year from three fiscal years ago to the trailing twelve months.</p>
+<p><b>Reverse DCF:</b> {cfg['REQUIRED_RETURN']*100:.0f}% required return, {cfg['TERMINAL_GROWTH']*100:.0f}% growth after year {cfg['FORECAST_YEARS']}, trailing-twelve-month free cash flow, net cash added. Reference growth = the lower of free cash flow and revenue growth per year from three fiscal years ago to the trailing twelve months, capped at {cfg['TRACK_CAP']*100:.0f}%.</p>
 <p><b>Known blind spots:</b> banks and insurers don't fit a free cash flow screen; companies with several share classes may be missing a share count; stock-based compensation is not subtracted. Data: SEC EDGAR (company facts, Form 4), daily closes from Stooq/Yahoo.</p>
 </details>
 </div></body></html>"""
