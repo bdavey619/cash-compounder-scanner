@@ -152,7 +152,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
     log(f"shortlist: {len(shortlist)}  -> {out_dir/'report.html'}")
     log(f"triggers: {sum(c['flag_drop'] for c in priced)} sharp drops, {sum(c['flag_cluster'] for c in priced)} insider clusters; "
-        f"{sum(c["flag_gap"] for c in priced)} of {len(priced)} with modest expectations vs reference growth")
+        f"{sum(c['flag_gap'] for c in priced)} of {len(priced)} with modest expectations vs reference growth")
     for c in shortlist[:60]:
         log(f"  {c['ticker']:<6} 5d {c['chg']*100:+6.1f}%  insiders {len(c['insider_buyers'])}  "
             f"implied {c['implied_g']*100:5.1f}%  ref {c['ref_g']*100:5.1f}% (fcf {c['fcf_cagr']*100:.0f}%)  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
