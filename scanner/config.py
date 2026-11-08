@@ -28,3 +28,7 @@ TRACK_CAP = 0.20                 # reference growth = lower of FCF and revenue g
 # --- Housekeeping ---
 FUNDAMENTALS_CACHE_DAYS = 0.9    # refresh SEC company facts daily so new 10-Qs show up fast (~1 GB download)
 SEC_RATE_LIMIT_PER_SEC = 8       # SEC asks for no more than 10 requests per second
+
+# --- Labels ---
+# A company is marked "volatile cash flow" (cyclical) when its last 3 fiscal years of FCF swing by
+# 60%+ of their average. It stays on the lists, labeled, with a 3-year-average view in the explorer.

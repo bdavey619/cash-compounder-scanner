@@ -14,9 +14,10 @@ All SEC filers  ->  Quality filter  ->  Trigger today  ->  Reverse-DCF gap  ->  
 
 Each run writes:
 
-- `report.html`: the visual daily report (light and dark mode)
-- `explorer.html`: the interactive reverse-DCF explorer ("What is the price assuming?"), loaded with
-  that day's shortlist, watchlist and triggered names. Each shortlist card links straight to its company.
+- `index.html` (also `explorer.html`): the home page, the interactive reverse-DCF explorer
+  ("What is the price assuming?") with that day's shortlist, watchlist and triggered names as tabs.
+  Cyclical companies carry a "cyclical" label and a 3-year-average cash-flow view.
+- `report.html`: a plain table view of the same lists
 - `results.csv` and `results.json`
 
 ## Run it daily on GitHub (free)

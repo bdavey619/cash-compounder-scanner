@@ -217,7 +217,7 @@ def _row(c):
         "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]), "off_52w_high": fin(c["off_high"]),
         "mcap_bn": round(c["mcap"] / 1e9, 2), "fcf_bn": round(c["fcf"] / 1e9, 3),
         "fy_end": c["fy_end"], "fcf_basis": c["fcf_basis"], "fcf_period_end": c["fcf_period_end"],
-        "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3),
+        "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3), "fcf_avg3_bn": round(c["fcf_avg3"] / 1e9, 3), "volatile": c["volatile"],
         "p_fcf": round(c["p_fcf"], 1), "net_cash_bn": round(c["net_cash"] / 1e9, 2),
         "fcf_margin": fin(c["fcf_margin"]), "cash_roc": fin(c["cash_roc"]),
         "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]), "ref_g": fin(c["ref_g"]) if c["ref_g"] is not None else None,
@@ -247,38 +247,54 @@ def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced):
         for r in sorted(data["all_quality"], key=lambda r: -r["score"]):
             w.writerow(r)
     (out_dir / "report.html").write_text(render_report(data))
-    (out_dir / "explorer.html").write_text(render_explorer(data))
+    explorer = render_explorer(data)
+    (out_dir / "explorer.html").write_text(explorer)
+    (out_dir / "index.html").write_text(explorer)  # the explorer is the home page
 
 
-def render_explorer(data, max_companies=10) -> str:
-    """Fill the reverse-DCF explorer with today's names: shortlist, then watchlist, then triggered."""
-    picked, seen = [], set()
-    for key in ("shortlist", "gap_only", "triggered_only"):
-        for r in data[key]:
-            if r["ticker"] not in seen and len(picked) < max_companies:
-                picked.append(r)
-                seen.add(r["ticker"])
-    if not picked:  # quiet day: show the biggest quality names instead
-        picked = sorted(data["all_quality"], key=lambda r: -r["mcap_bn"])[:max_companies]
-    cos = []
-    for r in picked:
-        bases = [{"label": ("TTM to " if r["fcf_basis"] == "TTM" else "FY ending ") + r["fcf_period_end"], "fcf": r["fcf_bn"]}]
-        if r["fcf_basis"] == "TTM":
-            bases.append({"label": "FY ending " + r["fy_end"], "fcf": r["fy_fcf_bn"]})
-        hist = [["TTM" if h["ttm"] else "FY" + h["fy_end"][2:4], h["fcf_bn"], 0] for h in r["fcf_history"]]
-        first_fy = next((h for h in r["fcf_history"][-4:] if not h["ttm"]), r["fcf_history"][0])
-        cos.append({
-            "id": r["ticker"].lower(), "name": r["ticker"],
-            "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close",
-            "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",
-            "bases": bases,
-            "track": round((r["ref_g"] or 0) * 100, 1),
-            "trackNote": f"lower of FCF ({(r['fcf_cagr'] or 0)*100:.0f}%) and revenue ({(r['rev_cagr'] or 0)*100:.0f}%) growth, capped at {int(C.TRACK_CAP*100)}%",
-            "hist": hist,
-        })
+def render_explorer(data, per_group=25) -> str:
+    """The explorer page, loaded with today's names in three groups."""
+    groups = [("shortlist", data["shortlist"]), ("watchlist", data["gap_only"]), ("triggered", data["triggered_only"])]
+    cos, seen = [], set()
+    for gname, rows in groups:
+        for r in rows[:per_group]:
+            if r["ticker"] in seen:
+                continue
+            seen.add(r["ticker"])
+            cos.append(explorer_company(r, gname))
+    meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"]}
     tpl = (Path(__file__).parent / "explorer_template.html").read_text()
     return (tpl.replace("__COMPANIES_JSON__", json.dumps(cos))
+               .replace("__META_JSON__", json.dumps(meta))
                .replace("__ASOF__", data["meta"]["asof"]))
+
+
+def explorer_company(r, group):
+    bases = [{"label": ("TTM to " if r["fcf_basis"] == "TTM" else "FY ending ") + r["fcf_period_end"], "fcf": r["fcf_bn"]}]
+    if r["fcf_basis"] == "TTM":
+        bases.append({"label": "FY ending " + r["fy_end"], "fcf": r["fy_fcf_bn"]})
+    if r["fcf_avg3_bn"] and r["fcf_avg3_bn"] > 0:
+        bases.append({"label": "3-year average (smooths the cycle)", "fcf": r["fcf_avg3_bn"]})
+    badges = []
+    if r["flag_drop"]:
+        badges.append({"k": "drop", "t": f"Down {abs(r['chg_5d'])*100:.0f}% in 5 days ({r['rel_chg_5d']*100:+.0f}% vs. S&P 500)",
+                       "s": f"▼{abs(r['chg_5d'])*100:.0f}%"})
+    if r["flag_cluster"]:
+        badges.append({"k": "ins", "t": f"{len(r['insider_buyers'])} insiders bought ${r['insider_value']/1e6:,.1f}M: " + "; ".join(r["insider_buyers"]),
+                       "s": f"{len(r['insider_buyers'])} insiders"})
+    if r["volatile"]:
+        badges.append({"k": "vol", "t": "Volatile cash flow (cyclical)", "s": "cyclical"})
+    badges.append({"k": "link", "t": "Insider filings ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=4&owner=include&count=40"})
+    badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
+    return {
+        "id": r["ticker"].lower(), "name": r["ticker"], "group": group, "badges": badges,
+        "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}",
+        "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",
+        "bases": bases,
+        "track": round((r["ref_g"] or 0) * 100, 1),
+        "trackNote": f"lower of FCF ({(r['fcf_cagr'] or 0)*100:.0f}%) and revenue ({(r['rev_cagr'] or 0)*100:.0f}%) growth, capped at {int(C.TRACK_CAP*100)}%",
+        "hist": [["TTM" if h["ttm"] else "FY" + h["fy_end"][2:4], h["fcf_bn"], 0] for h in r["fcf_history"]],
+    }
 
 
 def main(argv=None):

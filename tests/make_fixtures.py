@@ -20,7 +20,7 @@ COMPANIES = [
         [("Jane Ortiz", "Chief Financial Officer", "P"), ("Raj Mehta", "Director", "P"), ("Lee Park", "Director", "P")], 1.0),
     ("SMPC", "Sample Gamma Chips Inc", 9000003, [1.30, 1.40, 1.50], 0.30, 5.0, 70, -0.12,
         [("Sam Cole", "CEO", "S")], 0.5),
-    ("SMPD", "Sample Delta Networks Co", 9000004, [1.50, 1.80, 2.10], 0.28, 9.0, 13, -0.01, [], 0.0),
+    ("SMPD", "Sample Delta Networks Co", 9000004, [0.80, 2.40, 2.10], 0.28, 9.0, 13, -0.01, [], 0.0),
     ("SMPE", "Sample Epsilon Retail Co", 9000005, [0.40, 0.42, 0.45], 0.04, 6.0, 20, -0.15, [], 0.0),
     ("SMPF", "Sample Phi Biotech Inc", 9000006, [-0.20, 0.30, 0.60], 0.25, 3.0, 25, -0.20, [], 1.0),
     ("SMPG", "Sample Gamma-Ray Media Co", 9000007, [0.90, 1.00, 1.10], 0.22, 5.0, 28, 0.02, [], 0.0),

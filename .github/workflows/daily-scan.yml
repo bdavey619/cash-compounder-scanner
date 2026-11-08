@@ -45,8 +45,7 @@ jobs:
       - name: Keep a dated copy
         run: |
           mkdir -p site/archive
-          cp site/report.html "site/archive/$(date -u +%F).html"
-          cp site/report.html site/index.html
+          cp site/index.html "site/archive/$(date -u +%F).html"
 
       - uses: actions/upload-artifact@v4
         with:
