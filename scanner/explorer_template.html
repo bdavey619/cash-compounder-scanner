@@ -350,9 +350,9 @@ function renderGroups(){ const box=document.getElementById('groups'); box.innerH
     b.onclick=()=>{state.group=id; state.showAll=false; state.sel=(ranked()[0]||{}).id; renderDetail();}; box.appendChild(b);}); }
 function renderBadges(c){ document.getElementById('badges').innerHTML=(c.badges||[]).map(b=>b.k==='link'?`<a class="badge link" href="${b.u}">${b.t}</a>`:`<span class="badge ${b.k}">${b.t}</span>`).join(''); }
 function renderIntro(){ const f=META.funnel||{}, R=META.rules||{}, m=META.market||{}; const n=x=>(x||0).toLocaleString(); const p=x=>Math.round(Math.abs(x||0)*100);
-  let hidden=false; try{hidden=localStorage.getItem('introHidden')==='1';}catch(e){}
+  let hidden=true; try{hidden=localStorage.getItem('introShown')!=='1';}catch(e){}
   const box=document.getElementById('intro');
-  if(hidden){ box.innerHTML=`<div class="intro-foot" style="margin-top:0"><span>${n(f.universe)} companies scanned → <b style="color:var(--text-primary)">${n(f.shortlist)} shortlisted</b></span><button onclick="toggleIntro(false)">How this list is built</button></div>`; return; }
+  if(hidden){ box.innerHTML=`<div class="intro-foot" style="margin-top:0"><span>${n(f.universe)} companies scanned → <b style="color:var(--text-primary)">${n(f.shortlist)} shortlisted</b></span><button onclick="toggleIntro(false)">How this list is built ↓</button></div>`; return; }
   box.innerHTML=`
   <p class="philo">A great business is only a great investment at the right price. <span>Each trading day this scans every US-listed company for strong cash generators whose price, after a sell-off or insider buying, now assumes <i>less</i> growth than the business has actually delivered. Those are the moments when expectations may be too low.</span></p>
   <div class="steps">
@@ -362,8 +362,8 @@ function renderIntro(){ const f=META.funnel||{}, R=META.rules||{}, m=META.market
     <div class="step test"><div class="n">${n(f.modest)}</div><div class="l">Test 2 · Price assumes little</div><div class="d">Price implies ≤${p(R.MAX_IMPLIED_GROWTH)}% growth a year, at least ${p(R.GAP_THRESHOLD)} pts below its own per-share history.</div></div>
     <div class="step final"><div class="n">${n(f.shortlist)}</div><div class="l">Shortlist</div><div class="d">Passed both tests. A starting point for research, not a buy list.</div></div>
   </div>
-  <div class="intro-foot"><span>As of ${META.asof}${m.chg!=null?` · S&amp;P 500 ${(m.chg*100).toFixed(1)}% this week, ${(m.off_1m_high*100).toFixed(1)}% from its 1-month high`:''}</span><button onclick="toggleIntro(true)">Hide this</button></div>`; }
-function toggleIntro(h){ try{localStorage.setItem('introHidden',h?'1':'0');}catch(e){} renderIntro(); }
+  <div class="intro-foot"><span>As of ${META.asof}${m.chg!=null?` · S&amp;P 500 ${(m.chg*100).toFixed(1)}% this week, ${(m.off_1m_high*100).toFixed(1)}% from its 1-month high`:''}</span><button onclick="toggleIntro(true)">Hide ↑</button></div>`; }
+function toggleIntro(h){ try{localStorage.setItem('introShown',h?'0':'1');}catch(e){} renderIntro(); }
 function renderFunnel(){ if(!document.getElementById('funnel')) return; const f=META.funnel||{}; const st=[['companies',f.universe],['quality',f.quality],['triggered',f.triggered],['shortlist',f.shortlist]];
   document.getElementById('funnel').innerHTML=st.map(([l,n],i)=>`<span class="step${i===3?' hl':''}"><b>${(n||0).toLocaleString()}</b> ${l}</span>`).join('<span>→</span>'); }
 function renderDetail(){ renderGroups(); renderTabs(); const c=COMPANIES.find(c=>c.id===state.sel); if(!c){drawCompare(); ['tiles','verdict','inputs','badges','sens'].forEach(id=>document.getElementById(id).innerHTML=''); document.getElementById('path').innerHTML=''; return;} renderInputs(c); renderBadges(c); update(); }
