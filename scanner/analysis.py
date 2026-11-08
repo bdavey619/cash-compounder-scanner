@@ -11,22 +11,24 @@ OCF = ["NetCashProvidedByUsedInOperatingActivities",
 CAPEX = ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"]
 REVENUE = ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues",
            "RevenueFromContractWithCustomerIncludingAssessedTax", "SalesRevenueNet"]
+SBC = ["ShareBasedCompensation", "AllocatedShareBasedCompensationExpense"]
+DILUTED = ["WeightedAverageNumberOfDilutedSharesOutstanding"]
 
 
-def _usd(facts, ns, concept):
-    return facts.get(ns, {}).get(concept, {}).get("units", {}).get("USD", [])
+def _usd(facts, ns, concept, unit="USD"):
+    return facts.get(ns, {}).get(concept, {}).get("units", {}).get(unit, [])
 
 
 def _days(a: str, b: str) -> int:
     return (date.fromisoformat(b) - date.fromisoformat(a)).days
 
 
-def annual_series(facts: dict, concepts: list[str]) -> dict[str, float]:
+def annual_series(facts: dict, concepts: list[str], unit: str = "USD") -> dict[str, float]:
     """{fiscal-year-end: value} from 10-K full-year duration facts. Latest filing wins;
     the first concept that reports a given year wins over later fallbacks."""
     out: dict[str, tuple[str, float]] = {}
     for rank, c in enumerate(concepts):
-        for f in _usd(facts, "us-gaap", c):
+        for f in _usd(facts, "us-gaap", c, unit):
             if not f.get("form", "").startswith("10-K") or "start" not in f:
                 continue
             if not 330 <= _days(f["start"], f["end"]) <= 400:
@@ -92,28 +94,35 @@ def latest_instant(facts: dict, concepts: list[str], ns="us-gaap", unit="USD"):
 
 
 def fundamentals(facts: dict) -> dict | None:
+    """Free cash flow here = operating cash flow - capex - stock-based compensation.
+    Stock comp is a real cost to shareholders (it dilutes them) even though no cash leaves."""
     f = facts.get("facts", {})
-    ocf, capex, rev = annual_series(f, OCF), annual_series(f, CAPEX), annual_series(f, REVENUE)
+    ocf, capex, rev, sbc = (annual_series(f, OCF), annual_series(f, CAPEX),
+                            annual_series(f, REVENUE), annual_series(f, SBC))
+    dil = annual_series(f, DILUTED, unit="shares")
     years = sorted(ocf)[-4:]
     if len(years) < 3:
         return None
     rows = []
     for y in years:
-        cx = capex.get(y)
-        rows.append({"fy_end": y, "ocf": ocf[y], "capex": cx if cx is not None else 0.0,
-                     "capex_missing": cx is None, "revenue": rev.get(y), "fcf": ocf[y] - (cx or 0.0)})
+        cx, sb = capex.get(y), sbc.get(y, 0.0)
+        rows.append({"fy_end": y, "ocf": ocf[y], "capex": cx if cx is not None else 0.0, "sbc": sb,
+                     "capex_missing": cx is None, "revenue": rev.get(y), "diluted": dil.get(y),
+                     "fcf": ocf[y] - (cx or 0.0) - sb})
     last = rows[-1]
     # Trailing twelve months from quarterly filings, when they're newer than the last 10-K
     t_ocf, t_end, _ = ttm_value(f, OCF)
     t_cx, t_cx_end, _ = ttm_value(f, CAPEX)
     t_rev, t_rev_end, _ = ttm_value(f, REVENUE)
+    t_sbc, t_sbc_end, _ = ttm_value(f, SBC)
     if t_ocf is not None and t_end > last["fy_end"] and t_cx_end == t_end:
-        cur = {"end": t_end, "fcf": t_ocf - t_cx, "basis": "TTM",
+        ttm_sbc = t_sbc if t_sbc_end == t_end else last["sbc"]  # fall back to the fiscal-year figure
+        cur = {"end": t_end, "fcf": t_ocf - t_cx - ttm_sbc, "sbc": ttm_sbc, "basis": "TTM",
                "revenue": t_rev if t_rev_end == t_end else None}
         if cur["revenue"] is None:  # keep the margin like-for-like
             cur["revenue"] = last["revenue"] * (cur["fcf"] / last["fcf"]) if last["fcf"] and last["revenue"] else None
     else:
-        cur = {"end": last["fy_end"], "fcf": last["fcf"], "basis": "FY", "revenue": last["revenue"]}
+        cur = {"end": last["fy_end"], "fcf": last["fcf"], "sbc": last["sbc"], "basis": "FY", "revenue": last["revenue"]}
     equity, _ = latest_instant(f, ["StockholdersEquity"])
     ltd, _ = latest_instant(f, ["LongTermDebt", "LongTermDebtNoncurrent"])
     cash, _ = latest_instant(f, ["CashAndCashEquivalentsAtCarryingValue"])
@@ -130,6 +139,13 @@ def fundamentals(facts: dict) -> dict | None:
     rev_cagr = None
     if first.get("revenue") and cur.get("revenue") and first["revenue"] > 0 and yrs > 0.5:
         rev_cagr = (cur["revenue"] / first["revenue"]) ** (1 / yrs) - 1
+    # Share count change per year (diluted, fiscal years): buybacks shrink it, stock issuance grows it
+    share_cagr = None
+    sh_first, sh_last = first.get("diluted"), last.get("diluted")
+    sh_yrs = (date.fromisoformat(last["fy_end"]) - date.fromisoformat(first["fy_end"])).days / 365.25
+    if sh_first and sh_last and sh_first > 0 and sh_yrs > 0.5:
+        share_cagr = (sh_last / sh_first) ** (1 / sh_yrs) - 1
+    per_share = lambda g: None if g is None else (1 + g) / (1 + (share_cagr or 0.0)) - 1
     fy3 = [r["fcf"] for r in rows[-3:]]
     avg3 = sum(fy3) / 3
     volatile = avg3 > 0 and (max(fy3) - min(fy3)) / avg3 >= 0.6
@@ -142,10 +158,15 @@ def fundamentals(facts: dict) -> dict | None:
         "fy_fcf": last["fcf"],
         "revenue": cur["revenue"],
         "fcf": cur["fcf"],
+        "sbc": cur["sbc"],
+        "sbc_pct_rev": (cur["sbc"] / cur["revenue"]) if cur["revenue"] else None,
         "fcf_margin": (cur["fcf"] / cur["revenue"]) if cur["revenue"] else None,
         "positive_fcf_years": sum(1 for r in rows[-3:] if r["fcf"] > 0) - (0 if cur["fcf"] > 0 else 1),
         "fcf_cagr": cagr,
         "rev_cagr": rev_cagr,
+        "share_cagr": share_cagr,
+        "fcf_ps_cagr": per_share(cagr),
+        "rev_ps_cagr": per_share(rev_cagr),
         "fcf_avg3": avg3,
         "volatile": volatile,
         "cash_roc": (cur["fcf"] / capital) if capital > 0 else None,

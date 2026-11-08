@@ -146,7 +146,7 @@ def refresh_facts_bulk(fetcher, cache_dir: Path, max_age_days: float, log=print,
     and keep only the concepts we use (a few KB per company)."""
     import tempfile
     import zipfile
-    marker = cache_dir / ".bulk_refreshed"
+    marker = cache_dir / f".bulk_refreshed_{CACHE_VERSION}"
     if marker.exists() and (time.time() - marker.stat().st_mtime) < max_age_days * 86400:
         return False
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -197,6 +197,8 @@ def load_company_facts(fetcher, cik: int, cache_dir: Path | None, max_age_days: 
     return slim
 
 
+CACHE_VERSION = "v2"  # bump when WANTED_CONCEPTS changes so cached files get rebuilt
+
 WANTED_CONCEPTS = {
     "NetCashProvidedByUsedInOperatingActivities",
     "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
@@ -215,6 +217,8 @@ WANTED_CONCEPTS = {
     "MarketableSecuritiesCurrent",
     "EntityCommonStockSharesOutstanding",
     "WeightedAverageNumberOfDilutedSharesOutstanding",
+    "ShareBasedCompensation",
+    "AllocatedShareBasedCompensationExpense",
 }
 
 

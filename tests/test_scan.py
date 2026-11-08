@@ -40,8 +40,10 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("SMPG", quality)
 
     def test_buckets(self):
-        self.assertEqual(sorted(self.tickers("shortlist")), ["SMPA", "SMPB"])
-        self.assertEqual(self.tickers("triggered_only"), ["SMPC"])
+        self.assertEqual(self.tickers("shortlist"), ["SMPB"])
+        # SMPA dropped 14% and looks cheap on total FCF, but it dilutes shareholders 4%/yr,
+        # so its per-share growth (the reference) is too low for the price to look cheap
+        self.assertEqual(sorted(self.tickers("triggered_only")), ["SMPA", "SMPC"])
         self.assertEqual(self.tickers("gap_only"), ["SMPD"])
 
     def test_insider_cluster_counts_buys_not_sales(self):
@@ -62,10 +64,27 @@ class TestEndToEnd(unittest.TestCase):
         self.assertTrue(d["volatile"])
         self.assertGreater(d["implied_g"], -0.02)  # on its lower 3-yr average FCF the price looks less cheap
 
+    def test_stock_comp_subtracted(self):
+        a = {r["ticker"]: r for r in self.data["all_quality"]}["SMPA"]
+        self.assertGreater(a["sbc_bn"], 0)
+        self.assertAlmostEqual(a["fcf_bn"], 1.70 * 1.06, places=2)  # fixtures set OCF so FCF after SBC is the target
+
+    def test_per_share_growth(self):
+        rows = {r["ticker"]: r for r in self.data["all_quality"]}
+        a, b = rows["SMPA"], rows["SMPB"]
+        self.assertLess(a["fcf_ps_cagr"], a["fcf_cagr"])   # dilution lowers per-share growth
+        self.assertGreater(b["fcf_ps_cagr"], b["fcf_cagr"])  # buybacks raise it
+        self.assertAlmostEqual(a["share_cagr"], 0.04, places=2)
+
+    def test_risk_premium(self):
+        rows = {r["ticker"]: r for r in self.data["all_quality"]}
+        self.assertAlmostEqual(rows["SMPD"]["required_return"], 0.105, places=4)  # cyclical
+        self.assertAlmostEqual(rows["SMPA"]["required_return"], 0.09, places=4)
+
     def test_explorer_written(self):
         html = (self.tmp / "out/explorer.html").read_text()
         self.assertNotIn("__COMPANIES_JSON__", html)
-        self.assertIn('"id": "smpa"', html)
+        self.assertIn('"id": "smpb"', html)
 
     def test_annual_filter_ignores_quarterly(self):
         rows = {r["ticker"]: r for r in self.data["all_quality"]}
@@ -85,7 +104,8 @@ class TestFallbackToAnnual(unittest.TestCase):
         import make_fixtures as mf
         facts = mf.company_facts(1, "X", [1.0, 1.2, 1.4], 0.3, 5.0, 0.0, 1e8)
         for c in facts["facts"]["us-gaap"].values():
-            c["units"]["USD"] = [f for f in c["units"]["USD"] if f["form"] != "10-Q"]
+            for unit, vals in c["units"].items():
+                c["units"][unit] = [f for f in vals if f["form"] != "10-Q"]
         fu = fundamentals(facts)
         self.assertEqual(fu["fcf_basis"], "FY")
-        self.assertAlmostEqual(fu["fcf"] / 1e9, 1.4, places=6)
+        self.assertAlmostEqual(fu["fcf"] / 1e9, 1.4, places=6)  # FCF after stock comp

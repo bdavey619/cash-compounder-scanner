@@ -20,7 +20,7 @@ COMPANIES = [
         [("Jane Ortiz", "Chief Financial Officer", "P"), ("Raj Mehta", "Director", "P"), ("Lee Park", "Director", "P")], 1.0),
     ("SMPC", "Sample Gamma Chips Inc", 9000003, [1.30, 1.40, 1.50], 0.30, 5.0, 70, -0.12,
         [("Sam Cole", "CEO", "S")], 0.5),
-    ("SMPD", "Sample Delta Networks Co", 9000004, [0.80, 2.40, 2.10], 0.28, 9.0, 13, -0.01, [], 0.0),
+    ("SMPD", "Sample Delta Networks Co", 9000004, [0.80, 2.40, 2.10], 0.28, 9.0, 9, -0.01, [], 0.0),
     ("SMPE", "Sample Epsilon Retail Co", 9000005, [0.40, 0.42, 0.45], 0.04, 6.0, 20, -0.15, [], 0.0),
     ("SMPF", "Sample Phi Biotech Inc", 9000006, [-0.20, 0.30, 0.60], 0.25, 3.0, 25, -0.20, [], 1.0),
     ("SMPG", "Sample Gamma-Ray Media Co", 9000007, [0.90, 1.00, 1.10], 0.22, 5.0, 28, 0.02, [], 0.0),
@@ -36,8 +36,12 @@ def fact(start, end, val, fy, filed, form="10-K"):
     return d
 
 
+SHARE_TREND = {9000001: 0.04, 9000002: -0.03}  # SMPA dilutes 4%/yr, SMPB buys back 3%/yr
+
+
 def company_facts(cik, name, fcfs, margin, capital_bn, net_cash_bn, shares):
-    ocf, capex, rev = [], [], []
+    ocf, capex, rev, sbc, dil = [], [], [], [], []
+    trend = SHARE_TREND.get(cik, 0.0)
     for fy_report in (2024, 2025):          # two 10-Ks, each restating prior years (as real filings do)
         filed = f"{fy_report+1}-02-15"
         for i, end in enumerate(FY_ENDS):
@@ -46,15 +50,21 @@ def company_facts(cik, name, fcfs, margin, capital_bn, net_cash_bn, shares):
             start = f"{int(end[:4])}-01-01"
             f = fcfs[i] * 1e9
             cx = abs(f) * 0.15 + 0.05e9
-            ocf.append(fact(start, end, f + cx, fy_report, filed))
+            r_ = abs(fcfs[-1]) * 1e9 / margin * (1 - 0.08 * (2 - i))
+            sb = 0.03 * r_                      # stock comp, 3% of revenue
+            ocf.append(fact(start, end, f + cx + sb, fy_report, filed))   # so FCF after stock comp = f
             capex.append(fact(start, end, cx, fy_report, filed))
-            rev.append(fact(start, end, abs(fcfs[-1]) * 1e9 / margin * (1 - 0.08 * (2 - i)), fy_report, filed))
+            rev.append(fact(start, end, r_, fy_report, filed))
+            sbc.append(fact(start, end, sb, fy_report, filed))
+            d = fact(start, end, shares * (1 + trend) ** (i - 2), fy_report, filed)
+            dil.append(d)
     # 10-Q year-to-date facts (9 months), this year and last year, as the Q3 2026 10-Q reports them
     f25 = fcfs[-1] * 1e9
     cx25 = abs(f25) * 0.15 + 0.05e9
     rev25 = abs(fcfs[-1]) * 1e9 / margin
     q = lambda start, end, val: {"start": start, "end": end, "val": val, "accn": "q3", "fy": 2026, "fp": "Q3", "form": "10-Q", "filed": "2026-10-30"}
-    for lst, full in ((ocf, f25 + cx25), (capex, cx25), (rev, rev25)):
+    sb25 = 0.03 * rev25
+    for lst, full in ((ocf, f25 + cx25 + sb25), (capex, cx25), (rev, rev25), (sbc, sb25)):
         lst.append(q("2025-01-01", "2025-09-30", full * 0.75))
         lst.append(q("2026-01-01", "2026-09-30", full * 0.81))
     # a stale Q2 fact that must not be used (the Q3 YTD is newer)
@@ -69,6 +79,8 @@ def company_facts(cik, name, fcfs, margin, capital_bn, net_cash_bn, shares):
                 "NetCashProvidedByUsedInOperatingActivities": {"label": "OCF", "units": {"USD": ocf}},
                 "PaymentsToAcquirePropertyPlantAndEquipment": {"label": "Capex", "units": {"USD": capex}},
                 "RevenueFromContractWithCustomerExcludingAssessedTax": {"label": "Revenue", "units": {"USD": rev}},
+                "ShareBasedCompensation": {"label": "SBC", "units": {"USD": sbc}},
+                "WeightedAverageNumberOfDilutedSharesOutstanding": {"label": "Diluted", "units": {"shares": dil}},
                 "StockholdersEquity": {"label": "Equity", "units": inst(capital_bn * 0.7e9)},
                 "LongTermDebt": {"label": "LTD", "units": inst(capital_bn * 0.3e9)},
                 "CashAndCashEquivalentsAtCarryingValue": {"label": "Cash", "units": inst((net_cash_bn + capital_bn * 0.3) * 1e9)},

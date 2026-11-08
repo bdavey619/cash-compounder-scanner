@@ -100,11 +100,11 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     <div class="cardhead">
       <div class="groups" id="groups" role="tablist"></div>
       <div class="minictl">
-        <label>Required return <b id="rv"></b> <input id="r" type="range" min="6" max="12" step="0.5" value="9"></label>
+        <label>Base required return <b id="rv"></b> <input id="r" type="range" min="6" max="12" step="0.5" value="9"></label>
         <label>Growth after year 10 <b id="gtv"></b> <input id="gt" type="range" min="1" max="4" step="0.5" value="3"></label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw" style="background:var(--implied)"></i>Growth today's price requires (next 10 yrs)</span><span><i class="sw" style="background:var(--track)"></i>Reference growth (lower of FCF and revenue growth, capped at 20%)</span></div>
+    <div class="legend"><span><i class="sw" style="background:var(--implied)"></i>Growth today's price requires (next 10 yrs)</span><span><i class="sw" style="background:var(--track)"></i>Reference growth (per share: lower of FCF and revenue growth, capped at 20%)</span></div>
     <svg id="cmp" viewBox="0 0 1000 420" width="100%" role="img" aria-label="Growth implied by price versus reference growth, by company"></svg>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px">
       <div class="hint" style="margin:0">Ranked by how far blue sits left of grey: the price assumes the most slowdown at the top. Click a row for detail.</div>
@@ -146,7 +146,9 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     <h3 style="font-size:14px;margin:14px 0 4px">Read before relying on this</h3>
     <ul>
       <li><b>Volatile cash flow</b> (orange badge) marks cyclical businesses such as memory chips or energy. Their price often assumes a slowdown because one usually follows a boom. Switch the cash-flow starting point to the 3-year average to judge them through a whole cycle.</li>
-      <li><b>Free cash flow</b> is operating cash flow minus capital expenditures as reported in 10-K and 10-Q filings. Stock-based compensation is not subtracted.</li>
+      <li><b>Free cash flow</b> is operating cash flow minus capital expenditures <i>minus stock-based compensation</i>, from 10-K and 10-Q filings. Stock comp is a real cost to shareholders because it dilutes them.</li>
+      <li><b>Reference growth</b> is per share: the lower of free cash flow and revenue growth after adjusting for the change in diluted share count, so buybacks count in a company's favor and dilution against it. Capped at 20%.</li>
+      <li><b>Required return</b> is 9% for a steady business, plus 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× free cash flow. The sliders move the base; the premium rides on top.</li>
       <li><b>Net cash</b> is cash plus short-term investments minus long-term debt, from the latest filing.</li>
       <li>The cash-flow starting-point switch lets you compare the trailing twelve months with the last full fiscal year.</li>
     </ul>
@@ -172,7 +174,7 @@ function implied(f0,target,r,gt){ if(f0<=0||target<=0) return NaN; let lo=-0.6,h
   for(let i=0;i<120;i++){const m=(lo+hi)/2; if(pv(f0,m,r,gt)<target) lo=m; else hi=m;} return (lo+hi)/2; }
 function inputsFor(c){ const e=state.edits[c.id]||{}; const bi=state.baseIdx[c.id]??(c.defaultBase||0);
   return { mcap:e.mcap??c.mcap, fcf:e.fcf??c.bases[bi].fcf, net:e.net??c.netCash, track:e.track??c.track, baseLabel:c.bases[bi].label }; }
-function calc(c,r=state.r,gt=state.gt){ const i=inputsFor(c); return {...i, g:implied(i.fcf,i.mcap-i.net,r,gt)}; }
+function calc(c,r=state.r,gt=state.gt){ const i=inputsFor(c); const rr=r+(c.riskPremium||0); return {...i, r:rr, g:implied(i.fcf,i.mcap-i.net,rr,gt)}; }
 const pct=(x,d=1)=>isFinite(x)?(Math.abs(x*100)<0.5*Math.pow(10,-d)?0:x*100).toFixed(d)+'%':(x>0?'>300%':'n/a');
 const money=x=> x===0?'$0': x>=1000? '$'+(x/1000).toFixed(2)+'T' : '$'+(x>=100?x.toFixed(0):x.toFixed(1))+'B';
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -231,8 +233,8 @@ function renderTabs(){ const t=document.getElementById('tabs'); t.innerHTML='';
 
 function renderInputs(c){ const box=document.getElementById('inputs'); const i=inputsFor(c); const bi=state.baseIdx[c.id]??(c.defaultBase||0);
   const baseField = c.bases.length>1
-    ? `<label for="in-base">Cash flow starting point</label><select id="in-base">${c.bases.map((b,k)=>`<option value="${k}" ${k===bi?'selected':''}>${b.label}: ${money(b.fcf)}</option>`).join('')}</select><div class="note">Switch to see how much the starting point changes the answer.</div>`
-    : `<label for="in-fcf">Free cash flow, $B</label><input id="in-fcf" type="number" step="0.1" value="${i.fcf}"><div class="note">${c.bases[0].label}</div>`;
+    ? `<label for="in-base">Cash flow starting point</label><select id="in-base">${c.bases.map((b,k)=>`<option value="${k}" ${k===bi?'selected':''}>${b.label}: ${money(b.fcf)}</option>`).join('')}</select><div class="note">${c.sbcNote?c.sbcNote.charAt(0).toUpperCase()+c.sbcNote.slice(1)+'. ':''}Switch to compare starting points.</div>`
+    : `<label for="in-fcf">Free cash flow, $B</label><input id="in-fcf" type="number" step="0.1" value="${i.fcf}"><div class="note">${c.bases[0].label}${c.sbcNote?', '+c.sbcNote:''}</div>`;
   box.innerHTML=`
     <div><label for="in-mcap">Market cap, $B</label><input id="in-mcap" type="number" step="1" value="${i.mcap}"><div class="note">As of ${c.mcapNote}</div></div>
     <div>${baseField}</div>
@@ -250,7 +252,7 @@ function renderTiles(c){ const res=calc(c); const y10=res.fcf*Math.pow(1+res.g,1
   const yld=res.fcf/res.mcap;
   document.getElementById('tiles').innerHTML=`
     <div class="tile"><div class="k">Price ÷ free cash flow</div><div class="v">${(res.mcap/res.fcf).toFixed(1)}x</div><div class="d">FCF yield ${(yld*100).toFixed(1)}%</div></div>
-    <div class="tile"><div class="k">Implied growth, next 10 yrs</div><div class="v" style="color:var(--implied)">${pct(res.g)}</div><div class="d">per year, to justify today's price</div></div>
+    <div class="tile"><div class="k">Implied growth, next 10 yrs</div><div class="v" style="color:var(--implied)">${pct(res.g)}</div><div class="d">per year, at a ${(res.r*100).toFixed(1)}% required return${c.riskPremium?` (+${(c.riskPremium*100).toFixed(1)} pts: ${(c.riskWhy||[]).join(', ')})`:''}</div></div>
     <div class="tile"><div class="k">Reference growth</div><div class="v">${pct(res.track/100)}</div><div class="d">${c.trackNote}</div></div>
     <div class="tile"><div class="k">FCF required in year 10</div><div class="v">${isFinite(y10)?money(y10):'n/a'}</div><div class="d">vs. ${money(res.fcf)} today (${isFinite(y10)?(y10/res.fcf).toFixed(1)+'x':'n/a'})</div></div>`;
   const gap=res.g*100-res.track; let msg;
@@ -305,7 +307,7 @@ function drawPath(c){ const svg=document.getElementById('path'); svg.innerHTML='
 function drawSens(c){ const rs=[0.07,0.08,0.09,0.10,0.11], gts=[0.02,0.025,0.03,0.035];
   const steps=['--seq-1','--seq-2','--seq-3','--seq-4','--seq-5','--seq-6'];
   const shade=g=>{ if(!isFinite(g)) return steps[5]; const b=[0,0.05,0.10,0.15,0.20,0.30]; let k=0; for(let j=0;j<b.length;j++) if(g>=b[j]) k=j; return steps[k]; };
-  let h='<tr><th style="text-align:left">Required return ↓ / terminal growth →</th>'+gts.map(g=>`<th>${(g*100).toFixed(1)}%</th>`).join('')+'</tr>';
+  let h='<tr><th style="text-align:left">'+(c.riskPremium?'Base return (+'+(c.riskPremium*100).toFixed(1)+' risk) ↓':'Required return ↓')+' / terminal growth →</th>'+gts.map(g=>`<th>${(g*100).toFixed(1)}%</th>`).join('')+'</tr>';
   rs.forEach(r=>{ h+=`<tr><th style="text-align:left">${(r*100).toFixed(0)}%</th>`+gts.map(gt=>{const g=calc(c,r,gt).g; const s=shade(g); const dark=['--seq-4','--seq-5','--seq-6'].includes(s); const isCur=Math.abs(r-state.r)<1e-9&&Math.abs(gt-state.gt)<1e-9;
     return `<td style="background:var(${s});color:${dark?'#fff':'var(--text-primary)'};${isCur?'outline:2px solid var(--text-primary);outline-offset:-2px;font-weight:700':''}">${pct(g,0)}</td>`;}).join('')+'</tr>'; });
   document.getElementById('sens').innerHTML=h;

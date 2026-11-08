@@ -71,11 +71,16 @@ counts.
 
 - SEC publishes its bulk company-facts archive nightly, so a 10-Q filed today shows up in tomorrow's
   run. Raise `FUNDAMENTALS_CACHE_DAYS` in `config.py` to download less often.
-- **Reference growth** is the lower of FCF and revenue growth (three fiscal years ago → trailing twelve months), capped at
-  20%. Raw FCF growth is too noisy on its own: a rebound from a depressed base (memory chips, energy) made almost every
+- **Free cash flow is after stock-based compensation** (operating cash flow − capex − stock comp), since stock comp
+  dilutes shareholders even though no cash leaves.
+- **Reference growth** is per share: the lower of FCF and revenue growth (three fiscal years ago → trailing twelve
+  months) after adjusting for the change in diluted share count, capped at 20%. Buybacks help; dilution hurts.
+- **Required return** is 9% plus 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× FCF.
+- Still simplified: one constant growth rate for 10 years, no analyst forecasts, and **no backtest yet**, so there's no
+  evidence the screen beats the market. Treat the output as a research list.
+- Raw FCF growth is too noisy on its own: a rebound from a depressed base (memory chips, energy) made almost every
   price look cheap in the first live run. The shortlist also requires the price to imply 10%/yr or less.
 - **Sharp drops** are measured against the S&P 500 (SPY), so a market-wide sell-off doesn't flag everything.
 - **Banks and insurers** don't fit a free-cash-flow screen and will mostly fail or mislead.
 - Companies with **several share classes** may be missing a share count and drop out.
-- **Stock-based compensation** isn't subtracted from free cash flow.
 - Stooq and Yahoo are unofficial price sources and can rate-limit or change format.

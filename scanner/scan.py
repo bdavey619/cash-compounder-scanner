@@ -100,15 +100,18 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         mcap = ps["last"] * co["shares"]
         if mcap < C.MIN_MARKET_CAP_USD:
             continue
-        g = implied_growth(co["fcf"], mcap - co["net_cash"], C.REQUIRED_RETURN, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+        prem, why = risk_premium(co)
+        r = C.REQUIRED_RETURN + prem
+        g = implied_growth(co["fcf"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
         g_ttm = g
         if co["volatile"] and co["fcf_avg3"] > 0:
             # cyclicals are judged on a 3-year average, not one boom (or bust) year
-            g = implied_growth(co["fcf_avg3"], mcap - co["net_cash"], C.REQUIRED_RETURN, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+            g = implied_growth(co["fcf_avg3"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
         ref = reference_growth(co)
         gap = (g - ref) if (g is not None and math.isfinite(g) and ref is not None) else None
         priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "mcap": mcap, "p_fcf": mcap / co["fcf"],
-                       "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap})
+                       "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
+                       "risk_premium": prem, "risk_why": why, "required_return": r})
     funnel["quality"] = len(priced)
     log(f"quality + priced + above market-cap floor: {len(priced)}")
 
@@ -165,7 +168,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         f"{sum(c['flag_gap'] for c in priced)} of {len(priced)} with modest expectations vs reference growth")
     for c in shortlist[:60]:
         log(f"  {c['ticker']:<6} 5d {c['chg']*100:+6.1f}%  insiders {len(c['insider_buyers'])}  "
-            f"implied {c['implied_g']*100:5.1f}%  ref {c['ref_g']*100:5.1f}% (fcf {c['fcf_cagr']*100:.0f}%)  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
+            f"implied {c['implied_g']*100:5.1f}%  ref {c['ref_g']*100:5.1f}%  r {c['required_return']*100:.1f}%  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
     write_step_summary(meta, shortlist)
     return meta, shortlist
 
@@ -186,9 +189,23 @@ def write_step_summary(meta, shortlist):
         fh.write("\n".join(lines) + "\n")
 
 
+def risk_premium(co) -> tuple[float, list[str]]:
+    """Riskier businesses have to clear a higher bar: a cheap price is often fair pay for risk."""
+    prem, why = 0.0, []
+    if co.get("volatile"):
+        prem += C.RISK_PREMIUM_CYCLICAL
+        why.append("cyclical")
+    net_debt = -co.get("net_cash", 0.0)
+    if co.get("fcf", 0) > 0 and net_debt > C.LEVERAGE_NET_DEBT_TO_FCF * co["fcf"]:
+        prem += C.RISK_PREMIUM_LEVERAGE
+        why.append("leveraged")
+    return prem, why
+
+
 def reference_growth(co):
-    """A conservative growth yardstick: the lower of FCF and revenue growth, capped."""
-    cands = [x for x in (co.get("fcf_cagr"), co.get("rev_cagr")) if x is not None]
+    """A conservative growth yardstick: the lower of FCF and revenue growth per share
+    (so buybacks help and dilution hurts), capped."""
+    cands = [x for x in (co.get("fcf_ps_cagr"), co.get("rev_ps_cagr")) if x is not None]
     if not cands:
         return None
     return min(min(cands), C.TRACK_CAP)
@@ -231,7 +248,10 @@ def _row(c):
         "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3), "fcf_avg3_bn": round(c["fcf_avg3"] / 1e9, 3), "volatile": c["volatile"],
         "p_fcf": round(c["p_fcf"], 1), "net_cash_bn": round(c["net_cash"] / 1e9, 2),
         "fcf_margin": fin(c["fcf_margin"]), "cash_roc": fin(c["cash_roc"]),
-        "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]), "ref_g": fin(c["ref_g"]) if c["ref_g"] is not None else None,
+        "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]),
+        "fcf_ps_cagr": fin(c["fcf_ps_cagr"]), "rev_ps_cagr": fin(c["rev_ps_cagr"]), "share_cagr": fin(c["share_cagr"]),
+        "sbc_bn": round((c["sbc"] or 0) / 1e9, 3), "sbc_pct_rev": fin(c["sbc_pct_rev"]),
+        "risk_premium": c["risk_premium"], "risk_why": c["risk_why"], "required_return": round(c["required_return"], 4), "ref_g": fin(c["ref_g"]) if c["ref_g"] is not None else None,
         "implied_g": fin(c["implied_g"]) if c["implied_g"] is not None else None,
         "implied_g_ttm": fin(c["implied_g_ttm"]) if c["implied_g_ttm"] is not None else None,
         "gap": fin(c["gap"]) if c["gap"] is not None else None,
@@ -252,7 +272,7 @@ def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced):
             "all_quality": [_row(c) for c in priced]}
     (out_dir / "results.json").write_text(json.dumps(data, indent=1))
     cols = ["ticker", "name", "price", "chg_5d", "mcap_bn", "fcf_bn", "p_fcf", "fcf_margin", "cash_roc",
-            "fcf_cagr", "rev_cagr", "ref_g", "implied_g", "gap", "flag_drop", "flag_cluster", "flag_gap", "score"]
+            "fcf_cagr", "rev_cagr", "fcf_ps_cagr", "rev_ps_cagr", "share_cagr", "sbc_bn", "required_return", "ref_g", "implied_g", "gap", "flag_drop", "flag_cluster", "flag_gap", "score"]
     with open(out_dir / "results.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
@@ -295,7 +315,9 @@ def explorer_company(r, group):
         badges.append({"k": "ins", "t": f"{len(r['insider_buyers'])} insiders bought ${r['insider_value']/1e6:,.1f}M: " + "; ".join(r["insider_buyers"]),
                        "s": f"{len(r['insider_buyers'])} insiders"})
     if r["volatile"]:
-        badges.append({"k": "vol", "t": "Volatile cash flow (cyclical)", "s": "cyclical"})
+        badges.append({"k": "vol", "t": "Volatile cash flow (cyclical): judged on 3-yr average, +1.5 pts required return", "s": "cyclical"})
+    if "leveraged" in (r.get("risk_why") or []):
+        badges.append({"k": "vol", "t": f"Leveraged: net debt ${-r['net_cash_bn']:.1f}B, +1 pt required return", "s": "leveraged"})
     badges.append({"k": "link", "t": "Insider filings ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=4&owner=include&count=40"})
     badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
     return {
@@ -306,7 +328,10 @@ def explorer_company(r, group):
         "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",
         "bases": bases,
         "track": round((r["ref_g"] or 0) * 100, 1),
-        "trackNote": f"lower of FCF ({(r['fcf_cagr'] or 0)*100:.0f}%) and revenue ({(r['rev_cagr'] or 0)*100:.0f}%) growth, capped at {int(C.TRACK_CAP*100)}%",
+        "trackNote": f"per share: lower of FCF ({(r['fcf_ps_cagr'] or 0)*100:.0f}%) and revenue ({(r['rev_ps_cagr'] or 0)*100:.0f}%) growth, capped at {int(C.TRACK_CAP*100)}%"
+                     + (f"; share count {(r['share_cagr'] or 0)*100:+.1f}%/yr" if r.get("share_cagr") is not None else ""),
+        "riskPremium": r["risk_premium"], "riskWhy": r["risk_why"],
+        "sbcNote": (f"after ${r['sbc_bn']:.2f}B stock comp ({(r['sbc_pct_rev'] or 0)*100:.0f}% of revenue)" if r["sbc_bn"] else "after stock comp"),
         "hist": [["TTM" if h["ttm"] else "FY" + h["fy_end"][2:4], h["fcf_bn"], 0] for h in r["fcf_history"]],
     }
 
