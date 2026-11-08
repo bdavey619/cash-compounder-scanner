@@ -15,6 +15,7 @@ import json
 import math
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from .analysis import fundamentals, implied_growth, parse_form4, price_stats
 from .report import render_report
 from .sources import (FetchError, FixtureFetcher, LiveFetcher, env_user_agent,
                       load_company_facts, load_filing_text, load_form4_index,
-                      load_prices, load_tickers, refresh_facts_bulk)
+                      load_prices, load_tickers, refresh_facts_bulk, SourceBreaker)
 
 
 def log(*a):
@@ -57,7 +58,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     #    Full runs read a weekly bulk download; small --tickers runs call the per-company API.
     bulk = cache_dir is not None and not tickers_only and hasattr(fetcher, "download_to")
     if bulk:
-        refresh_facts_bulk(fetcher, cache_dir, C.FUNDAMENTALS_CACHE_DAYS, log)
+        refresh_facts_bulk(fetcher, cache_dir, C.FUNDAMENTALS_CACHE_DAYS, log, only_ciks={u["cik"] for u in universe})
     quality = []
     for i, co in enumerate(universe, 1):
         if i % 250 == 0:
@@ -77,8 +78,19 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
 
     # 3. Prices, market cap, reverse DCF
     priced = []
+    breaker = SourceBreaker()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(load_prices, fetcher, co["ticker"], breaker): co for co in quality}
+        closes_by = {}
+        for k, fut in enumerate(as_completed(futures), 1):
+            closes_by[futures[fut]["ticker"]] = fut.result()
+            if k % 100 == 0:
+                log(f"  prices {k}/{len(quality)}")
+    missing = sum(1 for v in closes_by.values() if not v)
+    log(f"prices: {len(quality) - missing} ok, {missing} missing; source failures: {breaker.fails}")
+    funnel["price_missing"] = missing
     for co in quality:
-        closes = load_prices(fetcher, co["ticker"])
+        closes = closes_by.get(co["ticker"], [])
         ps = price_stats(closes, C.DROP_LOOKBACK_DAYS)
         if not ps or not co.get("shares"):
             continue
@@ -95,7 +107,9 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     by_cik = {c["cik"]: c for c in priced}
     insider = defaultdict(lambda: {"buyers": {}, "value": 0.0, "filings": set()})
     for ymd in business_days_back(asof, C.INSIDER_LOOKBACK_DAYS):
-        for cik, path in load_form4_index(fetcher, ymd):
+        idx = load_form4_index(fetcher, ymd)
+        log(f"  form 4 index {ymd}: {len(idx)} lines, {sum(1 for c, _ in idx if c in by_cik)} for quality names")
+        for cik, path in idx:
             if cik not in by_cik or path in insider[cik]["filings"]:
                 continue
             txt = load_filing_text(fetcher, path)

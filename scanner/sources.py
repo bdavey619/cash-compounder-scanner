@@ -39,7 +39,7 @@ class LiveFetcher:
         self.min_gap = 1.0 / sec_rate_per_sec
         self._last_sec = 0.0
 
-    def get(self, url: str, retries: int = 3) -> bytes:
+    def get(self, url: str, retries: int = 3, timeout: float = 30) -> bytes:
         is_sec = "sec.gov" in url
         for attempt in range(retries):
             if is_sec:
@@ -52,7 +52,7 @@ class LiveFetcher:
                 "Accept-Encoding": "gzip",
             })
             try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
                     data = resp.read()
                     if resp.headers.get("Content-Encoding") == "gzip":
                         data = gzip.decompress(data)
@@ -91,7 +91,7 @@ class FixtureFetcher:
     def __init__(self, root: Path):
         self.root = Path(root)
 
-    def get(self, url: str, retries: int = 1) -> bytes:
+    def get(self, url: str, retries: int = 1, timeout: float = 30) -> bytes:
         path = self._map(url)
         if path is None or not path.exists():
             raise FetchError(f"no fixture for {url}")
@@ -137,7 +137,7 @@ def slim_facts(cik: int, data: dict) -> dict:
     return slim
 
 
-def refresh_facts_bulk(fetcher, cache_dir: Path, max_age_days: float, log=print) -> bool:
+def refresh_facts_bulk(fetcher, cache_dir: Path, max_age_days: float, log=print, only_ciks=None) -> bool:
     """Weekly: pull SEC's nightly companyfacts.zip once instead of ~10,000 API calls,
     and keep only the concepts we use (a few KB per company)."""
     import tempfile
@@ -148,7 +148,7 @@ def refresh_facts_bulk(fetcher, cache_dir: Path, max_age_days: float, log=print)
     cache_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as td:
         zpath = Path(td) / "companyfacts.zip"
-        log("downloading SEC companyfacts.zip (about 1 GB; weekly)...")
+        log("downloading SEC companyfacts.zip (about 1 GB)...")
         fetcher.download_to(SEC_FACTS_BULK_URL, zpath)
         n = 0
         with zipfile.ZipFile(zpath) as zf:
@@ -156,13 +156,17 @@ def refresh_facts_bulk(fetcher, cache_dir: Path, max_age_days: float, log=print)
                 m = re.match(r"CIK(\d{10})\.json$", name)
                 if not m:
                     continue
+                cik = int(m.group(1))
+                if only_ciks is not None and cik not in only_ciks:
+                    continue
                 try:
                     data = json.loads(zf.read(name))
                 except ValueError:
                     continue
-                cik = int(m.group(1))
                 (cache_dir / name).write_text(json.dumps(slim_facts(cik, data)))
                 n += 1
+                if n % 2000 == 0:
+                    log(f"  unpacked {n:,} companies")
         log(f"cached slim facts for {n:,} companies")
     marker.touch()
     return True
@@ -214,28 +218,51 @@ def stooq_symbol(ticker: str) -> str:
     return ticker.lower().replace(".", "-")
 
 
-def load_prices(fetcher, ticker: str) -> list[tuple[str, float]]:
-    """Daily closes, oldest first. Stooq first, Yahoo as fallback."""
-    try:
-        txt = fetcher.get(STOOQ_URL.format(sym=stooq_symbol(ticker))).decode("utf-8", "replace")
-        rows = []
-        for line in txt.strip().splitlines()[1:]:
-            parts = line.split(",")
-            if len(parts) >= 5 and parts[4] not in ("", "null"):
-                rows.append((parts[0], float(parts[4])))
-        if len(rows) > 5:
+class SourceBreaker:
+    """Stop calling a price source after it fails many times in a row (blocked or rate-limited),
+    so one bad source can't stall the run."""
+
+    def __init__(self, limit: int = 15):
+        import threading
+        self.limit, self.fails, self.lock = limit, {}, threading.Lock()
+
+    def open(self, name):
+        return self.fails.get(name, 0) >= self.limit
+
+    def record(self, name, ok):
+        with self.lock:
+            self.fails[name] = 0 if ok else self.fails.get(name, 0) + 1
+
+
+def load_prices(fetcher, ticker: str, breaker: "SourceBreaker | None" = None) -> list[tuple[str, float]]:
+    """Daily closes, oldest first. Stooq first, Yahoo as fallback. One quick try per source."""
+    breaker = breaker or SourceBreaker()
+    if not breaker.open("stooq"):
+        try:
+            txt = fetcher.get(STOOQ_URL.format(sym=stooq_symbol(ticker)), retries=1, timeout=12).decode("utf-8", "replace")
+            rows = []
+            for line in txt.strip().splitlines()[1:]:
+                parts = line.split(",")
+                if len(parts) >= 5 and parts[4] not in ("", "null"):
+                    rows.append((parts[0], float(parts[4])))
+            if len(rows) > 5:
+                breaker.record("stooq", True)
+                return rows[-260:]
+            breaker.record("stooq", False)
+        except (FetchError, ValueError):
+            breaker.record("stooq", False)
+    if not breaker.open("yahoo"):
+        try:
+            js = json.loads(fetcher.get(YAHOO_URL.format(sym=ticker.replace(".", "-")), retries=1, timeout=12))
+            res = js["chart"]["result"][0]
+            ts = res["timestamp"]
+            closes = res["indicators"]["quote"][0]["close"]
+            rows = [(time.strftime("%Y-%m-%d", time.gmtime(t)), c) for t, c in zip(ts, closes) if c]
+            breaker.record("yahoo", bool(rows))
             return rows[-260:]
-    except (FetchError, ValueError):
-        pass
-    try:
-        js = json.loads(fetcher.get(YAHOO_URL.format(sym=ticker.replace(".", "-"))))
-        res = js["chart"]["result"][0]
-        ts = res["timestamp"]
-        closes = res["indicators"]["quote"][0]["close"]
-        rows = [(time.strftime("%Y-%m-%d", time.gmtime(t)), c) for t, c in zip(ts, closes) if c]
-        return rows[-260:]
-    except Exception:
-        return []
+        except Exception:
+            breaker.record("yahoo", False)
+    return []
 
 
 def load_form4_index(fetcher, ymd: str) -> list[tuple[int, str]]:

@@ -193,6 +193,7 @@ def render_report(data):
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Daily Cash-Compounder Scan · {esc(m['asof'])}</title><style>{CSS}</style></head><body><div class="wrap">
 <h1>Daily cash-compounder scan</h1>
+{('<div class="empty" style="margin-bottom:14px;text-align:left"><b>Prices were missing for ' + str(m['funnel'].get('price_missing',0)) + ' quality companies today</b> (price source unavailable), so they could not be screened.</div>') if m['funnel'].get('price_missing',0) > max(5, 0.2*m['funnel'].get('has_data_and_quality',1)) else ''}
 <div class="meta">As of {esc(m['asof'])} · generated {esc(m['generated'])} · research shortlist, not buy signals · <a href="explorer.html" style="color:var(--blue)">Open today's names in the reverse-DCF explorer</a></div>
 <div class="card">{funnel_svg(m['funnel'])}</div>
 
