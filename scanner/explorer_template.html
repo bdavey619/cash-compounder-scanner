@@ -199,11 +199,15 @@ function drawCompare(){
     el('text',{x:x(t),y:yy+18,'text-anchor':'middle','font-size':12,fill:css('--text-secondary')},svg,(t>0?'+':'')+Math.round(t*100)+'%'); });
   el('text',{x:R,y:yy+36,'text-anchor':'end','font-size':12,fill:css('--text-muted')},svg,'Free cash flow growth per year →');
   items.forEach((it,k)=>{ const top=pos[k];
-    if(it.head){ el('text',{x:24,y:top+headH-9,'font-size':12.5,'font-weight':700,'letter-spacing':'0.02em',fill:css('--text-secondary')},svg,it.head.toUpperCase()+'  ·  '+it.n); return; }
+    if(it.head){ const gy=top+headH-11;
+      el('rect',{x:10,y:top+4,width:980,height:headH-4,rx:6,fill:css('--surface')},svg);
+      const t=el('text',{x:24,y:gy,'font-size':10.5,'font-weight':600,'letter-spacing':'0.08em',fill:css('--text-muted')},svg);
+      el('tspan',{},t,it.head.toUpperCase()); el('tspan',{dx:8,'font-weight':400},t,String(it.n));
+      return; }
     const c=it.c, res=calc(c), y=top+rowH/2;
     const g=el('g',{style:'cursor:pointer'},svg); g.addEventListener('click',()=>{state.sel=c.id;renderDetail();document.getElementById('tabs').scrollIntoView({behavior:'smooth',block:'start'});});
     if(c.id===state.sel) el('rect',{x:10,y:top+2,width:980,height:rowH-4,rx:8,fill:css('--implied-soft'),opacity:.35},g);
-    el('text',{x:24,y:y-1,'font-size':14,'font-weight':600,fill:css('--text-primary')},g,c.name);
+    el('text',{x:24,y:y-1,'font-size':15.5,'font-weight':700,fill:css('--text-primary')},g,c.name);
     el('text',{x:24,y:y+14,'font-size':11,fill:css('--text-muted')},g,[(res.mcap/res.fcf).toFixed(0)+'x FCF'].concat((c.badges||[]).filter(b=>b.k!=='link').map(b=>b.s)).join(' · '));
     const gi=res.g, tr=res.track/100, xi=x(gi), xt=x(tr);
     el('line',{x1:Math.min(xi,xt),x2:Math.max(xi,xt),y1:y,y2:y,stroke:css('--track-soft'),'stroke-width':3,'stroke-linecap':'round'},g);
