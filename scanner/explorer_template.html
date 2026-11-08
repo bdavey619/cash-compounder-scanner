@@ -71,6 +71,21 @@ table.sens td{text-align:center;padding:8px 4px;border-radius:4px}
 .sources a{color:var(--implied)}
 .caveat{font-size:13px;color:var(--text-secondary)}
 .top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+.intro{margin:0 0 22px}
+.philo{font-size:17px;line-height:1.55;color:var(--text-primary);max-width:860px;margin:0 0 16px}
+.philo span{color:var(--text-secondary)}
+.steps{display:grid;grid-template-columns:1fr 1fr 1.1fr 1.1fr 1fr;gap:10px;align-items:stretch}
+.step{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;position:relative}
+.step .n{font-size:26px;font-weight:650;letter-spacing:-0.01em;font-variant-numeric:tabular-nums;line-height:1.1}
+.step .l{font-size:13px;font-weight:600;margin:2px 0 4px}
+.step .d{font-size:12.5px;color:var(--text-secondary);line-height:1.4}
+.step.test{border-color:var(--implied-soft);border-width:1.5px}
+.step.final{background:var(--implied);border-color:var(--implied)}.step.final .n,.step.final .l,.step.final .d{color:#fff}
+.step:not(:last-child)::after{content:"→";position:absolute;right:-9px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;background:var(--surface);line-height:1}
+.step.t1::after{content:"+"}
+.intro-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted);margin-top:8px}
+.intro-foot button{background:none;border:none;color:var(--implied);font:inherit;cursor:pointer;padding:0}
+@media (max-width:820px){.steps{grid-template-columns:1fr 1fr}.step::after{display:none}}
 .funnel{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary)}
 .funnel b{color:var(--text-primary);font-variant-numeric:tabular-nums}
 .funnel .step{border:1px solid var(--border);border-radius:999px;padding:4px 10px;background:var(--card)}
@@ -92,9 +107,9 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
 <div class="wrap">
   <div class="top">
     <div><h1>What is the price assuming?</h1>
-    <p class="asof" style="margin:0">Daily scan · __ASOF__ · educational research shortlist, not investment advice</p></div>
-    <div class="funnel" id="funnel"></div>
+    <p class="asof" style="margin:0">Daily scan · __ASOF__ · educational research, not investment advice</p></div>
   </div>
+  <section class="intro" id="intro"></section>
 
   <div class="card">
     <div class="cardhead">
@@ -334,7 +349,22 @@ function renderGroups(){ const box=document.getElementById('groups'); box.innerH
   GROUPS.forEach(([id,label])=>{const n=COMPANIES.filter(c=>c.group===id).length; const b=document.createElement('button'); b.className='tab'; b.setAttribute('aria-selected',id===state.group); b.textContent=`${label} (${n})`; b.disabled=!n; if(!n) b.style.opacity=.45;
     b.onclick=()=>{state.group=id; state.showAll=false; state.sel=(ranked()[0]||{}).id; renderDetail();}; box.appendChild(b);}); }
 function renderBadges(c){ document.getElementById('badges').innerHTML=(c.badges||[]).map(b=>b.k==='link'?`<a class="badge link" href="${b.u}">${b.t}</a>`:`<span class="badge ${b.k}">${b.t}</span>`).join(''); }
-function renderFunnel(){ const f=META.funnel||{}; const st=[['companies',f.universe],['quality',f.quality],['triggered',f.triggered],['shortlist',f.shortlist]];
+function renderIntro(){ const f=META.funnel||{}, R=META.rules||{}, m=META.market||{}; const n=x=>(x||0).toLocaleString(); const p=x=>Math.round(Math.abs(x||0)*100);
+  let hidden=false; try{hidden=localStorage.getItem('introHidden')==='1';}catch(e){}
+  const box=document.getElementById('intro');
+  if(hidden){ box.innerHTML=`<div class="intro-foot" style="margin-top:0"><span>${n(f.universe)} companies scanned → <b style="color:var(--text-primary)">${n(f.shortlist)} shortlisted</b></span><button onclick="toggleIntro(false)">How this list is built</button></div>`; return; }
+  box.innerHTML=`
+  <p class="philo">A great business is only a great investment at the right price. <span>Each trading day this scans every US-listed company for strong cash generators whose price, after a sell-off or insider buying, now assumes <i>less</i> growth than the business has actually delivered. Those are the moments when expectations may be too low.</span></p>
+  <div class="steps">
+    <div class="step"><div class="n">${n(f.universe)}</div><div class="l">Listed companies</div><div class="d">Every company filing with the SEC under a stock ticker.</div></div>
+    <div class="step"><div class="n">${n(f.quality)}</div><div class="l">Quality cash generators</div><div class="d">${p(R.MIN_FCF_MARGIN)}%+ of revenue becomes free cash flow after stock pay, positive every year, $${Math.round((R.MIN_MARKET_CAP_USD||0)/1e9)}B+ in size.</div></div>
+    <div class="step test t1"><div class="n">${n(f.triggered)}</div><div class="l">Test 1 · Something happened</div><div class="d">Fell ${p(R.DROP_THRESHOLD)}+ pts more than the S&amp;P 500 this week or ${p(R.DRAWDOWN_THRESHOLD)}+ over a month, or ${R.MIN_CLUSTER_BUYERS||2}+ insiders bought.</div></div>
+    <div class="step test"><div class="n">${n(f.modest)}</div><div class="l">Test 2 · Price assumes little</div><div class="d">Price implies ≤${p(R.MAX_IMPLIED_GROWTH)}% growth a year, at least ${p(R.GAP_THRESHOLD)} pts below its own per-share history.</div></div>
+    <div class="step final"><div class="n">${n(f.shortlist)}</div><div class="l">Shortlist</div><div class="d">Passed both tests. A starting point for research, not a buy list.</div></div>
+  </div>
+  <div class="intro-foot"><span>As of ${META.asof}${m.chg!=null?` · S&amp;P 500 ${(m.chg*100).toFixed(1)}% this week, ${(m.off_1m_high*100).toFixed(1)}% from its 1-month high`:''}</span><button onclick="toggleIntro(true)">Hide this</button></div>`; }
+function toggleIntro(h){ try{localStorage.setItem('introHidden',h?'1':'0');}catch(e){} renderIntro(); }
+function renderFunnel(){ if(!document.getElementById('funnel')) return; const f=META.funnel||{}; const st=[['companies',f.universe],['quality',f.quality],['triggered',f.triggered],['shortlist',f.shortlist]];
   document.getElementById('funnel').innerHTML=st.map(([l,n],i)=>`<span class="step${i===3?' hl':''}"><b>${(n||0).toLocaleString()}</b> ${l}</span>`).join('<span>→</span>'); }
 function renderDetail(){ renderGroups(); renderTabs(); const c=COMPANIES.find(c=>c.id===state.sel); if(!c){drawCompare(); ['tiles','verdict','inputs','badges','sens'].forEach(id=>document.getElementById(id).innerHTML=''); document.getElementById('path').innerHTML=''; return;} renderInputs(c); renderBadges(c); update(); }
 function update(){ const c=COMPANIES.find(c=>c.id===state.sel); if(!c) return;
@@ -342,7 +372,7 @@ function update(){ const c=COMPANIES.find(c=>c.id===state.sel); if(!c) return;
   drawCompare(); renderTiles(c); drawPath(c); drawSens(c); }
 document.getElementById('r').oninput=e=>{state.r=e.target.value/100;update();};
 document.getElementById('gt').oninput=e=>{state.gt=e.target.value/100;update();};
-renderFunnel(); drawFlow(); renderDetail();
+renderIntro(); renderFunnel(); drawFlow(); renderDetail();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawFlow();update();});
 </script>
 </body>

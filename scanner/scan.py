@@ -91,7 +91,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     mkt_dd = mkt["off_1m_high"] if mkt else 0.0
     log(f"market (SPY): {C.DROP_LOOKBACK_DAYS}-day change {mkt_chg*100:+.1f}%, {mkt_dd*100:+.1f}% from its 1-month high"
         if mkt else "market: SPY unavailable, using absolute moves")
-    meta_market = {"chg": mkt_chg, "off_1m_high": mkt_dd}
+    meta_market = {"chg": mkt_chg, "off_1m_high": mkt_dd} if mkt else {}
     missing = sum(1 for v in closes_by.values() if not v)
     log(f"prices: {len(quality) - missing} ok, {missing} missing; source failures: {breaker.fails}")
     funnel["price_missing"] = missing
@@ -167,6 +167,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     triggered_only = sorted([c for c in priced if c["triggered"] and not c["flag_gap"]], key=lambda c: c["chg"])
     gap_only = sorted([c for c in priced if c["flag_gap"] and not c["triggered"]], key=lambda c: c["gap"])
     funnel["triggered"] = sum(1 for c in priced if c["triggered"])
+    funnel["modest"] = sum(1 for c in priced if c["flag_gap"])
     funnel["shortlist"] = len(shortlist)
 
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
@@ -307,7 +308,11 @@ def render_explorer(data, per_group=25) -> str:
                 continue
             seen.add(r["ticker"])
             cos.append(explorer_company(r, gname))
-    meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"]}
+    cfg = data["meta"]["config"]
+    meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"],
+            "market": data["meta"].get("market", {}),
+            "rules": {k: cfg[k] for k in ("MIN_FCF_MARGIN", "MIN_MARKET_CAP_USD", "DROP_THRESHOLD", "DRAWDOWN_THRESHOLD",
+                                          "MIN_CLUSTER_BUYERS", "MAX_IMPLIED_GROWTH", "GAP_THRESHOLD", "REQUIRED_RETURN")}}
     tpl = (Path(__file__).parent / "explorer_template.html").read_text()
     return (tpl.replace("__COMPANIES_JSON__", json.dumps(cos))
                .replace("__META_JSON__", json.dumps(meta))
