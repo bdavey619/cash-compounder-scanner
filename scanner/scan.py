@@ -105,7 +105,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
 
     # 4. Insider cluster buys among quality names
     by_cik = {c["cik"]: c for c in priced}
-    insider = defaultdict(lambda: {"buyers": {}, "value": 0.0, "filings": set()})
+    insider = defaultdict(lambda: {"buyers": {}, "by_buyer": defaultdict(float), "value": 0.0, "filings": set()})
     for ymd in business_days_back(asof, C.INSIDER_LOOKBACK_DAYS):
         idx = load_form4_index(fetcher, ymd)
         log(f"  form 4 index {ymd}: {len(idx)} lines, {sum(1 for c, _ in idx if c in by_cik)} for quality names")
@@ -118,14 +118,17 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
                 continue
             rec = insider[cik]
             rec["filings"].add(path)
+            v = sum(b["value"] for b in parsed["buys"])
             for o in parsed["owners"]:
                 rec["buyers"][o["name"]] = o["role"]
-            rec["value"] += sum(b["value"] for b in parsed["buys"])
+                rec["by_buyer"][o["name"]] += v / max(1, len(parsed["owners"]))
+            rec["value"] += v
 
     # 5. Flags and shortlist
     for c in priced:
         ins = insider.get(c["cik"])
-        c["insider_buyers"] = sorted(ins["buyers"].items()) if ins else []
+        c["insider_buyers"] = sorted((n, r) for n, r in ins["buyers"].items()
+                                     if ins["by_buyer"][n] >= C.MIN_BUY_VALUE_USD) if ins else []
         c["insider_value"] = ins["value"] if ins else 0.0
         c["flag_drop"] = c["chg"] <= C.DROP_THRESHOLD
         c["flag_cluster"] = len(c["insider_buyers"]) >= C.MIN_CLUSTER_BUYERS
@@ -142,7 +145,29 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel}
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
     log(f"shortlist: {len(shortlist)}  -> {out_dir/'report.html'}")
+    log(f"triggers: {sum(c['flag_drop'] for c in priced)} sharp drops, {sum(c['flag_cluster'] for c in priced)} insider clusters; "
+        f"{sum(c['flag_gap'] for c in priced)} of {len(priced)} cheap vs track record")
+    for c in shortlist[:60]:
+        log(f"  {c['ticker']:<6} 5d {c['chg']*100:+6.1f}%  insiders {len(c['insider_buyers'])}  "
+            f"implied {c['implied_g']*100:5.1f}%  track {c['fcf_cagr']*100:5.1f}%  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
+    write_step_summary(meta, shortlist)
     return meta, shortlist
+
+
+def write_step_summary(meta, shortlist):
+    """A table on the GitHub Actions run page, readable without downloading anything."""
+    import os
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    f = meta["funnel"]
+    lines = [f"## Daily scan · {meta['asof']}", "",
+             f"{f.get('universe',0):,} companies → {f.get('quality',0):,} quality → {f.get('triggered',0):,} triggered → **{f.get('shortlist',0):,} shortlist**", "",
+             "| Ticker | 5-day | Insiders | Implied growth | Track record | P/FCF |", "|---|---:|---:|---:|---:|---:|"]
+    for c in shortlist[:40]:
+        lines.append(f"| {c['ticker']} | {c['chg']*100:+.1f}% | {len(c['insider_buyers']) or '–'} | {c['implied_g']*100:.1f}% | {c['fcf_cagr']*100:.1f}% | {c['p_fcf']:.0f}x |")
+    with open(path, "a") as fh:
+        fh.write("\n".join(lines) + "\n")
 
 
 def quality_fail_reasons(fu) -> list[str]:

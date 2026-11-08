@@ -12,6 +12,7 @@ DROP_LOOKBACK_DAYS = 5           # trading days
 DROP_THRESHOLD = -0.10           # price change over the lookback that counts as a sharp drop
 INSIDER_LOOKBACK_DAYS = 7        # calendar days of Form 4 filings to scan
 MIN_CLUSTER_BUYERS = 2           # distinct insiders making open-market purchases (code "P")
+MIN_BUY_VALUE_USD = 25_000       # ignore token purchases (dividend reinvestment, small plan buys)
 
 # --- Reverse DCF ---
 REQUIRED_RETURN = 0.09
