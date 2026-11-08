@@ -101,10 +101,14 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         if mcap < C.MIN_MARKET_CAP_USD:
             continue
         g = implied_growth(co["fcf"], mcap - co["net_cash"], C.REQUIRED_RETURN, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+        g_ttm = g
+        if co["volatile"] and co["fcf_avg3"] > 0:
+            # cyclicals are judged on a 3-year average, not one boom (or bust) year
+            g = implied_growth(co["fcf_avg3"], mcap - co["net_cash"], C.REQUIRED_RETURN, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
         ref = reference_growth(co)
         gap = (g - ref) if (g is not None and math.isfinite(g) and ref is not None) else None
         priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "mcap": mcap, "p_fcf": mcap / co["fcf"],
-                       "implied_g": g, "ref_g": ref, "gap": gap})
+                       "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap})
     funnel["quality"] = len(priced)
     log(f"quality + priced + above market-cap floor: {len(priced)}")
 
@@ -229,6 +233,7 @@ def _row(c):
         "fcf_margin": fin(c["fcf_margin"]), "cash_roc": fin(c["cash_roc"]),
         "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]), "ref_g": fin(c["ref_g"]) if c["ref_g"] is not None else None,
         "implied_g": fin(c["implied_g"]) if c["implied_g"] is not None else None,
+        "implied_g_ttm": fin(c["implied_g_ttm"]) if c["implied_g_ttm"] is not None else None,
         "gap": fin(c["gap"]) if c["gap"] is not None else None,
         "insider_buyers": [f"{n} ({r})" for n, r in c["insider_buyers"]],
         "insider_value": round(c["insider_value"]),
@@ -294,7 +299,8 @@ def explorer_company(r, group):
     badges.append({"k": "link", "t": "Insider filings ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=4&owner=include&count=40"})
     badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
     return {
-        "id": r["ticker"].lower(), "name": r["ticker"], "group": group, "badges": badges,
+        "id": r["ticker"].lower(), "name": r["ticker"], "fullName": r["name"], "group": group, "badges": badges,
+        "defaultBase": len(bases) - 1 if r["volatile"] and r["fcf_avg3_bn"] and r["fcf_avg3_bn"] > 0 else 0,
         "sector": r["sector"], "score": r["score"], "gap": r["gap"],
         "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}" + (f" · {r['sic_desc'].title()}" if r["sic_desc"] else ""),
         "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",

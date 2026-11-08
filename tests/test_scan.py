@@ -56,6 +56,12 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(a["fcf_period_end"], "2026-09-30")
         self.assertAlmostEqual(a["fcf_bn"], 1.70 * 1.06, places=2)  # FY25 + 0.81 YTD - 0.75 YTD
 
+    def test_cyclical_judged_on_average(self):
+        rows = {r["ticker"]: r for r in self.data["all_quality"]}
+        d = rows["SMPD"]
+        self.assertTrue(d["volatile"])
+        self.assertGreater(d["implied_g"], -0.02)  # on its lower 3-yr average FCF the price looks less cheap
+
     def test_explorer_written(self):
         html = (self.tmp / "out/explorer.html").read_text()
         self.assertNotIn("__COMPANIES_JSON__", html)
