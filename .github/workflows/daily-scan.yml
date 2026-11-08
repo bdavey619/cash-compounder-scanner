@@ -1,0 +1,69 @@
+name: Daily cash-compounder scan
+
+on:
+  schedule:
+    # Weekdays at 23:17 UTC (3:17 pm Pacific in winter), after the US close
+    - cron: "17 23 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Slim SEC company facts; the bulk archive is re-downloaded when older than a day
+      - name: Restore fundamentals cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/companyfacts
+          key: companyfacts-${{ github.run_id }}
+          restore-keys: companyfacts-
+
+      - name: Self-test on sample data
+        run: python -m unittest discover tests
+
+      - name: Run scan
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python -m scanner.scan --out site
+
+      - name: Keep a dated copy
+        run: |
+          mkdir -p site/archive
+          cp site/report.html "site/archive/$(date -u +%F).html"
+          cp site/report.html site/index.html
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scan-${{ github.run_id }}
+          path: site
+          retention-days: 30
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publish:
+    needs: scan
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

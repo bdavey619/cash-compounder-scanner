@@ -1,0 +1,6 @@
+out/
+site/
+fixtures/
+.cache/
+__pycache__/
+*.png
