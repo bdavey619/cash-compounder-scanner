@@ -18,6 +18,7 @@ from pathlib import Path
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 SEC_FACTS_BULK_URL = "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip"
+SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 SEC_DAILY_INDEX_URL = "https://www.sec.gov/Archives/edgar/daily-index/{y}/QTR{q}/form.{ymd}.idx"
 SEC_ARCHIVE_URL = "https://www.sec.gov/Archives/{path}"
 STOOQ_URL = "https://stooq.com/q/d/l/?s={sym}.us&i=d"
@@ -103,6 +104,9 @@ class FixtureFetcher:
         m = re.search(r"companyfacts/(CIK\d{10})\.json", url)
         if m:
             return self.root / "companyfacts" / f"{m.group(1)}.json"
+        m = re.search(r"submissions/(CIK\d{10})\.json", url)
+        if m:
+            return self.root / "submissions" / f"{m.group(1)}.json"
         m = re.search(r"daily-index/\d{4}/QTR\d/(form\.\d{8}\.idx)", url)
         if m:
             return self.root / "daily-index" / m.group(1)
@@ -263,6 +267,39 @@ def load_prices(fetcher, ticker: str, breaker: "SourceBreaker | None" = None) ->
         except Exception:
             breaker.record("yahoo", False)
     return []
+
+
+def load_sic(fetcher, cik: int) -> tuple[int | None, str]:
+    """SEC industry code and description for one company."""
+    try:
+        js = json.loads(fetcher.get(SEC_SUBMISSIONS_URL.format(cik=cik)))
+        return (int(js["sic"]) if js.get("sic") else None), js.get("sicDescription") or ""
+    except (FetchError, ValueError, KeyError):
+        return None, ""
+
+
+SECTORS = [  # (label, SIC ranges)
+    ("Software & internet", [(7370, 7379)]),
+    ("Semiconductors & hardware", [(3570, 3579), (3660, 3699), (3810, 3829)]),
+    ("Energy", [(1300, 1399), (2900, 2999), (4920, 4925), (4610, 4619)]),
+    ("Industrials", [(1500, 1799), (3400, 3569), (3580, 3659), (3700, 3809), (4000, 4599), (8700, 8748)]),
+    ("Healthcare", [(2830, 2836), (3840, 3851), (8000, 8099)]),
+    ("Financials & insurance", [(6000, 6799)]),
+    ("Consumer", [(2000, 2399), (5000, 5999), (7000, 7299), (7800, 7999)]),
+    ("Media & telecom", [(2700, 2799), (4800, 4899)]),
+    ("Education & services", [(8200, 8299), (7300, 7369), (7380, 7399), (8100, 8199), (8300, 8699), (8900, 8999)]),
+    ("Materials & chemicals", [(1000, 1499), (2400, 2829), (2840, 2899), (3000, 3399)]),
+    ("Utilities", [(4900, 4919), (4926, 4999)]),
+]
+
+
+def sector_for(sic: int | None) -> str:
+    if sic is None:
+        return "Other"
+    for label, ranges in SECTORS:
+        if any(lo <= sic <= hi for lo, hi in ranges):
+            return label
+    return "Other"
 
 
 def load_form4_index(fetcher, ymd: str) -> list[tuple[int, str]]:

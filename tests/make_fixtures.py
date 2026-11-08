@@ -125,7 +125,7 @@ def form4_xml(issuer_cik, ticker, issuer_name, owner, role, code, day, shares, p
 
 def main(root):
     root = Path(root)
-    for sub in ("companyfacts", "prices", "daily-index", "archives"):
+    for sub in ("companyfacts", "prices", "daily-index", "archives", "submissions"):
         (root / sub).mkdir(parents=True, exist_ok=True)
     tickers = {}
     idx_lines = {}
@@ -136,6 +136,8 @@ def main(root):
         shares = mcap / price
         (root / "companyfacts" / f"CIK{cik:010d}.json").write_text(json.dumps(company_facts(cik, name, fcfs, margin, cap_bn, net, shares)))
         (root / "prices" / f"{tk.lower()}.csv").write_text(prices(price, move, cik))
+        sic = [7372, 7389, 3674, 7370, 5331, 2834, 4841, 3423][n]
+        (root / "submissions" / f"CIK{cik:010d}.json").write_text(json.dumps({"cik": str(cik), "sic": str(sic), "sicDescription": "Sample industry"}))
         for j, (owner, role, code) in enumerate(buyers):
             day = ASOF - timedelta(days=j + 1 if (ASOF - timedelta(days=j + 1)).weekday() < 5 else j + 3)
             ymd = day.strftime("%Y%m%d")

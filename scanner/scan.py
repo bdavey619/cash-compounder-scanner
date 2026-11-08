@@ -24,7 +24,7 @@ from .analysis import fundamentals, implied_growth, parse_form4, price_stats
 from .report import render_report
 from .sources import (FetchError, FixtureFetcher, LiveFetcher, env_user_agent,
                       load_company_facts, load_filing_text, load_form4_index,
-                      load_prices, load_tickers, refresh_facts_bulk, SourceBreaker)
+                      load_prices, load_tickers, refresh_facts_bulk, SourceBreaker, load_sic, sector_for)
 
 
 def log(*a):
@@ -144,6 +144,12 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     shortlist = sorted([c for c in priced if c["triggered"] and c["flag_gap"]], key=lambda c: -c["score"])
     triggered_only = sorted([c for c in priced if c["triggered"] and not c["flag_gap"]], key=lambda c: c["chg"])
     gap_only = sorted([c for c in priced if c["flag_gap"] and not c["triggered"]], key=lambda c: c["gap"])
+    # industry labels, only for the names that will be shown
+    for c in priced:
+        c["sector"], c["sic_desc"] = "Other", ""
+    for c in shortlist[:25] + gap_only[:25] + triggered_only[:25]:
+        sic, desc = load_sic(fetcher, c["cik"])
+        c["sector"], c["sic_desc"] = sector_for(sic), desc
     funnel["triggered"] = sum(1 for c in priced if c["triggered"])
     funnel["shortlist"] = len(shortlist)
 
@@ -213,6 +219,7 @@ def _row(c):
     fin = lambda x: (round(x, 4) if isinstance(x, float) and math.isfinite(x) else None)
     return {
         "ticker": c["ticker"], "name": c["name"], "cik": c["cik"],
+        "sector": c.get("sector", "Other"), "sic_desc": c.get("sic_desc", ""),
         "price": round(c["last"], 2), "price_date": c["last_date"],
         "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]), "off_52w_high": fin(c["off_high"]),
         "mcap_bn": round(c["mcap"] / 1e9, 2), "fcf_bn": round(c["fcf"] / 1e9, 3),
@@ -288,7 +295,8 @@ def explorer_company(r, group):
     badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
     return {
         "id": r["ticker"].lower(), "name": r["ticker"], "group": group, "badges": badges,
-        "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}",
+        "sector": r["sector"], "score": r["score"], "gap": r["gap"],
+        "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}" + (f" · {r['sic_desc'].title()}" if r["sic_desc"] else ""),
         "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",
         "bases": bases,
         "track": round((r["ref_g"] or 0) * 100, 1),
