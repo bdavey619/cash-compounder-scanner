@@ -273,13 +273,26 @@ def load_prices(fetcher, ticker: str, breaker: "SourceBreaker | None" = None) ->
     return []
 
 
-def load_sic(fetcher, cik: int) -> tuple[int | None, str]:
-    """SEC industry code and description for one company."""
+def load_submissions(fetcher, cik: int) -> dict:
+    """Industry code plus the dates the company reported earnings (8-K with Item 2.02,
+    'Results of Operations and Financial Condition') from SEC's submissions API."""
+    out = {"sic": None, "sic_desc": "", "earnings_dates": []}
     try:
         js = json.loads(fetcher.get(SEC_SUBMISSIONS_URL.format(cik=cik)))
-        return (int(js["sic"]) if js.get("sic") else None), js.get("sicDescription") or ""
-    except (FetchError, ValueError, KeyError):
-        return None, ""
+    except (FetchError, ValueError):
+        return out
+    out["sic"] = int(js["sic"]) if js.get("sic") else None
+    out["sic_desc"] = js.get("sicDescription") or ""
+    rec = js.get("filings", {}).get("recent", {})
+    for form, filed, items in zip(rec.get("form", []), rec.get("filingDate", []), rec.get("items", [])):
+        if form in ("8-K", "8-K/A") and "2.02" in (items or ""):
+            out["earnings_dates"].append(filed)
+    return out
+
+
+def load_sic(fetcher, cik: int) -> tuple[int | None, str]:
+    s = load_submissions(fetcher, cik)
+    return s["sic"], s["sic_desc"]
 
 
 SECTORS = [  # (label, SIC ranges)

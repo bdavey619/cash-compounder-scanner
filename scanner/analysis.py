@@ -215,15 +215,20 @@ def implied_growth(fcf, target_value, r, gt, n):
 
 # ------------------------------------------------------------- prices
 
-def price_stats(closes: list[tuple[str, float]], lookback: int) -> dict | None:
+def price_stats(closes: list[tuple[str, float]], lookback: int, month: int = 21) -> dict | None:
     if len(closes) <= lookback:
         return None
     last = closes[-1][1]
     prior = closes[-1 - lookback][1]
     hi52 = max(c for _, c in closes)
+    window = closes[-month - 1:]
+    hi_date, hi_1m = max(window, key=lambda dc: dc[1])
     return {
         "last": last, "last_date": closes[-1][0],
         "chg": last / prior - 1,
+        "chg_start_date": closes[-1 - lookback][0],
+        "off_1m_high": last / hi_1m - 1,
+        "high_1m_date": hi_date,
         "off_high": last / hi52 - 1,
         "spark": [round(c, 4) for _, c in closes[-90:]],
     }

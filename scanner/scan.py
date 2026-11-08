@@ -24,7 +24,7 @@ from .analysis import fundamentals, implied_growth, parse_form4, price_stats
 from .report import render_report
 from .sources import (FetchError, FixtureFetcher, LiveFetcher, env_user_agent,
                       load_company_facts, load_filing_text, load_form4_index,
-                      load_prices, load_tickers, refresh_facts_bulk, SourceBreaker, load_sic, sector_for)
+                      load_prices, load_tickers, refresh_facts_bulk, SourceBreaker, load_submissions, sector_for)
 
 
 def log(*a):
@@ -86,15 +86,18 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             closes_by[futures[fut]["ticker"]] = fut.result()
             if k % 100 == 0:
                 log(f"  prices {k}/{len(quality)}")
-    mkt = price_stats(load_prices(fetcher, "SPY", breaker), C.DROP_LOOKBACK_DAYS) if C.DROP_RELATIVE_TO_MARKET else None
+    mkt = price_stats(load_prices(fetcher, "SPY", breaker), C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS) if C.DROP_RELATIVE_TO_MARKET else None
     mkt_chg = mkt["chg"] if mkt else 0.0
-    log(f"market (SPY) {C.DROP_LOOKBACK_DAYS}-day change: {mkt_chg*100:+.1f}%" if mkt else "market: SPY unavailable, using absolute drops")
+    mkt_dd = mkt["off_1m_high"] if mkt else 0.0
+    log(f"market (SPY): {C.DROP_LOOKBACK_DAYS}-day change {mkt_chg*100:+.1f}%, {mkt_dd*100:+.1f}% from its 1-month high"
+        if mkt else "market: SPY unavailable, using absolute moves")
+    meta_market = {"chg": mkt_chg, "off_1m_high": mkt_dd}
     missing = sum(1 for v in closes_by.values() if not v)
     log(f"prices: {len(quality) - missing} ok, {missing} missing; source failures: {breaker.fails}")
     funnel["price_missing"] = missing
     for co in quality:
         closes = closes_by.get(co["ticker"], [])
-        ps = price_stats(closes, C.DROP_LOOKBACK_DAYS)
+        ps = price_stats(closes, C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS)
         if not ps or not co.get("shares"):
             continue
         mcap = ps["last"] * co["shares"]
@@ -109,7 +112,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             g = implied_growth(co["fcf_avg3"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
         ref = reference_growth(co)
         gap = (g - ref) if (g is not None and math.isfinite(g) and ref is not None) else None
-        priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "mcap": mcap, "p_fcf": mcap / co["fcf"],
+        priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap, "p_fcf": mcap / co["fcf"],
                        "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
                        "risk_premium": prem, "risk_why": why, "required_return": r})
     funnel["quality"] = len(priced)
@@ -136,38 +139,46 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
                 rec["by_buyer"][o["name"]] += v / max(1, len(parsed["owners"]))
             rec["value"] += v
 
-    # 5. Flags and shortlist
+    # 5. Industry codes and earnings dates (SEC submissions API, one call per quality name)
+    for c in priced:
+        sub = load_submissions(fetcher, c["cik"])
+        c["sector"], c["sic_desc"] = sector_for(sub["sic"]), sub["sic_desc"]
+        c["earnings_dates"] = sub["earnings_dates"]
+
+    # 6. Flags and shortlist
     for c in priced:
         ins = insider.get(c["cik"])
         c["insider_buyers"] = sorted((n, r) for n, r in ins["buyers"].items()
                                      if ins["by_buyer"][n] >= C.MIN_BUY_VALUE_USD) if ins else []
         c["insider_value"] = ins["value"] if ins else 0.0
         c["flag_drop"] = c["rel_chg"] <= C.DROP_THRESHOLD
+        c["flag_drawdown"] = c["rel_dd"] <= C.DRAWDOWN_THRESHOLD
+        # Did it fall on its own earnings report, or with the market?
+        since = min([c["chg_start_date"]] + ([c["high_1m_date"]] if c["flag_drawdown"] else []))
+        hits = sorted(d for d in c["earnings_dates"] if d >= since)
+        c["earnings_in_window"] = hits[-1] if hits else None
         c["flag_cluster"] = len(c["insider_buyers"]) >= C.MIN_CLUSTER_BUYERS
         c["flag_gap"] = (c["gap"] is not None and c["gap"] <= C.GAP_THRESHOLD
                          and c["implied_g"] <= C.MAX_IMPLIED_GROWTH)
-        c["triggered"] = c["flag_drop"] or c["flag_cluster"]
+        c["price_trigger"] = c["flag_drop"] or c["flag_drawdown"]
+        c["triggered"] = c["price_trigger"] or c["flag_cluster"]
         c["score"] = score(c)
     shortlist = sorted([c for c in priced if c["triggered"] and c["flag_gap"]], key=lambda c: -c["score"])
     triggered_only = sorted([c for c in priced if c["triggered"] and not c["flag_gap"]], key=lambda c: c["chg"])
     gap_only = sorted([c for c in priced if c["flag_gap"] and not c["triggered"]], key=lambda c: c["gap"])
-    # industry labels, only for the names that will be shown
-    for c in priced:
-        c["sector"], c["sic_desc"] = "Other", ""
-    for c in shortlist[:25] + gap_only[:25] + triggered_only[:25]:
-        sic, desc = load_sic(fetcher, c["cik"])
-        c["sector"], c["sic_desc"] = sector_for(sic), desc
     funnel["triggered"] = sum(1 for c in priced if c["triggered"])
     funnel["shortlist"] = len(shortlist)
 
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-            "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel}
+            "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market}
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
     log(f"shortlist: {len(shortlist)}  -> {out_dir/'report.html'}")
-    log(f"triggers: {sum(c['flag_drop'] for c in priced)} sharp drops, {sum(c['flag_cluster'] for c in priced)} insider clusters; "
+    log(f"triggers: {sum(c['flag_drop'] for c in priced)} sharp drops, {sum(c['flag_drawdown'] for c in priced)} 1-month drawdowns "
+        f"({sum(1 for c in priced if c['price_trigger'] and c['earnings_in_window'])} on their own earnings), {sum(c['flag_cluster'] for c in priced)} insider clusters; "
         f"{sum(c['flag_gap'] for c in priced)} of {len(priced)} with modest expectations vs reference growth")
     for c in shortlist[:60]:
         log(f"  {c['ticker']:<6} 5d {c['chg']*100:+6.1f}%  insiders {len(c['insider_buyers'])}  "
+            f"1m {c['off_1m_high']*100:+6.1f}%  {('EARNINGS ' + c['earnings_in_window'] if c['earnings_in_window'] else 'with market') if c['price_trigger'] else 'no price drop'}  "
             f"implied {c['implied_g']*100:5.1f}%  ref {c['ref_g']*100:5.1f}%  r {c['required_return']*100:.1f}%  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
     write_step_summary(meta, shortlist)
     return meta, shortlist
@@ -231,7 +242,7 @@ def score(c) -> float:
     s = 0.0
     if c["gap"] is not None and math.isfinite(c["gap"]):
         s += max(0.0, -c["gap"]) * 100
-    s += max(0.0, -c["rel_chg"]) * 50
+    s += max(0.0, -c["rel_chg"], -c["rel_dd"]) * 50
     s += 3 * len(c["insider_buyers"])
     return round(s, 2)
 
@@ -242,7 +253,9 @@ def _row(c):
         "ticker": c["ticker"], "name": c["name"], "cik": c["cik"],
         "sector": c.get("sector", "Other"), "sic_desc": c.get("sic_desc", ""),
         "price": round(c["last"], 2), "price_date": c["last_date"],
-        "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]), "off_52w_high": fin(c["off_high"]),
+        "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]),
+        "off_1m_high": fin(c["off_1m_high"]), "rel_dd": fin(c["rel_dd"]), "high_1m_date": c["high_1m_date"],
+        "flag_drawdown": c["flag_drawdown"], "earnings_in_window": c["earnings_in_window"], "off_52w_high": fin(c["off_high"]),
         "mcap_bn": round(c["mcap"] / 1e9, 2), "fcf_bn": round(c["fcf"] / 1e9, 3),
         "fy_end": c["fy_end"], "fcf_basis": c["fcf_basis"], "fcf_period_end": c["fcf_period_end"],
         "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3), "fcf_avg3_bn": round(c["fcf_avg3"] / 1e9, 3), "volatile": c["volatile"],
@@ -309,8 +322,16 @@ def explorer_company(r, group):
         bases.append({"label": "3-year average (smooths the cycle)", "fcf": r["fcf_avg3_bn"]})
     badges = []
     if r["flag_drop"]:
-        badges.append({"k": "drop", "t": f"Down {abs(r['chg_5d'])*100:.0f}% in 5 days ({r['rel_chg_5d']*100:+.0f}% vs. S&P 500)",
-                       "s": f"▼{abs(r['chg_5d'])*100:.0f}%"})
+        badges.append({"k": "drop", "t": f"Down {abs(r['chg_5d'])*100:.0f}% in 5 days ({r['rel_chg_5d']*100:+.0f} pts vs. S&P 500)",
+                       "s": f"▼{abs(r['chg_5d'])*100:.0f}% wk"})
+    if r["flag_drawdown"]:
+        badges.append({"k": "drop", "t": f"{abs(r['off_1m_high'])*100:.0f}% below its 1-month high of {r['high_1m_date']} ({r['rel_dd']*100:+.0f} pts vs. S&P 500)",
+                       "s": f"▼{abs(r['off_1m_high'])*100:.0f}% mo"})
+    if r["flag_drop"] or r["flag_drawdown"]:
+        if r["earnings_in_window"]:
+            badges.append({"k": "earn", "t": f"Fell on its own earnings: results filed {r['earnings_in_window']} (8-K Item 2.02)", "s": "on earnings"})
+        else:
+            badges.append({"k": "mkt", "t": "Fell with the market: no earnings report in the window", "s": "with market"})
     if r["flag_cluster"]:
         badges.append({"k": "ins", "t": f"{len(r['insider_buyers'])} insiders bought ${r['insider_value']/1e6:,.1f}M: " + "; ".join(r["insider_buyers"]),
                        "s": f"{len(r['insider_buyers'])} insiders"})

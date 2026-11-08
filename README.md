@@ -80,7 +80,11 @@ counts.
   evidence the screen beats the market. Treat the output as a research list.
 - Raw FCF growth is too noisy on its own: a rebound from a depressed base (memory chips, energy) made almost every
   price look cheap in the first live run. The shortlist also requires the price to imply 10%/yr or less.
-- **Sharp drops** are measured against the S&P 500 (SPY), so a market-wide sell-off doesn't flag everything.
+- **Sharp drops** are measured against the S&P 500 (SPY), so a market-wide sell-off doesn't flag everything. Two
+  windows: down 10+ points more than the market over 5 trading days, or 15+ points more from its 1-month high.
+- **Earnings check:** each price drop is tagged *fell on its own earnings* (an 8-K with Item 2.02 was filed in the
+  window, from SEC's submissions API) or *fell with the market*. The page can hide the earnings-driven ones, which
+  leaves the collateral-damage names a sell-off tends to create.
 - **Banks and insurers** don't fit a free-cash-flow screen and will mostly fail or mislead.
 - Companies with **several share classes** may be missing a share count and drop out.
 - Stooq and Yahoo are unofficial price sources and can rate-limit or change format.

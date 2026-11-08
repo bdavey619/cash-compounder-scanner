@@ -81,6 +81,19 @@ class TestEndToEnd(unittest.TestCase):
         self.assertAlmostEqual(rows["SMPD"]["required_return"], 0.105, places=4)  # cyclical
         self.assertAlmostEqual(rows["SMPA"]["required_return"], 0.09, places=4)
 
+    def test_earnings_vs_market(self):
+        rows = {r["ticker"]: r for r in self.data["all_quality"]}
+        self.assertEqual(rows["SMPA"]["earnings_in_window"], "2026-11-04")  # 8-K Item 2.02 during the drop
+        self.assertIsNone(rows["SMPC"]["earnings_in_window"])               # only an older 8-K
+        html = (self.tmp / "out/explorer.html").read_text()
+        self.assertIn("Fell on its own earnings", html)
+        self.assertIn("Fell with the market", html)
+
+    def test_drawdown_fields(self):
+        a = {r["ticker"]: r for r in self.data["all_quality"]}["SMPA"]
+        self.assertLess(a["off_1m_high"], -0.10)
+        self.assertIn("flag_drawdown", a)
+
     def test_explorer_written(self):
         html = (self.tmp / "out/explorer.html").read_text()
         self.assertNotIn("__COMPANIES_JSON__", html)

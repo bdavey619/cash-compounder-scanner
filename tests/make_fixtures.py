@@ -149,7 +149,12 @@ def main(root):
         (root / "companyfacts" / f"CIK{cik:010d}.json").write_text(json.dumps(company_facts(cik, name, fcfs, margin, cap_bn, net, shares)))
         (root / "prices" / f"{tk.lower()}.csv").write_text(prices(price, move, cik))
         sic = [7372, 7389, 3674, 7370, 5331, 2834, 4841, 3423][n]
-        (root / "submissions" / f"CIK{cik:010d}.json").write_text(json.dumps({"cik": str(cik), "sic": str(sic), "sicDescription": "Sample industry"}))
+        filings = {"form": ["10-Q", "8-K", "8-K", "4"], "filingDate": ["2026-10-30", "2026-08-05", "2026-07-01", "2026-10-01"],
+                   "items": ["", "2.02,9.01", "5.02", ""]}
+        if tk == "SMPA":  # reported results inside the drop window
+            filings = {k: [v] + filings[k] for k, v in (("form", "8-K"), ("filingDate", "2026-11-04"), ("items", "2.02,9.01"))}
+        (root / "submissions" / f"CIK{cik:010d}.json").write_text(json.dumps(
+            {"cik": str(cik), "sic": str(sic), "sicDescription": "Sample industry", "filings": {"recent": filings}}))
         for j, (owner, role, code) in enumerate(buyers):
             day = ASOF - timedelta(days=j + 1 if (ASOF - timedelta(days=j + 1)).weekday() < 5 else j + 3)
             ymd = day.strftime("%Y%m%d")
