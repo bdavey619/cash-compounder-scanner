@@ -137,8 +137,11 @@ def form4_xml(issuer_cik, ticker, issuer_name, owner, role, code, day, shares, p
 
 def main(root):
     root = Path(root)
-    for sub in ("companyfacts", "prices", "daily-index", "archives", "submissions"):
+    for sub in ("companyfacts", "prices", "daily-index", "archives", "submissions", "rates"):
         (root / sub).mkdir(parents=True, exist_ok=True)
+    # 10-year Treasury yield, FRED's CSV format ("." = no data that day)
+    (root / "rates" / "DGS10.csv").write_text("observation_date,DGS10\n2026-11-04,4.90\n2026-11-05,4.84\n2026-11-06,.\n")
+    (root / "prices" / "spy.csv").write_text(prices(600.0, 0.0, 42))  # the S&P 500, roughly flat this week
     tickers = {}
     idx_lines = {}
     for n, (tk, name, cik, fcfs, margin, cap_bn, mult, move, buyers, net) in enumerate(COMPANIES):

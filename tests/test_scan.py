@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 
 from scanner.analysis import implied_growth, dcf_value
@@ -26,7 +27,8 @@ class TestEndToEnd(unittest.TestCase):
         cls.tmp = Path(tempfile.mkdtemp())
         subprocess.run([sys.executable, str(ROOT / "tests/make_fixtures.py"), str(cls.tmp / "fx")], check=True, cwd=ROOT)
         subprocess.run([sys.executable, "-m", "scanner.scan", "--fixtures", str(cls.tmp / "fx"),
-                        "--asof", "2026-11-06", "--out", str(cls.tmp / "out")], check=True, cwd=ROOT)
+                        "--asof", "2026-11-06", "--out", str(cls.tmp / "out"),
+                        "--ledger", str(cls.tmp / "ledger.json")], check=True, cwd=ROOT)
         cls.data = json.loads((cls.tmp / "out/results.json").read_text())
 
     def tickers(self, key):
@@ -78,8 +80,8 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_risk_premium(self):
         rows = {r["ticker"]: r for r in self.data["all_quality"]}
-        self.assertAlmostEqual(rows["SMPD"]["required_return"], 0.105, places=4)  # cyclical
-        self.assertAlmostEqual(rows["SMPA"]["required_return"], 0.09, places=4)
+        self.assertAlmostEqual(rows["SMPD"]["required_return"], 0.0884 + 0.015, places=4)  # 10-yr 4.84% + 4% + cyclical
+        self.assertAlmostEqual(rows["SMPA"]["required_return"], 0.0884, places=4)
 
     def test_earnings_vs_market(self):
         rows = {r["ticker"]: r for r in self.data["all_quality"]}
@@ -99,14 +101,23 @@ class TestEndToEnd(unittest.TestCase):
         self.assertNotIn("__COMPANIES_JSON__", html)
         self.assertIn('"id": "smpb"', html)
 
+    def test_hurdle_from_treasury(self):
+        r = self.data["meta"]["rates"]
+        self.assertAlmostEqual(r["rf"], 0.0484)          # latest non-blank FRED value
+        self.assertAlmostEqual(r["base"], 0.0884)        # + 4% premium
+        self.assertEqual(r["rf_source"], "FRED DGS10")
+
+    def test_ledger_logs_todays_flags(self):
+        led = json.loads((self.tmp / "ledger.json").read_text())
+        got = {(e["ticker"], e["group"]) for e in led["entries"]}
+        self.assertEqual(got, {("SMPB", "shortlist"), ("SMPD", "watchlist"), ("SMPA", "triggered"), ("SMPC", "triggered")})
+        self.assertTrue((self.tmp / "out/track/track_record.csv").exists())
+        self.assertIn('"track"', (self.tmp / "out/index.html").read_text())
+
     def test_annual_filter_ignores_quarterly(self):
         rows = {r["ticker"]: r for r in self.data["all_quality"]}
         self.assertLess(rows["SMPA"]["fy_fcf_bn"], 100)  # the planted stale 10-Q value is $9.99T
         self.assertLess(rows["SMPA"]["fcf_bn"], 100)
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TestFallbackToAnnual(unittest.TestCase):
@@ -122,3 +133,66 @@ class TestFallbackToAnnual(unittest.TestCase):
         fu = fundamentals(facts)
         self.assertEqual(fu["fcf_basis"], "FY")
         self.assertAlmostEqual(fu["fcf"] / 1e9, 1.4, places=6)  # FCF after stock comp
+
+
+def _closes(start, n, p0, daily):
+    out, d, p = [], start, p0
+    while len(out) < n:
+        if d.weekday() < 5:
+            out.append((d.isoformat(), round(p, 4)))
+            p *= 1 + daily
+        d += timedelta(days=1)
+    return out
+
+
+class TestTrackMath(unittest.TestCase):
+    def test_horizons_excess_and_freeze(self):
+        from scanner import track as T
+        d0 = date(2026, 1, 5)
+        spy = _closes(d0, 120, 100.0, 0.0)          # flat market
+        stock = _closes(d0, 120, 50.0, 0.001)        # +0.1% a day
+        led = {"started": None, "entries": []}
+        co = {"ticker": "X", "name": "X Co", "last": 50.0, "last_date": d0.isoformat(), "flag_gap": True}
+        self.assertEqual(T.add_flags(led, d0, {"shortlist": [co]}, spy), 1)
+        self.assertEqual(T.add_flags(led, d0 + timedelta(days=10), {"shortlist": [co]}, spy), 0)  # repeat window
+        T.update_returns(led, {"X": stock}, spy)
+        e = led["entries"][0]
+        self.assertIsNotNone(e.get("x1m")); self.assertIsNotNone(e.get("x3m")); self.assertIsNone(e.get("x6m"))
+        self.assertGreater(e["x1m"], 0)
+        self.assertGreater(e["x3m"], e["x1m"])
+        frozen = e["x1m"]
+        T.update_returns(led, {"X": [(d, p * 2) for d, p in stock]}, spy)   # later prices don't rewrite history
+        self.assertEqual(led["entries"][0]["x1m"], frozen)
+        s = T.summarize(led, d0 + timedelta(days=100))
+        self.assertEqual(s["groups"][0]["h"]["3m"]["n"], 1)
+        self.assertEqual(s["groups"][0]["h"]["3m"]["beat"], 1.0)
+
+
+class TestPeakMargin(unittest.TestCase):
+    def _facts(self, margins):
+        sys.path.insert(0, str(ROOT / "tests"))
+        import make_fixtures as mf
+        g = {"NetCashProvidedByUsedInOperatingActivities": [], "PaymentsToAcquirePropertyPlantAndEquipment": [],
+             "Revenues": []}
+        for i, m in enumerate(margins):
+            y = 2020 + i
+            rev = 10e9
+            g["Revenues"].append(mf.fact(f"{y}-01-01", f"{y}-12-31", rev, y, f"{y+1}-02-15"))
+            g["PaymentsToAcquirePropertyPlantAndEquipment"].append(mf.fact(f"{y}-01-01", f"{y}-12-31", 0.5e9, y, f"{y+1}-02-15"))
+            g["NetCashProvidedByUsedInOperatingActivities"].append(mf.fact(f"{y}-01-01", f"{y}-12-31", rev * m + 0.5e9, y, f"{y+1}-02-15"))
+        return {"facts": {"us-gaap": {k: {"units": {"USD": v}} for k, v in g.items()},
+                          "dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [mf.fact(None, "2025-12-31", 1e9, 2025, "2026-02-15")]}}}}}
+
+    def test_flags_margin_spike(self):
+        from scanner.analysis import fundamentals
+        fu = fundamentals(self._facts([0.15, 0.16, 0.15, 0.16, 0.17, 0.30]))
+        self.assertTrue(fu["peak_margin"])
+        self.assertAlmostEqual(fu["fcf_normalized"], 10e9 * fu["margin_avg"])
+
+    def test_steady_margin_not_flagged(self):
+        from scanner.analysis import fundamentals
+        self.assertFalse(fundamentals(self._facts([0.25, 0.26, 0.27, 0.28, 0.29, 0.30]))["peak_margin"])
+
+
+if __name__ == "__main__":
+    unittest.main()

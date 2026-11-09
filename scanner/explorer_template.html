@@ -94,6 +94,13 @@ table.sens td{text-align:center;padding:8px 4px;border-radius:4px}
 .groups{display:flex;gap:6px;flex-wrap:wrap}
 .minictl{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary)}
 .minictl input[type=range]{width:120px;vertical-align:middle}
+.trk{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.trk th{font-size:12px;font-weight:600;color:var(--text-muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)}
+.trk th:first-child,.trk td:first-child{text-align:left}
+.trk td{padding:8px;border-bottom:1px solid var(--grid);text-align:right;vertical-align:top}
+.trk td .v{font-weight:650;font-size:14px}.trk td .s{font-size:11.5px;color:var(--text-muted)}
+.trk td .v.up{color:#1c7c4a}.trk td .v.dn{color:#b3261e}.trk td .v.na{color:var(--text-muted);font-weight:500}
+@media (prefers-color-scheme: dark){.trk td .v.up{color:#5cc08a}.trk td .v.dn{color:#f08a82}}
 .badges{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
 .badge{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px}
 .badge.drop{background:#fbe5e3;color:#b3261e}.badge.earn{background:#ecebe7;color:#52514e}.badge.mkt{background:#e3eefb;color:#1c5cab}.badge.ins{background:#e3f2e8;color:#1c7c4a}.badge.vol{background:#fdf0d8;color:#8a5300}.badge.link{background:transparent;border:1px solid var(--border);color:var(--implied);font-weight:500;text-decoration:none}
@@ -115,7 +122,7 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     <div class="cardhead">
       <div class="groups" id="groups" role="tablist"></div>
       <div class="minictl">
-        <label>Base required return <b id="rv"></b> <input id="r" type="range" min="6" max="12" step="0.5" value="9"></label>
+        <label id="rlab">Base required return <b id="rv"></b> <input id="r" type="range" min="6" max="13" step="0.1" value="9"></label>
         <label>Growth after year 10 <b id="gtv"></b> <input id="gt" type="range" min="1" max="4" step="0.5" value="3"></label>
       </div>
     </div>
@@ -149,6 +156,12 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     </div>
   </div>
 
+  <div class="card" id="trackcard">
+    <div class="cardhead" style="margin-bottom:4px"><div style="font-size:15px;font-weight:650">Track record: does the screen work?</div><a class="badge link" href="track/track_record.csv">Full log (CSV) ↓</a></div>
+    <div class="hint" id="tracknote" style="margin:0 0 12px"></div>
+    <table class="trk" id="trk"></table>
+  </div>
+
   <details class="card more">
     <summary>How the screen works</summary>
 
@@ -156,7 +169,7 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     <div class="flow-note">
       <div><b>1. Quality filter</b>FCF margin of 15%+, FCF ÷ capital of 10%+, positive FCF in each of the last 3 fiscal years and the trailing 12 months, $2B+ market cap. Removes stocks that are cheap for good reason.</div>
       <div><b>2. Event trigger</b>Price down 10%+ more than the S&amp;P 500 in 5 trading days, or 2+ insiders each buying $25k+ on the open market within 7 days (SEC Form 4).</div>
-      <div><b>3. Modest expectations</b>The price implies 10%/yr or less, at least 5 points below reference growth (the lower of FCF and revenue growth, capped at 20%), at a 9% required return.</div>
+      <div><b>3. Modest expectations</b>The price implies 10%/yr or less, at least 5 points below reference growth (the lower of FCF and revenue growth, capped at 20%), at the base required return (<span class="rtext"></span>).</div>
       <div><b>4. Your judgment</b>Is the problem temporary or permanent? The screen can't answer this. It only tells you where to look.</div>
     </div>
 
@@ -166,7 +179,9 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
       <li><b>Volatile cash flow</b> (orange badge) marks cyclical businesses such as memory chips or energy. Their price often assumes a slowdown because one usually follows a boom. Switch the cash-flow starting point to the 3-year average to judge them through a whole cycle.</li>
       <li><b>Free cash flow</b> is operating cash flow minus capital expenditures <i>minus stock-based compensation</i>, from 10-K and 10-Q filings. Stock comp is a real cost to shareholders because it dilutes them.</li>
       <li><b>Reference growth</b> is per share: the lower of free cash flow and revenue growth after adjusting for the change in diluted share count, so buybacks count in a company's favor and dilution against it. Capped at 20%.</li>
-      <li><b>Required return</b> is 9% for a steady business, plus 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× free cash flow. The sliders move the base; the premium rides on top.</li>
+      <li><b>Required return</b> starts from the 10-year Treasury yield plus a 4-point premium for owning stocks (<span class="rtext"></span>), so when rates rise every price has to clear a higher bar. Add 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× free cash flow. The slider moves the base; the premium rides on top.</li>
+      <li><b>Peak margins</b> (orange badge) marks companies whose free-cash-flow margin is at least 1.3× and 5+ points above their own multi-year average. A low implied growth rate may just mean the market expects margins to fall back, so they're judged on normalized cash flow: today's revenue at their average margin.</li>
+      <li><b>Track record</b> logs every flagged company at that day's close and measures it against the S&amp;P 500 at 1, 3, 6 and 12 months. Nothing is back-filled, so the record only starts on the day tracking began. <a href="track/track_record.csv" style="color:var(--implied)">Download the full log (CSV)</a></li>
       <li><b>Net cash</b> is cash plus short-term investments minus long-term debt, from the latest filing.</li>
       <li>The cash-flow starting-point switch lets you compare the trailing twelve months with the last full fiscal year.</li>
     </ul>
@@ -180,7 +195,8 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
 const COMPANIES = __COMPANIES_JSON__;
 const META = __META_JSON__;
 const GROUPS=[['shortlist','Shortlist'],['watchlist','Watchlist'],['triggered','Triggered, still priced for growth']];
-const state = { showAll:false, hideEarn:false, r:0.09, gt:0.03, group:(GROUPS.find(g=>COMPANIES.some(c=>c.group===g[0]))||GROUPS[0])[0], sel:null, baseIdx:{} , edits:{} };
+const BASE_R=(META.rules&&META.rules.REQUIRED_RETURN)||0.09;
+const state = { showAll:false, hideEarn:false, r:BASE_R, gt:0.03, group:(GROUPS.find(g=>COMPANIES.some(c=>c.group===g[0]))||GROUPS[0])[0], sel:null, baseIdx:{} , edits:{} };
 const onEarn=c=>(c.badges||[]).some(b=>b.k==='earn');
 const visible=()=>COMPANIES.filter(c=>c.group===state.group && !(state.hideEarn && onEarn(c)));
 state.sel=(ranked()[0]||COMPANIES[0]||{}).id;
@@ -230,7 +246,7 @@ function drawCompare(){
     if(c.id===state.sel) el('rect',{x:10,y:top+2,width:980,height:rowH-4,rx:8,fill:css('--implied-soft'),opacity:.35},g);
     { const t=el('text',{x:24,y:y-1,'font-size':15.5,'font-weight':700,fill:css('--text-primary')},g); el('tspan',{},t,c.name);
       if(c.fullName){ const nm=c.fullName.replace(/,? (Inc|Corp|Corporation|Co|Company|Ltd|Holdings|Group|plc|N\.V\.|S\.A\.)\.?$/i,''); el('tspan',{dx:8,'font-size':12.5,'font-weight':400,fill:css('--text-secondary')},t,nm.length>30?nm.slice(0,29)+'…':nm);} }
-    el('text',{x:24,y:y+14,'font-size':11,fill:css('--text-muted')},g,[(res.mcap/res.fcf).toFixed(0)+'x FCF'+(c.bases.length>1&&res.baseLabel.startsWith('3-year')?' (3-yr avg)':'')].concat((c.badges||[]).filter(b=>b.k!=='link').map(b=>b.s)).join(' · '));
+    el('text',{x:24,y:y+14,'font-size':11,fill:css('--text-muted')},g,[(res.mcap/res.fcf).toFixed(0)+'x FCF'+(res.baseLabel.startsWith('3-year')?' (3-yr avg)':res.baseLabel.startsWith('Normalized')?' (normalized)':'')].concat((c.badges||[]).filter(b=>b.k!=='link').map(b=>b.s)).join(' · '));
     const gi=res.g, tr=res.track/100, xi=x(gi), xt=x(tr);
     el('line',{x1:Math.min(xi,xt),x2:Math.max(xi,xt),y1:y,y2:y,stroke:css('--track-soft'),'stroke-width':3,'stroke-linecap':'round'},g);
     el('circle',{cx:xt,cy:y,r:6,fill:css('--track'),stroke:css('--card'),'stroke-width':2},g);
@@ -283,7 +299,7 @@ function renderTiles(c){ const res=calc(c); const y10=res.fcf*Math.pow(1+res.g,1
   else if(gap>4) msg=`The price needs <b>${c.name}</b> to grow cash about <b>${gap.toFixed(0)} points per year faster</b> than its reference growth. That's a bet on acceleration.`;
   else if(gap<-4) msg=`The price assumes <b>${c.name}</b> grows cash about <b>${(-gap).toFixed(0)} points per year slower</b> than its reference growth. If you think the slowdown is overdone, the price may assume too little.`;
   else msg=`The price assumes roughly <b>more of the same</b> for ${c.name}: implied growth is within a few points of its reference growth.`;
-  if((c.badges||[]).some(b=>b.k==='vol')) msg+=(res.baseLabel||'').startsWith('3-year')?' Its cash flow swings with the cycle, so it\u2019s judged on its 3-year average. Switch the starting point to see the latest-year view.':' Its cash flow swings with the cycle: the 3-year average starting point gives a fairer read.'; if(c.id==='alphabet'||c.id==='microsoft') msg+=' Keep in mind its recent cash flow is held down by AI capital spending, so the track record understates what the business earns before that spending.';
+  if((c.badges||[]).some(b=>b.k==='vol')) msg+=(res.baseLabel||'').startsWith('3-year')?' Its cash flow swings with the cycle, so it\u2019s judged on its 3-year average. Switch the starting point to see the latest-year view.':' Its cash flow swings with the cycle: the 3-year average starting point gives a fairer read.'; if((c.badges||[]).some(b=>b.s==='peak margins')) msg+=(res.baseLabel||'').startsWith('Normalized')?' Its margin is well above its own history, so it\u2019s judged on normalized cash flow: today\u2019s revenue at its average margin. If you think the higher margin is here to stay, switch to the latest figure.':' Its margin is well above its own history: the normalized starting point shows what the price assumes if margins fall back.'; if(c.id==='alphabet'||c.id==='microsoft') msg+=' Keep in mind its recent cash flow is held down by AI capital spending, so the track record understates what the business earns before that spending.';
   document.getElementById('verdict').innerHTML=msg;
 }
 
@@ -326,11 +342,11 @@ function drawPath(c){ const svg=document.getElementById('path'); svg.innerHTML='
   hit.addEventListener('mouseleave',()=>{hideTip();cross.setAttribute('opacity',0);});
 }
 
-function drawSens(c){ const rs=[0.07,0.08,0.09,0.10,0.11], gts=[0.02,0.025,0.03,0.035];
+function drawSens(c){ const r0=Math.round(state.r*1000)/1000; const rs=[-0.02,-0.01,0,0.01,0.02].map(d=>Math.round((r0+d)*1000)/1000), gts=[0.02,0.025,0.03,0.035];
   const steps=['--seq-1','--seq-2','--seq-3','--seq-4','--seq-5','--seq-6'];
   const shade=g=>{ if(!isFinite(g)) return steps[5]; const b=[0,0.05,0.10,0.15,0.20,0.30]; let k=0; for(let j=0;j<b.length;j++) if(g>=b[j]) k=j; return steps[k]; };
   let h='<tr><th style="text-align:left">'+(c.riskPremium?'Base return (+'+(c.riskPremium*100).toFixed(1)+' risk) ↓':'Required return ↓')+' / terminal growth →</th>'+gts.map(g=>`<th>${(g*100).toFixed(1)}%</th>`).join('')+'</tr>';
-  rs.forEach(r=>{ h+=`<tr><th style="text-align:left">${(r*100).toFixed(0)}%</th>`+gts.map(gt=>{const g=calc(c,r,gt).g; const s=shade(g); const dark=['--seq-4','--seq-5','--seq-6'].includes(s); const isCur=Math.abs(r-state.r)<1e-9&&Math.abs(gt-state.gt)<1e-9;
+  rs.forEach(r=>{ h+=`<tr><th style="text-align:left">${(r*100).toFixed(1)}%</th>`+gts.map(gt=>{const g=calc(c,r,gt).g; const s=shade(g); const dark=['--seq-4','--seq-5','--seq-6'].includes(s); const isCur=Math.abs(r-r0)<1e-9&&Math.abs(gt-state.gt)<1e-9;
     return `<td style="background:var(${s});color:${dark?'#fff':'var(--text-primary)'};${isCur?'outline:2px solid var(--text-primary);outline-offset:-2px;font-weight:700':''}">${pct(g,0)}</td>`;}).join('')+'</tr>'; });
   document.getElementById('sens').innerHTML=h;
 }
@@ -363,6 +379,18 @@ function renderIntro(){ const f=META.funnel||{}, R=META.rules||{}, m=META.market
     <div class="step final"><div class="n">${n(f.shortlist)}</div><div class="l">Shortlist</div><div class="d">Passed both tests. A starting point for research, not a buy list.</div></div>
   </div>
   <div class="intro-foot"><span>As of ${META.asof}${m.chg!=null?` · S&amp;P 500 ${(m.chg*100).toFixed(1)}% this week, ${(m.off_1m_high*100).toFixed(1)}% from its 1-month high`:''}</span><button onclick="toggleIntro(true)">Hide ↑</button></div>`; }
+function rateText(){ const R=META.rates||{}; if(R.rf==null) return (BASE_R*100).toFixed(1)+'%';
+  return `${(R.base*100).toFixed(2)}% = 10-yr Treasury ${(R.rf*100).toFixed(2)}% + ${(R.premium*100).toFixed(1)}% premium`; }
+function renderRates(){ document.querySelectorAll('.rtext').forEach(e=>e.textContent=rateText());
+  const R=META.rates||{}; document.getElementById('rlab').title=R.rf!=null?`${rateText()} (${R.rf_source}, ${R.rf_date}). Drag to test other hurdles.`:'';
+  const inp=document.getElementById('r'); inp.value=(BASE_R*100).toFixed(1); }
+function renderTrack(){ const T=META.track||{}, G=T.groups||[]; const names={shortlist:'Shortlist',watchlist:'Watchlist',triggered:'Triggered, still priced for growth'};
+  const H=[['todate','To date'],['1m','1 month'],['3m','3 months'],['6m','6 months'],['12m','12 months']];
+  const note=document.getElementById('tracknote'); const tbl=document.getElementById('trk');
+  if(!T.started){ note.textContent='Tracking starts with the next daily run.'; tbl.innerHTML=''; return; }
+  note.innerHTML=`Every flagged company is logged at that day’s close and compared with the S&amp;P 500. Cells show the <b>average return beyond the S&amp;P 500</b> and how many beat it. Tracking since ${T.started}, ${(T.n||0).toLocaleString()} entries`+(T.next?`; first ${T.next.h.replace('m',' month')} read on ${T.next.date}.`:'.')+` Early numbers are noise: judge it at 6–12 months.`;
+  const cell=x=>{ if(!x||!x.n) return '<span class="v na">–</span><div class="s">not yet</div>'; const v=x.avg*100; return `<span class="v ${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(1)} pts</span><div class="s">${x.n} · ${Math.round(x.beat*100)}% beat</div>`; };
+  tbl.innerHTML='<tr><th>Group</th>'+H.map(h=>`<th>${h[1]}</th>`).join('')+'</tr>'+G.map(g=>`<tr><td><b>${names[g.group]||g.group}</b><div class="s" style="font-size:11.5px;color:var(--text-muted)">${g.n} logged</div></td>`+H.map(h=>`<td>${cell(g.h[h[0]])}</td>`).join('')+'</tr>').join(''); }
 function toggleIntro(h){ try{localStorage.setItem('introShown',h?'0':'1');}catch(e){} renderIntro(); }
 function renderFunnel(){ if(!document.getElementById('funnel')) return; const f=META.funnel||{}; const st=[['companies',f.universe],['quality',f.quality],['triggered',f.triggered],['shortlist',f.shortlist]];
   document.getElementById('funnel').innerHTML=st.map(([l,n],i)=>`<span class="step${i===3?' hl':''}"><b>${(n||0).toLocaleString()}</b> ${l}</span>`).join('<span>→</span>'); }
@@ -372,7 +400,7 @@ function update(){ const c=COMPANIES.find(c=>c.id===state.sel); if(!c) return;
   drawCompare(); renderTiles(c); drawPath(c); drawSens(c); }
 document.getElementById('r').oninput=e=>{state.r=e.target.value/100;update();};
 document.getElementById('gt').oninput=e=>{state.gt=e.target.value/100;update();};
-renderIntro(); renderFunnel(); drawFlow(); renderDetail();
+renderRates(); renderIntro(); renderFunnel(); renderTrack(); drawFlow(); renderDetail();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawFlow();update();});
 </script>
 </body>

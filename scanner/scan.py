@@ -20,9 +20,10 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import config as C
+from . import track as T
 from .analysis import fundamentals, implied_growth, parse_form4, price_stats
 from .report import render_report
-from .sources import (FetchError, FixtureFetcher, LiveFetcher, env_user_agent,
+from .sources import (load_risk_free, FetchError, FixtureFetcher, LiveFetcher, env_user_agent,
                       load_company_facts, load_filing_text, load_form4_index,
                       load_prices, load_tickers, refresh_facts_bulk, SourceBreaker, load_submissions, sector_for)
 
@@ -40,9 +41,19 @@ def business_days_back(asof: date, n_calendar: int) -> list[str]:
     return out
 
 
-def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int | None, tickers_only: list[str] | None):
+def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int | None, tickers_only: list[str] | None,
+        ledger_path: Path | None = None):
     out_dir.mkdir(parents=True, exist_ok=True)
     funnel = {}
+
+    # 0. The hurdle: 10-year Treasury yield + equity premium, so rate moves flow into every valuation
+    rf = load_risk_free(fetcher, asof)
+    rf_rate = rf["rate"] if rf["rate"] is not None else C.RISK_FREE_FALLBACK
+    C.REQUIRED_RETURN = round(min(C.REQUIRED_RETURN_MAX, max(C.REQUIRED_RETURN_MIN, rf_rate + C.EQUITY_PREMIUM)), 4)
+    rates = {"rf": rf_rate, "rf_date": rf["date"], "rf_source": rf["source"] or "fallback (lookup failed)",
+             "premium": C.EQUITY_PREMIUM, "base": C.REQUIRED_RETURN}
+    log(f"hurdle: 10-yr Treasury {rf_rate*100:.2f}% ({rates['rf_source']}, {rf['date']}) + {C.EQUITY_PREMIUM*100:.1f}% premium "
+        f"= {C.REQUIRED_RETURN*100:.2f}% base required return")
 
     # 1. Universe
     universe = load_tickers(fetcher)
@@ -86,7 +97,8 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             closes_by[futures[fut]["ticker"]] = fut.result()
             if k % 100 == 0:
                 log(f"  prices {k}/{len(quality)}")
-    mkt = price_stats(load_prices(fetcher, "SPY", breaker), C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS) if C.DROP_RELATIVE_TO_MARKET else None
+    spy_closes = load_prices(fetcher, "SPY", breaker)
+    mkt = price_stats(spy_closes, C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS) if C.DROP_RELATIVE_TO_MARKET else None
     mkt_chg = mkt["chg"] if mkt else 0.0
     mkt_dd = mkt["off_1m_high"] if mkt else 0.0
     log(f"market (SPY): {C.DROP_LOOKBACK_DAYS}-day change {mkt_chg*100:+.1f}%, {mkt_dd*100:+.1f}% from its 1-month high"
@@ -107,9 +119,12 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         r = C.REQUIRED_RETURN + prem
         g = implied_growth(co["fcf"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
         g_ttm = g
-        if co["volatile"] and co["fcf_avg3"] > 0:
-            # cyclicals are judged on a 3-year average, not one boom (or bust) year
-            g = implied_growth(co["fcf_avg3"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+        # Cyclicals are judged on a 3-year average and peak-margin names on normalized cash flow
+        # (revenue x their own average margin), not one boom year. If both apply, the lower base wins.
+        alt = [x for x, use in ((co["fcf_avg3"], co["volatile"]), (co.get("fcf_normalized"), co.get("peak_margin")))
+               if use and x and x > 0]
+        if alt:
+            g = implied_growth(min(alt), mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
         ref = reference_growth(co)
         gap = (g - ref) if (g is not None and math.isfinite(g) and ref is not None) else None
         priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap, "p_fcf": mcap / co["fcf"],
@@ -170,9 +185,30 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     funnel["modest"] = sum(1 for c in priced if c["flag_gap"])
     funnel["shortlist"] = len(shortlist)
 
+    funnel["peak_margin"] = sum(1 for c in priced if c.get("peak_margin"))
+
+    # 7. Track record: log today's flags, then measure every open entry against the S&P 500
+    ledger = T.load_ledger(ledger_path)
+    added = T.add_flags(ledger, asof, {"shortlist": shortlist, "watchlist": gap_only, "triggered": triggered_only}, spy_closes)
+    need = T.tickers_needing_prices(ledger, asof) - {t for t, v in closes_by.items() if v}
+    if need:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for t, closes in zip(sorted(need), pool.map(lambda t: load_prices(fetcher, t, breaker), sorted(need))):
+                closes_by[t] = closes
+    T.update_returns(ledger, closes_by, spy_closes)
+    if ledger_path:
+        T.save_ledger(ledger_path, ledger)
+    track = T.summarize(ledger, asof)
+    log(f"track record: +{added} new entries today, {track['n']} total since {track['started']}"
+        + (f" ({len(need)} extra price lookups)" if need else ""))
+
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-            "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market}
+            "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market,
+            "rates": rates, "track": track}
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
+    (out_dir / "track").mkdir(exist_ok=True)
+    T.write_csv(out_dir / "track" / "track_record.csv", ledger)
+    T.save_ledger(out_dir / "track" / "ledger.json", ledger)
     log(f"shortlist: {len(shortlist)}  -> {out_dir/'report.html'}")
     log(f"triggers: {sum(c['flag_drop'] for c in priced)} sharp drops, {sum(c['flag_drawdown'] for c in priced)} 1-month drawdowns "
         f"({sum(1 for c in priced if c['price_trigger'] and c['earnings_in_window'])} on their own earnings), {sum(c['flag_cluster'] for c in priced)} insider clusters; "
@@ -260,6 +296,8 @@ def _row(c):
         "mcap_bn": round(c["mcap"] / 1e9, 2), "fcf_bn": round(c["fcf"] / 1e9, 3),
         "fy_end": c["fy_end"], "fcf_basis": c["fcf_basis"], "fcf_period_end": c["fcf_period_end"],
         "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3), "fcf_avg3_bn": round(c["fcf_avg3"] / 1e9, 3), "volatile": c["volatile"],
+        "peak_margin": bool(c.get("peak_margin")), "margin_avg": fin(c.get("margin_avg")), "margin_years": c.get("margin_years", 0),
+        "fcf_norm_bn": round(c["fcf_normalized"] / 1e9, 3) if c.get("fcf_normalized") else None,
         "p_fcf": round(c["p_fcf"], 1), "net_cash_bn": round(c["net_cash"] / 1e9, 2),
         "fcf_margin": fin(c["fcf_margin"]), "cash_roc": fin(c["cash_roc"]),
         "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]),
@@ -311,8 +349,10 @@ def render_explorer(data, per_group=25) -> str:
     cfg = data["meta"]["config"]
     meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"],
             "market": data["meta"].get("market", {}),
+            "rates": data["meta"].get("rates", {}), "track": data["meta"].get("track", {}),
             "rules": {k: cfg[k] for k in ("MIN_FCF_MARGIN", "MIN_MARKET_CAP_USD", "DROP_THRESHOLD", "DRAWDOWN_THRESHOLD",
-                                          "MIN_CLUSTER_BUYERS", "MAX_IMPLIED_GROWTH", "GAP_THRESHOLD", "REQUIRED_RETURN")}}
+                                          "MIN_CLUSTER_BUYERS", "MAX_IMPLIED_GROWTH", "GAP_THRESHOLD", "REQUIRED_RETURN",
+                                          "EQUITY_PREMIUM", "PEAK_MARGIN_RATIO")}}
     tpl = (Path(__file__).parent / "explorer_template.html").read_text()
     return (tpl.replace("__COMPANIES_JSON__", json.dumps(cos))
                .replace("__META_JSON__", json.dumps(meta))
@@ -325,6 +365,12 @@ def explorer_company(r, group):
         bases.append({"label": "FY ending " + r["fy_end"], "fcf": r["fy_fcf_bn"]})
     if r["fcf_avg3_bn"] and r["fcf_avg3_bn"] > 0:
         bases.append({"label": "3-year average (smooths the cycle)", "fcf": r["fcf_avg3_bn"]})
+    if r.get("fcf_norm_bn") and r["fcf_norm_bn"] > 0 and r.get("margin_avg") is not None:
+        bases.append({"label": f"Normalized: revenue × {r['margin_years']}-yr avg margin ({r['margin_avg']*100:.0f}%)", "fcf": r["fcf_norm_bn"]})
+    # Default view matches how the screen judged it: the lowest of the alternative bases that applies
+    alts = [i for i, b in enumerate(bases) if (b["label"].startswith("3-year") and r["volatile"])
+            or (b["label"].startswith("Normalized") and r.get("peak_margin"))]
+    default_base = min(alts, key=lambda i: bases[i]["fcf"]) if alts else 0
     badges = []
     if r["flag_drop"]:
         badges.append({"k": "drop", "t": f"Down {abs(r['chg_5d'])*100:.0f}% in 5 days ({r['rel_chg_5d']*100:+.0f} pts vs. S&P 500)",
@@ -342,13 +388,16 @@ def explorer_company(r, group):
                        "s": f"{len(r['insider_buyers'])} insiders"})
     if r["volatile"]:
         badges.append({"k": "vol", "t": "Volatile cash flow (cyclical): judged on 3-yr average, +1.5 pts required return", "s": "cyclical"})
+    if r.get("peak_margin"):
+        badges.append({"k": "vol", "t": f"Peak margins: FCF margin {r['fcf_margin']*100:.0f}% vs. its {r['margin_years']}-yr average of {r['margin_avg']*100:.0f}%; judged on normalized cash flow",
+                       "s": "peak margins"})
     if "leveraged" in (r.get("risk_why") or []):
         badges.append({"k": "vol", "t": f"Leveraged: net debt ${-r['net_cash_bn']:.1f}B, +1 pt required return", "s": "leveraged"})
     badges.append({"k": "link", "t": "Insider filings ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=4&owner=include&count=40"})
     badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
     return {
         "id": r["ticker"].lower(), "name": r["ticker"], "fullName": r["name"], "group": group, "badges": badges,
-        "defaultBase": len(bases) - 1 if r["volatile"] and r["fcf_avg3_bn"] and r["fcf_avg3_bn"] > 0 else 0,
+        "defaultBase": default_base,
         "sector": r["sector"], "score": r["score"], "gap": r["gap"],
         "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}" + (f" · {r['sic_desc'].title()}" if r["sic_desc"] else ""),
         "netCash": r["net_cash_bn"], "netNote": "cash + short-term investments − long-term debt",
@@ -370,12 +419,13 @@ def main(argv=None):
     ap.add_argument("--asof", type=lambda s: date.fromisoformat(s), default=date.today())
     ap.add_argument("--limit", type=int, help="only scan the first N companies (testing)")
     ap.add_argument("--tickers", nargs="*", help="only scan these tickers")
+    ap.add_argument("--ledger", type=Path, help="track-record file to read and update (e.g. track/ledger.json)")
     a = ap.parse_args(argv)
     if a.fixtures:
         fetcher, cache = FixtureFetcher(a.fixtures), None
     else:
         fetcher, cache = LiveFetcher(env_user_agent(), C.SEC_RATE_LIMIT_PER_SEC), a.cache
-    run(fetcher, a.asof, a.out, cache, a.limit, a.tickers)
+    run(fetcher, a.asof, a.out, cache, a.limit, a.tickers, a.ledger)
 
 
 if __name__ == "__main__":

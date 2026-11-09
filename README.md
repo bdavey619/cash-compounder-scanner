@@ -67,6 +67,14 @@ counts.
 | Insider buying | EDGAR daily form index → each Form 4's XML | Counts open-market purchases (code P) only; sales and option exercises are ignored |
 | Reverse DCF | `scanner/analysis.py` | Same model as the interactive explorer: 10 years of constant growth, then terminal growth, discounted at the required return, plus net cash |
 
+## Track record
+
+Every run logs each flagged company (shortlist, watchlist, triggered) at that day's close in
+`track/ledger.json`, which the workflow commits back to the repo. Each later run fills in the return
+versus SPY at 1, 3, 6 and 12 months; a result is frozen once measured. The same ticker isn't re-logged
+in the same group within 30 days. Nothing is back-filled, so the record starts the day tracking began.
+The site shows a summary table and `track/track_record.csv` has the full log.
+
 ## Known blind spots
 
 - SEC publishes its bulk company-facts archive nightly, so a 10-Q filed today shows up in tomorrow's
@@ -75,7 +83,8 @@ counts.
   dilutes shareholders even though no cash leaves.
 - **Reference growth** is per share: the lower of FCF and revenue growth (three fiscal years ago → trailing twelve
   months) after adjusting for the change in diluted share count, capped at 20%. Buybacks help; dilution hurts.
-- **Required return** is 9% plus 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× FCF.
+- **Required return** is the 10-year Treasury yield (FRED, Yahoo ^TNX as fallback) plus a 4-point equity premium, kept between 7% and 13%, plus 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× FCF.
+- **Peak margins**: when today's FCF margin is at least 1.3× and 5+ points above the company's own 4–6-year average, it's judged on normalized FCF (revenue × average margin), like cyclicals on their 3-year average.
 - Still simplified: one constant growth rate for 10 years, no analyst forecasts, and **no backtest yet**, so there's no
   evidence the screen beats the market. Treat the output as a research list.
 - Raw FCF growth is too noisy on its own: a rebound from a depressed base (memory chips, energy) made almost every

@@ -23,6 +23,7 @@ SEC_DAILY_INDEX_URL = "https://www.sec.gov/Archives/edgar/daily-index/{y}/QTR{q}
 SEC_ARCHIVE_URL = "https://www.sec.gov/Archives/{path}"
 STOOQ_URL = "https://stooq.com/q/d/l/?s={sym}.us&i=d"
 YAHOO_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=1y&interval=1d"
+FRED_DGS10_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10&cosd={start}"
 
 
 class FetchError(Exception):
@@ -113,6 +114,8 @@ class FixtureFetcher:
         m = re.search(r"/Archives/(edgar/data/.+)$", url)
         if m:
             return self.root / "archives" / m.group(1)
+        if "fred.stlouisfed.org" in url and "DGS10" in url:
+            return self.root / "rates" / "DGS10.csv"
         m = re.search(r"stooq\.com/q/d/l/\?s=([a-z0-9\-]+)\.us", url)
         if m:
             return self.root / "prices" / f"{m.group(1)}.csv"
@@ -271,6 +274,31 @@ def load_prices(fetcher, ticker: str, breaker: "SourceBreaker | None" = None) ->
         except Exception:
             breaker.record("yahoo", False)
     return []
+
+
+def load_risk_free(fetcher, asof) -> dict:
+    """Latest 10-year Treasury yield: FRED (Federal Reserve H.15) first, Yahoo's ^TNX as a fallback.
+    Returns {"rate": 0.0487, "date": "2026-11-06", "source": "FRED DGS10"} or rate None."""
+    from datetime import timedelta
+    try:
+        txt = fetcher.get(FRED_DGS10_URL.format(start=(asof - timedelta(days=30)).isoformat()), retries=2, timeout=15).decode()
+        rows = [ln.split(",") for ln in txt.strip().splitlines()[1:]]
+        rows = [(d, float(v)) for d, v in (r[:2] for r in rows if len(r) >= 2) if v not in ("", ".")]
+        if rows:
+            return {"rate": rows[-1][1] / 100, "date": rows[-1][0], "source": "FRED DGS10"}
+    except (FetchError, ValueError, UnicodeDecodeError):
+        pass
+    try:
+        js = json.loads(fetcher.get(YAHOO_URL.format(sym="%5ETNX"), retries=1, timeout=12))
+        res = js["chart"]["result"][0]
+        pts = [(t, c) for t, c in zip(res["timestamp"], res["indicators"]["quote"][0]["close"]) if c]
+        if pts:
+            v = pts[-1][1]
+            v = v / 10 if v > 20 else v  # ^TNX was once quoted at 10x the yield
+            return {"rate": v / 100, "date": time.strftime("%Y-%m-%d", time.gmtime(pts[-1][0])), "source": "Yahoo ^TNX"}
+    except Exception:
+        pass
+    return {"rate": None, "date": None, "source": None}
 
 
 def load_submissions(fetcher, cik: int) -> dict:

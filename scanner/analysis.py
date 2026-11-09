@@ -1,6 +1,8 @@
 """Turn raw SEC facts, prices and Form 4 filings into screen metrics."""
 from __future__ import annotations
 
+from . import config as C
+
 import math
 import re
 import xml.etree.ElementTree as ET
@@ -150,6 +152,16 @@ def fundamentals(facts: dict) -> dict | None:
     avg3 = sum(fy3) / 3
     volatile = avg3 > 0 and (max(fy3) - min(fy3)) / avg3 >= 0.6
     history = rows + ([{"fy_end": cur["end"], "fcf": cur["fcf"], "ttm": True}] if cur["basis"] == "TTM" else [])
+    # Peak-margin check: today's FCF margin against the company's own multi-year average
+    margins = []
+    for y in sorted(ocf)[-C.PEAK_MARGIN_YEARS:]:
+        if rev.get(y) and rev[y] > 0:
+            margins.append((ocf[y] - (capex.get(y) or 0.0) - sbc.get(y, 0.0)) / rev[y])
+    margin_avg = sum(margins) / len(margins) if len(margins) >= 4 else None
+    margin_now = (cur["fcf"] / cur["revenue"]) if cur["revenue"] else None
+    peak_margin = bool(margin_avg is not None and margin_now is not None and margin_avg > 0
+                       and margin_now >= C.PEAK_MARGIN_RATIO * margin_avg
+                       and margin_now - margin_avg >= C.PEAK_MARGIN_MIN_PTS)
     return {
         "history": history,
         "fy_end": last["fy_end"],
@@ -168,6 +180,10 @@ def fundamentals(facts: dict) -> dict | None:
         "fcf_ps_cagr": per_share(cagr),
         "rev_ps_cagr": per_share(rev_cagr),
         "fcf_avg3": avg3,
+        "margin_avg": margin_avg,
+        "margin_years": len(margins),
+        "peak_margin": peak_margin,
+        "fcf_normalized": (cur["revenue"] * margin_avg) if (margin_avg and cur["revenue"]) else None,
         "volatile": volatile,
         "cash_roc": (cur["fcf"] / capital) if capital > 0 else None,
         "net_cash": (cash or 0) + (sti or 0) - (ltd or 0),
