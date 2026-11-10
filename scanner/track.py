@@ -84,6 +84,28 @@ def add_flags(ledger: dict, asof: date, groups: dict[str, list[dict]], spy_close
     return added
 
 
+def list_changes(ledger: dict, asof: date, groups: dict[str, list[dict]]) -> dict:
+    """What changed since the previous trading day's run: names new to each group and names that dropped off.
+    Keeps the latest two days' lists in the ledger; a second run on the same day still compares to the day before."""
+    today = {g: sorted(c["ticker"] for c in groups.get(g, [])) for g in GROUP_ORDER}
+    lists = ledger.setdefault("lists", {})
+    cur = lists.get("cur")
+    if cur is None and ledger.get("started") and ledger["started"] < asof.isoformat():
+        # first run with this feature: rebuild the starting day's lists from its ledger entries
+        d0 = ledger["started"]
+        cur = {"date": d0, **{g: sorted(e["ticker"] for e in ledger["entries"] if e["date"] == d0 and e["group"] == g)
+                              for g in GROUP_ORDER}}
+    if cur and cur["date"] < asof.isoformat():
+        lists["prev"] = cur
+    lists["cur"] = {"date": asof.isoformat(), **today}
+    prev = lists.get("prev")
+    if not prev or prev["date"] >= asof.isoformat():
+        return {"prev_date": None, "new": {g: [] for g in GROUP_ORDER}, "dropped": {g: [] for g in GROUP_ORDER}}
+    return {"prev_date": prev["date"],
+            "new": {g: [t for t in today[g] if t not in prev.get(g, [])] for g in GROUP_ORDER},
+            "dropped": {g: [t for t in prev.get(g, []) if t not in today[g]] for g in GROUP_ORDER}}
+
+
 def update_returns(ledger: dict, closes_by: dict[str, list], spy_closes) -> None:
     if not spy_closes:
         return

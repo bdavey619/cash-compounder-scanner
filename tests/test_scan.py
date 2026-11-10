@@ -168,6 +168,21 @@ class TestTrackMath(unittest.TestCase):
         self.assertEqual(s["groups"][0]["h"]["3m"]["beat"], 1.0)
 
 
+class TestListChanges(unittest.TestCase):
+    def test_new_and_dropped(self):
+        from scanner import track as T
+        led = {"started": "2026-11-09", "entries": [
+            {"date": "2026-11-09", "ticker": "A", "group": "shortlist"},
+            {"date": "2026-11-09", "ticker": "B", "group": "shortlist"}]}
+        mk = lambda *ts: {"shortlist": [{"ticker": t} for t in ts]}
+        ch = T.list_changes(led, date(2026, 11, 10), mk("B", "C"))      # seeded from the ledger's first day
+        self.assertEqual((ch["new"]["shortlist"], ch["dropped"]["shortlist"]), (["C"], ["A"]))
+        ch = T.list_changes(led, date(2026, 11, 10), mk("B", "C", "D"))  # same-day rerun still compares to Nov 9
+        self.assertEqual(ch["new"]["shortlist"], ["C", "D"])
+        ch = T.list_changes(led, date(2026, 11, 11), mk("D"))
+        self.assertEqual((ch["prev_date"], ch["new"]["shortlist"], ch["dropped"]["shortlist"]), ("2026-11-10", [], ["B", "C"]))
+
+
 class TestPeakMargin(unittest.TestCase):
     def _facts(self, margins):
         sys.path.insert(0, str(ROOT / "tests"))

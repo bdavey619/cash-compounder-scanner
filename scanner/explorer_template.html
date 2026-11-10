@@ -121,6 +121,7 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
   <div class="card">
     <div class="cardhead">
       <div class="groups" id="groups" role="tablist"></div>
+      <div class="hint" id="changes" style="margin:-4px 0 10px"></div>
       <div class="minictl">
         <label id="rlab">Base required return <b id="rv"></b> <input id="r" type="range" min="6" max="13" step="0.1" value="9"></label>
         <label>Growth after year 10 <b id="gtv"></b> <input id="gt" type="range" min="1" max="4" step="0.5" value="3"></label>
@@ -245,6 +246,7 @@ function drawCompare(){
     const g=el('g',{style:'cursor:pointer'},svg); g.addEventListener('click',()=>{state.sel=c.id;renderDetail();document.getElementById('tabs').scrollIntoView({behavior:'smooth',block:'start'});});
     if(c.id===state.sel) el('rect',{x:10,y:top+2,width:980,height:rowH-4,rx:8,fill:css('--implied-soft'),opacity:.35},g);
     { const t=el('text',{x:24,y:y-1,'font-size':15.5,'font-weight':700,fill:css('--text-primary')},g); el('tspan',{},t,c.name);
+      if(c.isNew) el('tspan',{dx:6,'font-size':10,'font-weight':700,'letter-spacing':'0.06em',fill:css('--implied')},t,'NEW');
       if(c.fullName){ const nm=c.fullName.replace(/,? (Inc|Corp|Corporation|Co|Company|Ltd|Holdings|Group|plc|N\.V\.|S\.A\.)\.?$/i,''); el('tspan',{dx:8,'font-size':12.5,'font-weight':400,fill:css('--text-secondary')},t,nm.length>30?nm.slice(0,29)+'…':nm);} }
     el('text',{x:24,y:y+14,'font-size':11,fill:css('--text-muted')},g,[(res.mcap/res.fcf).toFixed(0)+'x FCF'+(res.baseLabel.startsWith('3-year')?' (3-yr avg)':res.baseLabel.startsWith('Normalized')?' (normalized)':'')].concat((c.badges||[]).filter(b=>b.k!=='link').map(b=>b.s)).join(' · '));
     const gi=res.g, tr=res.track/100, xi=x(gi), xt=x(tr);
@@ -266,6 +268,13 @@ function drawCompare(){
   more.textContent=state.showAll?`Show top ${TOPN} only`:`Show all ${n}`;
 }
 
+function renderChanges(){ const box=document.getElementById('changes'); const C=META.changes||{};
+  if(!C.prev_date){ box.textContent=''; box.style.display='none'; return; } box.style.display='';
+  const nw=(C.new||{})[state.group]||[], dr=(C.dropped||{})[state.group]||[];
+  const d=new Date(C.prev_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  box.innerHTML=(!nw.length&&!dr.length)?`No change since ${d}.`
+    :`Since ${d}: `+[nw.length?`<b style="color:var(--implied)">${nw.length} new</b> (${nw.join(', ')})`:'', dr.length?`${dr.length} dropped off (${dr.join(', ')})`:''].filter(Boolean).join(' · ');
+}
 function renderTabs(){ const t=document.getElementById('tabs'); t.innerHTML='';
   const sh=shown(); (sh.some(c=>c.id===state.sel)?sh:sh.concat(visible().filter(c=>c.id===state.sel))).forEach(c=>{const b=document.createElement('button');b.className='tab';b.role='tab';b.textContent=c.name;b.setAttribute('aria-selected',c.id===state.sel);b.onclick=()=>{state.sel=c.id;renderDetail();};t.appendChild(b);}); }
 
@@ -362,7 +371,7 @@ function drawFlow(){ const svg=document.getElementById('flow'); svg.innerHTML=''
 }
 
 function renderGroups(){ const box=document.getElementById('groups'); box.innerHTML='';
-  GROUPS.forEach(([id,label])=>{const n=COMPANIES.filter(c=>c.group===id).length; const b=document.createElement('button'); b.className='tab'; b.setAttribute('aria-selected',id===state.group); b.textContent=`${label} (${n})`; b.disabled=!n; if(!n) b.style.opacity=.45;
+  GROUPS.forEach(([id,label])=>{const n=COMPANIES.filter(c=>c.group===id).length; const b=document.createElement('button'); b.className='tab'; b.setAttribute('aria-selected',id===state.group); const nNew=COMPANIES.filter(c=>c.group===id&&c.isNew).length; b.textContent=`${label} (${n}${nNew?' · '+nNew+' new':''})`; b.disabled=!n; if(!n) b.style.opacity=.45;
     b.onclick=()=>{state.group=id; state.showAll=false; state.sel=(ranked()[0]||{}).id; renderDetail();}; box.appendChild(b);}); }
 function renderBadges(c){ document.getElementById('badges').innerHTML=(c.badges||[]).map(b=>b.k==='link'?`<a class="badge link" href="${b.u}">${b.t}</a>`:`<span class="badge ${b.k}">${b.t}</span>`).join(''); }
 function renderIntro(){ const f=META.funnel||{}, R=META.rules||{}, m=META.market||{}; const n=x=>(x||0).toLocaleString(); const p=x=>Math.round(Math.abs(x||0)*100);
@@ -394,7 +403,7 @@ function renderTrack(){ const T=META.track||{}, G=T.groups||[]; const names={sho
 function toggleIntro(h){ try{localStorage.setItem('introShown',h?'0':'1');}catch(e){} renderIntro(); }
 function renderFunnel(){ if(!document.getElementById('funnel')) return; const f=META.funnel||{}; const st=[['companies',f.universe],['quality',f.quality],['triggered',f.triggered],['shortlist',f.shortlist]];
   document.getElementById('funnel').innerHTML=st.map(([l,n],i)=>`<span class="step${i===3?' hl':''}"><b>${(n||0).toLocaleString()}</b> ${l}</span>`).join('<span>→</span>'); }
-function renderDetail(){ renderGroups(); renderTabs(); const c=COMPANIES.find(c=>c.id===state.sel); if(!c){drawCompare(); ['tiles','verdict','inputs','badges','sens'].forEach(id=>document.getElementById(id).innerHTML=''); document.getElementById('path').innerHTML=''; return;} renderInputs(c); renderBadges(c); update(); }
+function renderDetail(){ renderGroups(); renderChanges(); renderTabs(); const c=COMPANIES.find(c=>c.id===state.sel); if(!c){drawCompare(); ['tiles','verdict','inputs','badges','sens'].forEach(id=>document.getElementById(id).innerHTML=''); document.getElementById('path').innerHTML=''; return;} renderInputs(c); renderBadges(c); update(); }
 function update(){ const c=COMPANIES.find(c=>c.id===state.sel); if(!c) return;
   document.getElementById('rv').textContent=(state.r*100).toFixed(1)+'%'; document.getElementById('gtv').textContent=(state.gt*100).toFixed(1)+'%';
   drawCompare(); renderTiles(c); drawPath(c); drawSens(c); }

@@ -189,7 +189,15 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
 
     # 7. Track record: log today's flags, then measure every open entry against the S&P 500
     ledger = T.load_ledger(ledger_path)
-    added = T.add_flags(ledger, asof, {"shortlist": shortlist, "watchlist": gap_only, "triggered": triggered_only}, spy_closes)
+    groups = {"shortlist": shortlist, "watchlist": gap_only, "triggered": triggered_only}
+    changes = T.list_changes(ledger, asof, groups)
+    for g, cs in groups.items():
+        for c in cs:
+            c["is_new"] = c["ticker"] in changes["new"][g]
+    if changes["prev_date"]:
+        log("since " + changes["prev_date"] + ": " + "; ".join(
+            f"{g} +{len(changes['new'][g])} new, -{len(changes['dropped'][g])} dropped" for g in groups))
+    added = T.add_flags(ledger, asof, groups, spy_closes)
     need = T.tickers_needing_prices(ledger, asof) - {t for t, v in closes_by.items() if v}
     if need:
         with ThreadPoolExecutor(max_workers=8) as pool:
@@ -204,7 +212,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
 
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market,
-            "rates": rates, "track": track}
+            "rates": rates, "track": track, "changes": changes}
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
     (out_dir / "track").mkdir(exist_ok=True)
     T.write_csv(out_dir / "track" / "track_record.csv", ledger)
@@ -287,7 +295,7 @@ def score(c) -> float:
 def _row(c):
     fin = lambda x: (round(x, 4) if isinstance(x, float) and math.isfinite(x) else None)
     return {
-        "ticker": c["ticker"], "name": c["name"], "cik": c["cik"],
+        "ticker": c["ticker"], "name": c["name"], "cik": c["cik"], "is_new": bool(c.get("is_new")),
         "sector": c.get("sector", "Other"), "sic_desc": c.get("sic_desc", ""),
         "price": round(c["last"], 2), "price_date": c["last_date"],
         "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]),
@@ -350,6 +358,7 @@ def render_explorer(data, per_group=25) -> str:
     meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"],
             "market": data["meta"].get("market", {}),
             "rates": data["meta"].get("rates", {}), "track": data["meta"].get("track", {}),
+            "changes": data["meta"].get("changes", {}),
             "rules": {k: cfg[k] for k in ("MIN_FCF_MARGIN", "MIN_MARKET_CAP_USD", "DROP_THRESHOLD", "DRAWDOWN_THRESHOLD",
                                           "MIN_CLUSTER_BUYERS", "MAX_IMPLIED_GROWTH", "GAP_THRESHOLD", "REQUIRED_RETURN",
                                           "EQUITY_PREMIUM", "PEAK_MARGIN_RATIO")}}
@@ -397,6 +406,7 @@ def explorer_company(r, group):
     badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
     return {
         "id": r["ticker"].lower(), "name": r["ticker"], "fullName": r["name"], "group": group, "badges": badges,
+        "isNew": bool(r.get("is_new")),
         "defaultBase": default_base,
         "sector": r["sector"], "score": r["score"], "gap": r["gap"],
         "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}" + (f" · {r['sic_desc'].title()}" if r["sic_desc"] else ""),
