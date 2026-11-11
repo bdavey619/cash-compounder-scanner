@@ -129,7 +129,7 @@ def fundamentals(facts: dict) -> dict | None:
     ltd, _ = latest_instant(f, ["LongTermDebt", "LongTermDebtNoncurrent"])
     cash, _ = latest_instant(f, ["CashAndCashEquivalentsAtCarryingValue"])
     sti, _ = latest_instant(f, ["MarketableSecuritiesCurrent", "ShortTermInvestments"])
-    shares, shares_asof = shares_outstanding(f)
+    shares, shares_asof = shares_outstanding(f, cur["end"])
     capital = (equity or 0) + (ltd or 0)
     first = rows[-3]
     yrs = (date.fromisoformat(cur["end"]) - date.fromisoformat(first["fy_end"])).days / 365.25
@@ -191,7 +191,7 @@ def fundamentals(facts: dict) -> dict | None:
     }
 
 
-def shares_outstanding(f):
+def shares_outstanding(f, ref_end: str | None = None, max_age_days: int = 400):
     """Total shares across all classes. The cover page reports each class separately (Mastercard, Visa,
     CME, Alphabet...), so add up every class from the latest filing. Then cross-check against diluted
     shares, which convert every class into common-equivalent shares: if that's materially larger (Visa's
@@ -204,7 +204,12 @@ def shares_outstanding(f):
         total, asof = float(sum(same)), best["end"]
     # Cover pages sometimes list only some classes (undercounting); net income / EPS and diluted shares can
     # lag a stock split (also undercounting). So keep the cover page unless another measure is 10%+ higher.
-    cands = [c for c in (implied_shares(f), latest_diluted_shares(f)) if c[0]]
+    # Ignore any count much older than the latest financials: some companies stopped using the standard
+    # tags years ago (Visa's cover-page count stops in 2010), and a 2010 share count is worse than none.
+    fresh = lambda c: bool(c[0]) and (ref_end is None or (date.fromisoformat(ref_end) - date.fromisoformat(c[1])).days <= max_age_days)
+    if not fresh((total, asof)):
+        total, asof = None, None
+    cands = [c for c in (implied_shares(f), latest_diluted_shares(f)) if fresh(c)]
     best = max(cands, key=lambda c: c[0]) if cands else (None, None)
     if total is None:
         return best

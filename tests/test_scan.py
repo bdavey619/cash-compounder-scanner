@@ -224,6 +224,12 @@ class TestShares(unittest.TestCase):
                             {"start": "2026-04-01", "end": "2026-06-30", "val": 100.0, "filed": "2026-07-28"}]}}}}
         self.assertEqual(shares_outstanding(f)[0], 800e6)
 
+    def test_stale_counts_ignored(self):
+        from scanner.analysis import shares_outstanding
+        f = {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+                {"end": "2010-01-27", "val": 469e6, "accn": "A1", "filed": "2010-02-01"}]}}}}
+        self.assertEqual(shares_outstanding(f, "2026-09-30"), (None, None))   # Visa's 2010 cover page
+
     def test_financials_excluded(self):
         from scanner.scan import is_financial
         self.assertTrue(is_financial(6021))      # national commercial bank
