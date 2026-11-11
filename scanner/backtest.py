@@ -257,11 +257,16 @@ def walk(pit: dict[str, dict[str, dict]], meta: dict[str, dict], prices: dict[st
             gap = gap_flag(v["gap"], v["implied_g"])
             gap_raw = gap_flag(v["gap_ttm"], v["implied_g_ttm"])
             fw = {h: forward(s, spy, i_spy, n) for h, n in HORIZONS.items()}
+            # 12-month price momentum, skipping the latest month (the standard way, avoids short-term bounce noise)
+            mom = (s.adj[j - 21] / s.adj[j - 252] - 1) if j >= 252 else None
             rows.append({
                 "d": d, "t": t, "groups": [g for g, on in (("quality", True), ("gap", gap), ("gap_trigger", gap and trig),
                                                            ("gap_quiet", gap and not trig), ("trigger_only", trig and not gap),
                                                            ("gap_unadjusted", gap_raw)) if on],
                 "implied_g": v["implied_g"], "ref_g": v["ref_g"], "mcap": v["mcap"], "hurdle": base_r,
+                "gap": v["gap"] if v["gap"] is not None and math.isfinite(v["gap"]) else None,
+                "fcf_yield": (1 / v["p_fcf"]) if v["p_fcf"] else None, "mom": mom,
+                "fcf_margin": fu.get("fcf_margin"), "roc": fu.get("cash_roc"),
                 "fw": {h: x for h, x in fw.items() if x is not None},
             })
     return {"rows": rows}
@@ -349,9 +354,88 @@ def summarize(walked: dict, prices: dict[str, Series], spy: Series, months: list
                       "ref_g": _r(r["ref_g"]), "ret": _r(ret), "spy": _r(m), "excess": _r(ret - m), "early": early})
     cases.sort(key=lambda c: c["excess"])
     flag_counts = {g: [sum(1 for r in rows if r["d"] == d and g in r["groups"]) for d in months] for g, _, _ in GROUPS}
-    return {"table": table, "growth": growth, "years": year_rows,
+    return {"table": table, "growth": growth, "years": year_rows, "baskets": baskets(rows, months),
             "cases": {"best": cases[-8:][::-1], "worst": cases[:8], "n": len(cases)},
             "counts": {"dates": months, **flag_counts}}
+
+
+BASKETS = [
+    # id, label, question, sort ascending?, end labels (first fifth, last fifth)
+    ("gap", "Valuation gap", "Priced for less growth than its record vs more", True, ("Cheapest", "Priciest")),
+    ("fcf_yield", "Free-cash-flow yield", "FCF as a % of market value, highest to lowest", False, ("Highest yield", "Lowest yield")),
+    ("mom", "12-month momentum", "Past 12-month price change, best to worst", False, ("Biggest winners", "Biggest losers")),
+    ("mcap", "Size", "Market value, largest to smallest", False, ("Largest", "Smallest")),
+    ("fcf_margin", "FCF margin", "Free cash flow as a % of revenue, highest to lowest", False, ("Highest", "Lowest")),
+    ("roc", "Return on capital", "Cash return on capital, highest to lowest", False, ("Highest", "Lowest")),
+]
+SPLIT_YEAR = "2020"   # check each result holds in both halves of the period
+
+
+def baskets(rows: list[dict], months: list[str]) -> dict:
+    """Each month, rank the quality universe on a measure, split it into fifths, and average each fifth's
+    return beyond the S&P 500. Months are weighted equally so no single crash or boom dominates."""
+    by_month = {}
+    for r in rows:
+        by_month.setdefault(r["d"], []).append(r)
+
+    def xs(r, h):
+        return r["fw"][h][0] - r["fw"][h][1] if h in r["fw"] else None
+
+    out = []
+    for key, label, q, asc, ends in BASKETS:
+        res = {"id": key, "label": label, "question": q, "ends": ends, "h": {}}
+        for h in ("6m", "12m"):
+            per_q = [[] for _ in range(5)]
+            spreads = []          # (month, first fifth minus last fifth)
+            for d in months:
+                rs = [r for r in by_month.get(d, []) if r.get(key) is not None and xs(r, h) is not None]
+                if len(rs) < 25:
+                    continue
+                rs.sort(key=lambda r: r[key], reverse=not asc)
+                n = len(rs)
+                means = []
+                for k in range(5):
+                    chunk = rs[k * n // 5:(k + 1) * n // 5]
+                    m = statistics.fmean(xs(r, h) for r in chunk)
+                    per_q[k].append(m)
+                    means.append(m)
+                spreads.append((d, means[0] - means[4]))
+            if not spreads:
+                continue
+            early = [x for d, x in spreads if d < SPLIT_YEAR]
+            late = [x for d, x in spreads if d >= SPLIT_YEAR]
+            res["h"][h] = {
+                "q": [_r(statistics.fmean(v)) for v in per_q],
+                "spread": _r(statistics.fmean(x for _, x in spreads)),
+                "consistency": _r(sum(1 for _, x in spreads if x > 0) / len(spreads)),
+                "early": _r(statistics.fmean(early)) if early else None,
+                "late": _r(statistics.fmean(late)) if late else None,
+                "months": len(spreads),
+            }
+        out.append(res)
+
+    # Value x momentum: split each month at the median of each, giving four baskets
+    two = {}
+    for h in ("6m", "12m"):
+        cells = {"cheap_up": [], "cheap_down": [], "pricey_up": [], "pricey_down": []}
+        for d in months:
+            rs = [r for r in by_month.get(d, []) if r.get("gap") is not None and r.get("mom") is not None and xs(r, h) is not None]
+            if len(rs) < 25:
+                continue
+            mg = statistics.median(r["gap"] for r in rs)
+            mm = statistics.median(r["mom"] for r in rs)
+            for name, cond in (("cheap_up", lambda r: r["gap"] <= mg and r["mom"] > mm),
+                               ("cheap_down", lambda r: r["gap"] <= mg and r["mom"] <= mm),
+                               ("pricey_up", lambda r: r["gap"] > mg and r["mom"] > mm),
+                               ("pricey_down", lambda r: r["gap"] > mg and r["mom"] <= mm)):
+                c = [xs(r, h) for r in rs if cond(r)]
+                if c:
+                    cells[name].append((d, statistics.fmean(c)))
+        two[h] = {k: {"mean": _r(statistics.fmean(x for _, x in v)) if v else None,
+                      "early": _r(statistics.fmean([x for d, x in v if d < SPLIT_YEAR] or [float("nan")])) if v else None,
+                      "late": _r(statistics.fmean([x for d, x in v if d >= SPLIT_YEAR] or [float("nan")])) if v else None,
+                      "months": len(v)} for k, v in cells.items()}
+    return {"factors": out, "value_momentum": two, "split_year": SPLIT_YEAR}
 
 
 def _r(x):
@@ -430,6 +514,13 @@ def main(argv=None):
     for row in res["table"]:
         h = row["h"]["12m"]
         log(f"  {row['label']:<30} flags {row['flags']:>6}  12m excess mean {_pct(h['mean'])} median {_pct(h['median'])} beat {_pct(h['beat'])}")
+    for f in res["baskets"]["factors"]:
+        h = f["h"].get("12m")
+        if h:
+            log(f"  basket {f['label']:<22} 12m by fifth {' '.join(_pct(x) for x in h['q'])}  spread {_pct(h['spread'])} "
+                f"({_pct(h['consistency'])} of months; before {SPLIT_YEAR} {_pct(h['early'])}, after {_pct(h['late'])})")
+    vm = res["baskets"]["value_momentum"].get("12m", {})
+    log("  value x momentum 12m: " + ", ".join(f"{k} {_pct(v['mean'])}" for k, v in vm.items()))
     log(f"done in {res['meta']['seconds']}s -> {a.out}/")
 
 

@@ -58,6 +58,12 @@ svg{display:block;width:100%;height:auto;overflow:visible}
 .cases{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .cases h3{font-size:14px;margin:0 0 6px}
 .cases td{font-size:13px;padding:6px 6px}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 22px}
+.bcell h3{font-size:14px;margin:0}.bcell .q{font-size:12px;color:var(--text-muted);margin:0 0 4px}
+.bcell .foot{font-size:12.5px;color:var(--text-secondary);line-height:1.45}
+.vm{max-width:620px}.vm td,.vm th{text-align:center}.vm td:first-child,.vm th:first-child{text-align:left}
+.vm td{padding:10px}
+@media (max-width:900px){.bgrid{grid-template-columns:1fr 1fr}}@media (max-width:600px){.bgrid{grid-template-columns:1fr}}
 ul.notes{margin:6px 0 0;padding-left:18px;color:var(--text-secondary);font-size:14px}
 ul.notes li{margin:0 0 6px}
 @media (max-width:760px){.cases{grid-template-columns:1fr}.hide-sm{display:none}}
@@ -71,6 +77,15 @@ ul.notes li{margin:0 0 6px}
   <p class="asof" id="asof"></p>
 
   <div class="card"><p class="answer" id="answer"></p></div>
+
+  <div class="card">
+    <h2>Which baskets beat the market?</h2>
+    <p class="sub" id="bsub"></p>
+    <div class="bgrid" id="bgrid"></div>
+    <h3 style="font-size:15px;margin:22px 0 4px">Value × momentum</h3>
+    <p class="sub">Each month the quality universe is split at the median valuation gap and the median 12-month price change, giving four baskets. Return beyond the S&amp;P 500 over the next 12 months.</p>
+    <table class="vm" id="vm"></table>
+  </div>
 
   <div class="card">
     <h2>Return beyond the S&amp;P 500, per flag</h2>
@@ -126,6 +141,31 @@ document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fm
   s.push(`As portfolios held for ${D.meta.hold_months} months, $1 grew to <b>$${end('gap_trigger')}</b> for gap + drop, $${end('gap')} for the valuation gap, $${end('quality')} for all quality companies and $${end('spy')} for the S&amp;P 500.`);
   if(gt.median!=null && gt.mean!=null && (gt.mean>0)!==(gt.median>0)) s.push(`Note the gap + drop average and median point in different directions: a handful of big winners lift the average, while the typical pick roughly matched the market.`);
   document.getElementById('answer').innerHTML = s.join(' ');
+})();
+
+// Baskets: one small bar chart per measure, fifths of the quality universe, 12-month return beyond the S&P
+(function(){
+  const B=D.baskets; if(!B){ return; }
+  const sy=B.split_year;
+  document.getElementById('bsub').textContent=`Every month the whole quality universe is ranked on each measure and split into fifths. Bars show each fifth's average return beyond the S&P 500 over the next 12 months. A staircase means the measure mattered; a flat row means it didn't. "Held up" checks the first-vs-last gap separately before ${sy} and since.`;
+  const NS='http://www.w3.org/2000/svg';
+  const box=document.getElementById('bgrid'); box.innerHTML='';
+  const all=B.factors.flatMap(f=>(f.h['12m']||{q:[]}).q).filter(x=>x!=null); const ext=Math.max(0.04,...all.map(Math.abs));
+  B.factors.forEach(f=>{ const h=f.h['12m']; if(!h) return;
+    const c=document.createElement('div'); c.className='bcell';
+    const W=300,H=150,T=18,Bm=34,L=8,R=8, mid=T+(H-T-Bm)/2, sc=(H-T-Bm)/2/ext, bw=(W-L-R)/5;
+    let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${f.label} by fifth">`;
+    svg+=`<line x1="${L}" x2="${W-R}" y1="${mid}" y2="${mid}" stroke="${css('--text-muted')}" stroke-width="1"/>`;
+    h.q.forEach((v,k)=>{ if(v==null) return; const x=L+k*bw+bw*0.18, w=bw*0.64, hh=Math.abs(v)*sc, y=v>=0?mid-hh:mid;
+      svg+=`<rect x="${x}" y="${y}" width="${w}" height="${Math.max(1,hh)}" rx="3" fill="${css('--s-gap_trigger')}" opacity="${0.45+0.11*(4-k)}"><title>${['First','Second','Middle','Fourth','Last'][k]} fifth: ${pts(v)}</title></rect>`;
+      svg+=`<text x="${x+w/2}" y="${v>=0?y-4:y+hh+12}" text-anchor="middle" font-size="11" fill="${css('--text-secondary')}">${(v>0?'+':'')+(v*100).toFixed(1)}</text>`; });
+    svg+=`<text x="${L+bw*0.18}" y="${H-8}" font-size="11" fill="${css('--text-muted')}">${f.ends[0]}</text><text x="${W-R-bw*0.18}" y="${H-8}" text-anchor="end" font-size="11" fill="${css('--text-muted')}">${f.ends[1]}</text>`;
+    svg+='</svg>';
+    const held=(h.early>0)===(h.late>0) && Math.abs(h.early)>0.005 && Math.abs(h.late)>0.005;
+    c.innerHTML=`<h3>${f.label}</h3><div class="q">${f.question}</div>${svg}<div class="foot">${f.ends[0]} minus ${f.ends[1].toLowerCase()}: <b class="${h.spread>0?'up':'dn'}">${pts(h.spread)}</b> a year; won in ${Math.round(h.consistency*100)}% of months. Before ${sy}: ${pts(h.early)}; since: ${pts(h.late)} ${held?'· <b>held up</b>':'· <span style="color:var(--text-muted)">not consistent</span>'}</div>`;
+    box.appendChild(c); });
+  const vm=B.value_momentum['12m']; if(vm){ const cell=k=>{const v=vm[k]; if(!v||v.mean==null) return '<td>–</td>'; return `<td><span class="cell ${v.mean>0.005?'up':v.mean<-0.005?'dn':''}" style="font-size:15px">${pts(v.mean)}</span><div class="s" style="margin-top:4px">before ${sy} ${pts(v.early)} · since ${pts(v.late)}</div></td>`;};
+    document.getElementById('vm').innerHTML=`<tr><th></th><th>Price rising (top half)</th><th>Price falling (bottom half)</th></tr><tr><td><b>Cheap</b><div class="s">bigger valuation gap</div></td>${cell('cheap_up')}${cell('cheap_down')}</tr><tr><td><b>Pricey</b><div class="s">smaller gap</div></td>${cell('pricey_up')}${cell('pricey_down')}</tr>`; }
 })();
 
 // Comparison table
