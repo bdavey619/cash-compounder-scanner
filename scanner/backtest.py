@@ -197,13 +197,18 @@ def month_ends(spy: Series, start: str) -> list[str]:
     return out
 
 
-def hurdle(tnx: Series | None, day: str) -> float:
-    rf = C.RISK_FREE_FALLBACK
+def risk_free(tnx: Series | None, day: str) -> float | None:
     if tnx:
         i = tnx.idx(day)
         if i is not None:
             v = tnx.close[i]
-            rf = (v / 10 if v > 20 else v) / 100
+            return (v / 10 if v > 20 else v) / 100
+    return None
+
+
+def hurdle(tnx: Series | None, day: str) -> float:
+    rf = risk_free(tnx, day)
+    rf = C.RISK_FREE_FALLBACK if rf is None else rf
     return min(C.REQUIRED_RETURN_MAX, max(C.REQUIRED_RETURN_MIN, rf + C.EQUITY_PREMIUM))
 
 
@@ -269,7 +274,8 @@ def walk(pit: dict[str, dict[str, dict]], meta: dict[str, dict], prices: dict[st
                 "fcf_margin": fu.get("fcf_margin"), "roc": fu.get("cash_roc"),
                 "fw": {h: x for h, x in fw.items() if x is not None},
             })
-    return {"rows": rows}
+    rates = {d: risk_free(tnx, d) for d in months}
+    return {"rows": rows, "rf": rates}
 
 
 def monthly_returns(s: Series, months: list[str]) -> dict[str, float]:
@@ -354,7 +360,7 @@ def summarize(walked: dict, prices: dict[str, Series], spy: Series, months: list
                       "ref_g": _r(r["ref_g"]), "ret": _r(ret), "spy": _r(m), "excess": _r(ret - m), "early": early})
     cases.sort(key=lambda c: c["excess"])
     flag_counts = {g: [sum(1 for r in rows if r["d"] == d and g in r["groups"]) for d in months] for g, _, _ in GROUPS}
-    return {"table": table, "growth": growth, "years": year_rows, "baskets": baskets(rows, months),
+    return {"table": table, "growth": growth, "years": year_rows, "baskets": baskets(rows, months, walked.get("rf")),
             "cases": {"best": cases[-8:][::-1], "worst": cases[:8], "n": len(cases)},
             "counts": {"dates": months, **flag_counts}}
 
@@ -371,7 +377,31 @@ BASKETS = [
 SPLIT_YEAR = "2020"   # check each result holds in both halves of the period
 
 
-def baskets(rows: list[dict], months: list[str]) -> dict:
+RATE_CUTOFFS = (0.025, 0.03, 0.035)
+MAIN_CUTOFF = 0.03
+
+
+def regime_split(spreads: list[tuple[str, float]], rf: dict, months: list[str]) -> dict:
+    """Average first-minus-last-fifth spread in high- vs low-rate months (10-year yield on the ranking date),
+    at several cutoffs, and in months when rates had risen vs fallen over the prior year."""
+    def stats(xs):
+        return {"mean": _r(statistics.fmean(xs)), "months": len(xs), "won": _r(sum(1 for x in xs if x > 0) / len(xs))} if xs else None
+    out = {"level": {}}
+    for cut in RATE_CUTOFFS:
+        hi = [x for d, x in spreads if rf.get(d) is not None and rf[d] >= cut]
+        lo = [x for d, x in spreads if rf.get(d) is not None and rf[d] < cut]
+        out["level"][f"{cut:.3f}"] = {"high": stats(hi), "low": stats(lo)}
+    idx = {d: i for i, d in enumerate(months)}
+    up, down = [], []
+    for d, x in spreads:
+        i = idx[d]
+        if i >= 12 and rf.get(d) is not None and rf.get(months[i - 12]) is not None:
+            (up if rf[d] > rf[months[i - 12]] else down).append(x)
+    out["rising"], out["falling"] = stats(up), stats(down)
+    return out
+
+
+def baskets(rows: list[dict], months: list[str], rf: dict | None = None) -> dict:
     """Each month, rank the quality universe on a measure, split it into fifths, and average each fifth's
     return beyond the S&P 500. Months are weighted equally so no single crash or boom dominates."""
     by_month = {}
@@ -411,6 +441,7 @@ def baskets(rows: list[dict], months: list[str]) -> dict:
                 "early": _r(statistics.fmean(early)) if early else None,
                 "late": _r(statistics.fmean(late)) if late else None,
                 "months": len(spreads),
+                "regime": regime_split(spreads, rf or {}, months),
             }
         out.append(res)
 
@@ -435,7 +466,9 @@ def baskets(rows: list[dict], months: list[str]) -> dict:
                       "early": _r(statistics.fmean([x for d, x in v if d < SPLIT_YEAR] or [float("nan")])) if v else None,
                       "late": _r(statistics.fmean([x for d, x in v if d >= SPLIT_YEAR] or [float("nan")])) if v else None,
                       "months": len(v)} for k, v in cells.items()}
-    return {"factors": out, "value_momentum": two, "split_year": SPLIT_YEAR}
+    return {"factors": out, "value_momentum": two, "split_year": SPLIT_YEAR,
+            "rates": {"dates": months, "rf": [_r(rf.get(d)) if rf else None for d in months]},
+            "cutoff": MAIN_CUTOFF}
 
 
 def _r(x):
@@ -519,6 +552,12 @@ def main(argv=None):
         if h:
             log(f"  basket {f['label']:<22} 12m by fifth {' '.join(_pct(x) for x in h['q'])}  spread {_pct(h['spread'])} "
                 f"({_pct(h['consistency'])} of months; before {SPLIT_YEAR} {_pct(h['early'])}, after {_pct(h['late'])})")
+    for f in res["baskets"]["factors"]:
+        g = (f["h"].get("12m") or {}).get("regime")
+        if g:
+            lv = " | ".join(f"{float(c)*100:.1f}%: hi {_pct((v['high'] or {}).get('mean'))} lo {_pct((v['low'] or {}).get('mean'))}"
+                            for c, v in g["level"].items())
+            log(f"  rates {f['label']:<22} {lv} | rising {_pct((g['rising'] or {}).get('mean'))} falling {_pct((g['falling'] or {}).get('mean'))}")
     vm = res["baskets"]["value_momentum"].get("12m", {})
     log("  value x momentum 12m: " + ", ".join(f"{k} {_pct(v['mean'])}" for k, v in vm.items()))
     log(f"done in {res['meta']['seconds']}s -> {a.out}/")
