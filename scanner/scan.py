@@ -318,8 +318,15 @@ def load_regime(rf, path: Path = Path("backtest/results.json")) -> dict | None:
     if not lv:
         return None
     hi_years = sorted({d[:4] for d, v in zip(b["rates"]["dates"], b["rates"]["rf"]) if v is not None and v >= cut})
+    try:
+        tbl = {r["id"]: r["h"]["12m"] for r in json.loads(path.read_text())["table"]}
+    except (OSError, ValueError, KeyError):
+        tbl = {}
+    pick = lambda g, k: (tbl.get(g) or {}).get(k)
     return {"rf": rf, "cutoff": cut, "high": rf is not None and rf >= cut, "hi": lv["high"], "lo": lv["low"],
-            "hi_years": hi_years, "start": b["rates"]["dates"][0][:4]}
+            "hi_years": hi_years, "start": b["rates"]["dates"][0][:4],
+            "drop_only_median": pick("trigger_only", "median"), "drop_only_beat": pick("trigger_only", "beat"),
+            "gap_drop_median": pick("gap_trigger", "median"), "gap_drop_mean": pick("gap_trigger", "mean")}
 
 
 def quality_fail_reasons(fu) -> list[str]:

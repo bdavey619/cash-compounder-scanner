@@ -97,9 +97,9 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("flag_drawdown", a)
 
     def test_site_written(self):
-        for page in ("index.html", "company.html", "track.html", "method.html"):
+        for page in ("index.html", "company.html", "track.html", "method.html", "learn.html"):
             html = (self.tmp / "out" / page).read_text()
-            for ph in ("__CSS__", "__NAV__", "__COMPANIES__", "__META__"):
+            for ph in ("__CSS__", "__NAV__", "__COMPANIES__", "__META__", "__MODEJS__", "__GLOSS__"):
                 self.assertNotIn(ph, html, page)
             self.assertIn('aria-label="Main"', html)
         home = (self.tmp / "out/index.html").read_text()

@@ -77,6 +77,14 @@ __NAV__
   <p class="lede">Every month-end since <span id="start"></span>, the same rules as today's scan were applied using only what was knowable that day: SEC numbers already filed, that day's prices, that day's 10-year Treasury yield. Then each flagged stock was measured against the S&amp;P 500 over the next 3, 6 and 12 months.</p>
   <p class="asof" id="asof"></p>
 
+  <div class="card" id="short">
+    <h2>The short version</h2>
+    <p class="answer" id="shorttext" style="margin-bottom:16px"></p>
+    <div id="shortbars"></div>
+    <p class="sub" style="margin:14px 0 0">These are averages over many companies and months. They describe what tended to happen, not what will happen to any one stock.</p>
+  </div>
+  <div style="text-align:center;margin:0 0 20px"><button id="detailsbtn" type="button" aria-expanded="false" style="height:42px;padding:0 18px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--text-primary);font:inherit;font-weight:600;cursor:pointer">Show the details</button></div>
+  <div id="details" hidden>
   <div class="card"><p class="answer" id="answer"></p></div>
 
   <div class="card">
@@ -123,6 +131,7 @@ __NAV__
     <div class="cases"><div><h3>Best 12-month outcomes</h3><table id="best"></table></div><div><h3>Worst 12-month outcomes</h3><table id="worst"></table></div></div>
   </div>
 
+  </div>
   <div class="card">
     <h2>How to read this, and what it can't tell you</h2>
     <ul class="notes" id="notes"></ul>
@@ -137,6 +146,33 @@ const pts = (x,d=1)=> x==null?'–':(x>0?'+':'')+(x*100).toFixed(d)+' pts';
 const fmtMonth = d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'});
 document.getElementById('start').textContent = fmtMonth(D.meta.start);
 document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fmtMonth(D.meta.start)} to ${fmtMonth(D.meta.end)} · ${D.meta.company_months.toLocaleString()} company-months in the quality universe · ${D.meta.ever_quality.toLocaleString()} companies passed quality at some point · run ${D.meta.generated}`;
+
+// The short version, in plain words
+(function(){
+  const F = (D.baskets && D.baskets.factors || []).find(f => f.id === 'fcf_yield');
+  const reg = F && F.h['12m'] && F.h['12m'].regime && F.h['12m'].regime.level[(D.baskets.cutoff || 0.03).toFixed(3)];
+  const cut = Math.round((D.baskets && D.baskets.cutoff || 0.03) * 100);
+  const drop = G.trigger_only && G.trigger_only.h['12m'], gd = G.gap_trigger && G.gap_trigger.h['12m'];
+  const a = x => Math.abs(x * 100).toFixed(0) + '%';
+  let t = `We replayed the rules every month since ${new Date(D.meta.start + 'T12:00:00').getFullYear()}, using only what people knew at the time, then checked the next 12 months. `;
+  if (reg && reg.high && reg.low) t += `<b>When safe government bonds paid more than ${cut}%</b> (like now), the strong businesses giving the most cash per $1 beat the ones giving the least by about <b>${a(reg.high.mean)} a year</b>. When bonds paid less, they did about ${a(reg.low.mean)} a year <i>worse</i>. `;
+  if (drop) t += `<b>Buying just because a price dropped didn’t work:</b> the typical pick trailed the market by ${a(drop.median)}. `;
+  if (gd) t += `Even a drop plus a cheap-looking price was a lottery ticket: a few huge winners, but the typical pick trailed by ${a(gd.median)}. `;
+  t += `Most of the high-rate years are 2022 to now, so treat this as a pattern, not a promise.`;
+  document.getElementById('shorttext').innerHTML = t;
+  const rows = [];
+  if (reg && reg.high) rows.push([`Bonds paid over ${cut}%: most cash per $1 vs least`, reg.high.mean]);
+  if (reg && reg.low) rows.push([`Bonds paid under ${cut}%: most cash per $1 vs least`, reg.low.mean]);
+  if (drop) rows.push(['Bought just because the price dropped (typical pick vs market)', drop.median]);
+  const mx = Math.max(0.12, ...rows.map(r => Math.abs(r[1])));
+  document.getElementById('shortbars').innerHTML = rows.map(([l, v]) => { const w = Math.abs(v) / mx * 50, left = v >= 0 ? 50 : 50 - w;
+    return `<div style="display:grid;grid-template-columns:minmax(200px,340px) 1fr;gap:14px;align-items:center;font-size:14px;margin:8px 0"><span>${l}</span><div style="position:relative;height:26px;background:linear-gradient(var(--grid),var(--grid)) center/2px 100% no-repeat"><div style="position:absolute;top:3px;height:20px;left:${left}%;width:${w}%;border-radius:5px;background:${v >= 0 ? css('--s-gap_trigger') : css('--dn')};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'};padding:0 8px">${(v > 0 ? '+' : '−') + a(v)}</div></div></div>`; }).join('');
+  const btn = document.getElementById('detailsbtn'), det = document.getElementById('details');
+  const open = location.hash === '#ratecard' || location.hash === '#details';
+  const set = o => { det.hidden = !o; btn.setAttribute('aria-expanded', o); btn.textContent = o ? 'Hide the details' : 'Show the details'; };
+  btn.onclick = () => set(det.hidden); set(open);
+  if (open && location.hash === '#ratecard') setTimeout(() => document.getElementById('ratecard').scrollIntoView(), 50);
+})();
 
 // Plain-language answer, generated from the numbers
 (function(){
