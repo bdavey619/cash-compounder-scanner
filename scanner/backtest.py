@@ -113,7 +113,7 @@ def _pit_worker(args):
     except (OSError, ValueError):
         return {}
     res = pit_fundamentals(facts, month_ends)
-    return {d: {k: v for k, v in fu.items() if k != "history"} for d, fu in res.items()}
+    return {d: {k: v for k, v in fu.items() if k not in ("history", "math")} for d, fu in res.items()}
 
 
 # ------------------------------------------------------------------ prices

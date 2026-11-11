@@ -288,11 +288,14 @@ def value_company(co, ps, mkt_chg, mkt_dd, base_r):
     if alt:
         g = implied_growth(min(alt), mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
     fcf_base = min(alt) if alt else co["fcf"]
+    base_kind = "latest"
+    if alt:
+        base_kind = "avg3" if (co["volatile"] and co["fcf_avg3"] == fcf_base) else "normalized"
     ref = reference_growth(co)
     ok = lambda x: x is not None and math.isfinite(x)
     gap = (g - ref) if (ok(g) and ref is not None) else None
     return {**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap,
-            "p_fcf": mcap / co["fcf"], "fcf_yield": fcf_base / mcap, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
+            "p_fcf": mcap / co["fcf"], "fcf_yield": fcf_base / mcap, "fcf_base": fcf_base, "base_kind": base_kind, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
             "gap_ttm": (g_ttm - ref) if (ok(g_ttm) and ref is not None) else None,
             "risk_premium": prem, "risk_why": why, "required_return": r}
 
@@ -371,7 +374,8 @@ def _row(c):
     fin = lambda x: (round(x, 4) if isinstance(x, float) and math.isfinite(x) else None)
     return {
         "ticker": c["ticker"], "name": c["name"], "cik": c["cik"], "new_in": c.get("new_in", []),
-        "fcf_yield": fin(c.get("fcf_yield")),
+        "fcf_yield": fin(c.get("fcf_yield")), "fcf_base_bn": round(c["fcf_base"] / 1e9, 4) if c.get("fcf_base") else None,
+        "base_kind": c.get("base_kind", "latest"), "math": c.get("math"), "mcap": c.get("mcap"),
         "sector": c.get("sector", "Other"), "sic_desc": c.get("sic_desc", ""),
         "price": round(c["last"], 2), "price_date": c["last_date"],
         "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]),

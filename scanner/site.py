@@ -88,7 +88,7 @@ GLOSSARY = {
     "margin": ("FCF margin", "Cash kept per $1 of sales",
                "Free cash flow as a share of revenue: of every $1 the company sells, how much ends up as spare cash after paying for everything."),
     "rec": ("Growth record", "Past growth",
-            "How fast the company's cash and sales per share grew over the last four years (we use the lower of the two, capped at 20%)."),
+            "How fast the company's cash and sales per share grew each year over roughly the last 2–3 years (we use the lower of the two, capped at 20%)."),
     "impl": ("Price implies", "Price's bet",
              "The yearly cash growth over the next 10 years that today's price only makes sense with. Negative means the price is betting the cash will shrink."),
     "mcap": ("Mkt cap", "Company value", "Market value: the share price times the number of shares, what it would cost to buy the whole company."),
@@ -198,6 +198,8 @@ def company_payload(r: dict, ec: dict, rank: int) -> dict:
         "bases": ec["bases"], "defaultBase": ec["defaultBase"], "hist": ec["hist"],
         "premium": ec["riskPremium"], "premiumWhy": ec["riskWhy"],
         "notes": [b["t"] for b in ec["badges"] if b["k"] != "link"],
+        "m": r.get("math"), "mcapRaw": r.get("mcap"), "baseKind": r.get("base_kind", "latest"), "fcfBase": r.get("fcf_base_bn"),
+        "req": r.get("required_return"),
     }
 
 

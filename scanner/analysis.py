@@ -55,7 +55,7 @@ def _shift_year(d: str, years: int) -> date:
         return x.replace(year=x.year + years, day=28)
 
 
-def ttm_value(facts: dict, concepts: list[str]):
+def ttm_value(facts: dict, concepts: list[str], parts: dict | None = None):
     """Trailing twelve months from 10-Q year-to-date facts:
     TTM = last fiscal year + this year's YTD - last year's matching YTD.
     Returns (value, period_end, fiscal_year_end_used) or (None, None, None)."""
@@ -78,6 +78,9 @@ def ttm_value(facts: dict, concepts: list[str]):
         if not prior:
             continue
         p = max(prior, key=lambda f: f.get("filed", ""))
+        if parts is not None:
+            parts.update({"fy": annual[fy_end], "fy_end": fy_end, "ytd": latest["val"], "ytd_start": latest["start"],
+                          "ytd_end": latest["end"], "prior": p["val"], "prior_start": p["start"], "prior_end": p["end"]})
         return annual[fy_end] + latest["val"] - p["val"], latest["end"], fy_end
     return None, None, None
 
@@ -113,23 +116,28 @@ def fundamentals(facts: dict) -> dict | None:
                      "fcf": ocf[y] - (cx or 0.0) - sb})
     last = rows[-1]
     # Trailing twelve months from quarterly filings, when they're newer than the last 10-K
-    t_ocf, t_end, _ = ttm_value(f, OCF)
-    t_cx, t_cx_end, _ = ttm_value(f, CAPEX)
-    t_rev, t_rev_end, _ = ttm_value(f, REVENUE)
-    t_sbc, t_sbc_end, _ = ttm_value(f, SBC)
+    tp = {k: {} for k in ("ocf", "capex", "rev", "sbc")}
+    t_ocf, t_end, _ = ttm_value(f, OCF, tp["ocf"])
+    t_cx, t_cx_end, _ = ttm_value(f, CAPEX, tp["capex"])
+    t_rev, t_rev_end, _ = ttm_value(f, REVENUE, tp["rev"])
+    t_sbc, t_sbc_end, _ = ttm_value(f, SBC, tp["sbc"])
     if t_ocf is not None and t_end > last["fy_end"] and t_cx_end == t_end:
         ttm_sbc = t_sbc if t_sbc_end == t_end else last["sbc"]  # fall back to the fiscal-year figure
         cur = {"end": t_end, "fcf": t_ocf - t_cx - ttm_sbc, "sbc": ttm_sbc, "basis": "TTM",
-               "revenue": t_rev if t_rev_end == t_end else None}
+               "revenue": t_rev if t_rev_end == t_end else None, "ocf": t_ocf, "capex": t_cx,
+               "parts": {"ocf": tp["ocf"], "capex": tp["capex"], "sbc": tp["sbc"] if t_sbc_end == t_end else None,
+                         "rev": tp["rev"] if t_rev_end == t_end else None},
+               "rev_estimated": t_rev_end != t_end}
         if cur["revenue"] is None:  # keep the margin like-for-like
             cur["revenue"] = last["revenue"] * (cur["fcf"] / last["fcf"]) if last["fcf"] and last["revenue"] else None
     else:
-        cur = {"end": last["fy_end"], "fcf": last["fcf"], "sbc": last["sbc"], "basis": "FY", "revenue": last["revenue"]}
-    equity, _ = latest_instant(f, ["StockholdersEquity"])
-    ltd, _ = latest_instant(f, ["LongTermDebt", "LongTermDebtNoncurrent"])
-    cash, _ = latest_instant(f, ["CashAndCashEquivalentsAtCarryingValue"])
-    sti, _ = latest_instant(f, ["MarketableSecuritiesCurrent", "ShortTermInvestments"])
-    shares, shares_asof = shares_outstanding(f, cur["end"])
+        cur = {"end": last["fy_end"], "fcf": last["fcf"], "sbc": last["sbc"], "basis": "FY", "revenue": last["revenue"],
+               "ocf": last["ocf"], "capex": last["capex"], "parts": None, "rev_estimated": False}
+    equity, equity_d = latest_instant(f, ["StockholdersEquity"])
+    ltd, ltd_d = latest_instant(f, ["LongTermDebt", "LongTermDebtNoncurrent"])
+    cash, cash_d = latest_instant(f, ["CashAndCashEquivalentsAtCarryingValue"])
+    sti, sti_d = latest_instant(f, ["MarketableSecuritiesCurrent", "ShortTermInvestments"])
+    shares, shares_asof, shares_src = shares_outstanding(f, cur["end"], with_source=True)
     capital = (equity or 0) + (ltd or 0)
     first = rows[-3]
     yrs = (date.fromisoformat(cur["end"]) - date.fromisoformat(first["fy_end"])).days / 365.25
@@ -160,7 +168,18 @@ def fundamentals(facts: dict) -> dict | None:
     peak_margin = bool(margin_avg is not None and margin_now is not None and margin_avg > 0
                        and margin_now >= C.PEAK_MARGIN_RATIO * margin_avg
                        and margin_now - margin_avg >= C.PEAK_MARGIN_MIN_PTS)
+    math = {
+        "basis": cur["basis"], "end": cur["end"], "ocf": cur["ocf"], "capex": cur["capex"], "sbc": cur["sbc"],
+        "revenue": cur["revenue"], "rev_estimated": cur["rev_estimated"], "parts": cur["parts"],
+        "cash": cash, "cash_date": cash_d, "sti": sti, "sti_date": sti_d, "ltd": ltd, "ltd_date": ltd_d,
+        "equity": equity, "equity_date": equity_d, "shares": shares, "shares_date": shares_asof, "shares_src": shares_src,
+        "first_fy": first["fy_end"], "first_fcf": first["fcf"], "first_rev": first.get("revenue"), "yrs": yrs,
+        "sh_first": sh_first, "sh_last": sh_last, "sh_first_fy": first["fy_end"], "sh_last_fy": last["fy_end"], "sh_yrs": sh_yrs,
+        "rows": [{k: r.get(k) for k in ("fy_end", "ocf", "capex", "sbc", "revenue", "fcf", "diluted")} for r in rows],
+        "fcf_avg3": avg3, "margin_avg": margin_avg, "margin_years": len(margins),
+    }
     return {
+        "math": math,
         "history": history,
         "fy_end": last["fy_end"],
         "fcf_basis": cur["basis"],
@@ -191,7 +210,7 @@ def fundamentals(facts: dict) -> dict | None:
     }
 
 
-def shares_outstanding(f, ref_end: str | None = None, max_age_days: int = 400):
+def shares_outstanding(f, ref_end: str | None = None, max_age_days: int = 400, with_source: bool = False):
     """Total shares across all classes. The cover page reports each class separately (Mastercard, Visa,
     CME, Alphabet...), so add up every class from the latest filing. Then cross-check against diluted
     shares, which convert every class into common-equivalent shares: if that's materially larger (Visa's
@@ -209,13 +228,13 @@ def shares_outstanding(f, ref_end: str | None = None, max_age_days: int = 400):
     fresh = lambda c: bool(c[0]) and (ref_end is None or (date.fromisoformat(ref_end) - date.fromisoformat(c[1])).days <= max_age_days)
     if not fresh((total, asof)):
         total, asof = None, None
-    cands = [c for c in (implied_shares(f), latest_diluted_shares(f)) if fresh(c)]
-    best = max(cands, key=lambda c: c[0]) if cands else (None, None)
-    if total is None:
-        return best
-    if best[0] and best[0] > 1.10 * total:
-        return best
-    return total, asof
+    named = [(implied_shares(f), "net income ÷ diluted EPS"), (latest_diluted_shares(f), "diluted weighted-average shares")]
+    cands = [(c, n) for c, n in named if fresh(c)]
+    best, src = max(cands, key=lambda x: x[0][0]) if cands else ((None, None), None)
+    out = (total, asof, "cover page of the latest filing")
+    if total is None or (best[0] and best[0] > 1.10 * total):
+        out = (best[0], best[1], src)
+    return out if with_source else out[:2]
 
 
 def implied_shares(f):

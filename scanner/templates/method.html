@@ -34,7 +34,7 @@ __NAV__
       <li>The screen can’t tell a temporary problem from a permanent one. That judgment is yours.</li>
       <li>Companies whose filings don’t use standard tags for cash flow or share counts can be missing or, rarely, misread. Each company page links to its filings so you can check.</li>
       <li>Free cash flow doesn’t mean the same thing for banks, lenders, insurers and real-estate companies, so they’re excluded.</li>
-      <li>The growth record looks back four fiscal years; a business that just changed shape (a spin-off, a big acquisition) can look odd.</li>
+      <li>The growth record looks back only 2–3 years; a business that just changed shape (a spin-off, a big acquisition) can look odd.</li>
     </ul>
   </section>
   <p class="faint" style="font-size:13px">Data: SEC EDGAR company facts (10-K and 10-Q), SEC submissions and Form 4 filings, daily closing prices, and the 10-year Treasury yield. Updated every weekday after the close. Source code: <a href="https://github.com/bdavey619/cash-compounder-scanner">GitHub</a>.</p>
@@ -59,7 +59,7 @@ dl('rules', [
 dl('defs', [
   ['Free cash flow', 'Operating cash flow minus capital spending minus stock-based compensation, from the latest twelve months of 10-K and 10-Q filings. Stock pay is subtracted because it dilutes shareholders.'],
   ['FCF yield', 'Free cash flow divided by market value: the cash the business produces per dollar you’d pay for it. Cyclical companies use their 3-year average, and companies at peak margins use today’s revenue at their average margin, so one boom year doesn’t flatter them.'],
-  ['Growth record', `The lower of free-cash-flow and revenue growth per share over the last four fiscal years, capped at ${p(R.TRACK_CAP)}. Per share, so buybacks count in a company’s favor and dilution against it.`],
+  ['Growth record', `The lower of free-cash-flow and revenue growth per share from the fiscal year two before the latest up to the latest twelve months (roughly 2–3 years), capped at ${p(R.TRACK_CAP)}. Per share, so buybacks count in a company’s favor and dilution against it.`],
   ['Price implies', `The yearly free-cash-flow growth over the next ${R.FORECAST_YEARS} years (then ${p(R.TERMINAL_GROWTH)} a year) that makes a discounted-cash-flow value equal today’s market value less net cash, a “reverse DCF”.`],
   ['Required return', `The 10-year Treasury yield plus a ${p(R.EQUITY_PREMIUM)} premium for owning stocks (today ${p(R.REQUIRED_RETURN, 2)}${RT.rf != null ? ', from a ' + p(RT.rf, 2) + ' Treasury yield' : ''}). Add 1.5 points for cyclical cash flow and 1 point when net debt exceeds 3× free cash flow.`],
   ['Flags', `Fell sharply: down ${Math.round(-R.DROP_THRESHOLD * 100)}+ points more than the S&amp;P 500 in 5 days, or ${Math.round(-R.DRAWDOWN_THRESHOLD * 100)}+ points more from its 1-month high. Priced below its record: the price implies at most ${p(R.MAX_IMPLIED_GROWTH)} a year and at least ${Math.round(-R.GAP_THRESHOLD * 100)} points less than its growth record. Insider buying: ${R.MIN_CLUSTER_BUYERS}+ insiders buying on the open market within a week.`]]);

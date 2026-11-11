@@ -39,6 +39,33 @@ table.sens td.on{background:var(--accent);color:#fff;font-weight:700}
 .plain{padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--accent);border-radius:0 12px 12px 0}
 .plain h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .plain p{margin:0;font-size:16.5px;line-height:1.65;color:var(--ink)}
+.mathlink{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);margin-top:6px;display:inline-block}
+.mathlink:hover{text-decoration:underline}.mathlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#math{padding:22px 24px;margin-bottom:20px;scroll-margin-top:16px}
+#math h2{margin:0 0 4px;font-size:17px;font-weight:700}
+.mtabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 18px}
+.mtabs button{all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--border);color:var(--ink2);background:var(--card)}
+.mtabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.mtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.formula{font-size:18px;font-weight:600;padding:14px 16px;background:var(--accent-soft);border-radius:10px;margin-bottom:16px;line-height:1.5}
+.formula .eq{color:var(--accent)}
+ol.steps{margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.7;color:var(--ink2)}
+ol.steps li{margin-bottom:10px}ol.steps b{color:var(--ink)}
+.calc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:6px 0 2px;color:var(--ink);overflow-x:auto;white-space:nowrap}
+.where{border-top:1px solid var(--line);padding-top:14px;font-size:13.5px;color:var(--ink2)}
+.where table{width:100%;border-collapse:collapse}.where td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+.where td:first-child{font-weight:600;color:var(--ink);white-space:nowrap;padding-left:0}
+.where code{font-size:12px;color:var(--muted)}
+table.dcf{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
+table.dcf th{font-size:12px;font-weight:600;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)}
+table.dcf td{text-align:right;padding:5px 8px;border-top:1px solid var(--line)}table.dcf th:first-child,table.dcf td:first-child{text-align:left}
+table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
+.calcgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0}
+.calcgrid label{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.calcgrid input{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:14px;width:100%}
+.calcout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.calcout div{background:var(--bg);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}.calcout b{display:block;font-size:20px;color:var(--ink)}
+@media (max-width:820px){.calcgrid{grid-template-columns:1fr 1fr}.calcout{grid-template-columns:1fr 1fr}}
 .cue{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px}
 .cue.cheap{background:var(--accent-bg);color:var(--accent-ink)}.cue.mid{background:var(--chip);color:var(--ink2)}.cue.pricey{background:var(--warn-bg);color:var(--warn-ink)}
 </style>
@@ -54,6 +81,7 @@ const pct = (x, d = 1) => x == null || !isFinite(x) ? (x === Infinity ? '>200%' 
 const pl = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x * 100).toFixed(d) + '%';
 const money = b => b == null ? '–' : Math.abs(b) >= 1000 ? '$' + (b / 1000).toFixed(2) + 'T' : Math.abs(b) >= 100 ? '$' + b.toFixed(0) + 'B' : '$' + b.toFixed(Math.abs(b) < 10 ? 2 : 1) + 'B';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmtD = (d, short) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', short ? { month: 'short', year: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' }) : '–';
 const BASE_R = META.rules.REQUIRED_RETURN, GT0 = META.rules.TERMINAL_GROWTH || 0.03;
 let st = {}, cur = null;
 const pc = x => Math.round(x * 100);
@@ -73,7 +101,8 @@ function plainSummary(c) {
     out.push(`For every $1 you’d pay for ${esc(c.name)}, the business produces about <b>${pc(c.yld)}¢ of spare cash a year</b>` +
       (mult ? (mult >= 1.15 ? `, about ${mult.toFixed(1)}× what a safe government bond pays (${(rf * 100).toFixed(1)}%).` : mult >= 0.85 ? `, about the same as a safe government bond (${(rf * 100).toFixed(1)}%).` : `, less than a safe government bond pays (${(rf * 100).toFixed(1)}%), so investors must be expecting growth.`) : '.'));
   }
-  if (c.rec != null) out.push(c.rec >= 0 ? `Over the last four years its cash and sales per share grew about <b>${pc(c.rec)}% a year</b>.` : `Over the last four years its cash and sales per share actually <b>shrank about ${Math.abs(pc(c.rec))}% a year</b>.`);
+  const since = c.m && c.m.first_fy ? `Since ${fmtD(c.m.first_fy, true)} (about ${c.m.yrs.toFixed(1)} years)` : 'Recently';
+  if (c.rec != null) out.push(c.rec >= 0 ? `${since}, its cash and sales per share grew about <b>${pc(c.rec)}% a year</b>.` : `${since}, its cash and sales per share actually <b>shrank about ${Math.abs(pc(c.rec))}% a year</b>.`);
   const g = c.impl;
   if (g != null && isFinite(g) && c.rec != null) {
     if (g < c.rec - 0.05) out.push(`But today’s price only makes sense if its cash ${g < 0 ? `<b>shrinks about ${Math.abs(pc(g))}% a year</b>` : `grows just <b>${pc(g)}% a year</b>`} for the next 10 years. Either the market sees trouble ahead, or it’s being too pessimistic. That’s the question to research.`);
@@ -122,7 +151,7 @@ function show() {
     </div>
   </div>
   <section class="card plain"><h2>In plain English</h2><p>${plainSummary(c)}</p></section>
-  <section class="tiles" aria-label="Key numbers">
+  <section class="tiles" aria-label="Key numbers" id="tiles">
     <div class="card tile"><div class="k">${L('yld')}${I('yld')}</div><div class="v">${plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld)}</div><div class="d">${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.round((N - c.rank) / Math.max(1, N - 1) * 100)}% of the list</div><div class="d" style="display:none">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
     <div class="card tile"><div class="k">${L('pfcf')}${I('pfcf')}</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'}</div><div class="d">${money(c.fcf)} ${plain ? 'of cash a year' : 'free cash flow'}</div></div>
     <div class="card tile"><div class="k">${L('margin')}${I('margin')}</div><div class="v">${plain && c.margin != null ? pc(c.margin) + '¢' : pl(c.margin)}</div><div class="d">${plain ? 'of every $1 of sales' : 'after stock comp' + (c.sbc ? ' (' + pl(c.sbc) + ' of revenue)' : '')}</div></div>
@@ -130,15 +159,16 @@ function show() {
     <div class="card tile"><div class="k">${L('shares')}${I('shares')}</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? (plain ? ': buying back its own shares' : ', from buybacks') : c.shares > 0.01 ? (plain ? ': issuing new shares' : ', dilution') : ''}</div></div>
     <div class="card tile"><div class="k">${c.net < 0 ? (plain ? 'Debt minus cash' : 'Net debt') : (plain ? 'Cash minus debt' : 'Net cash')}${I('net')}</div><div class="v">${money(Math.abs(c.net))}</div><div class="d">${plain && c.net < 0 && c.fcf > 0 ? `about ${(-c.net / c.fcf).toFixed(1)} years of cash` : netNote}</div></div>
   </section>
+  <section class="card" id="math" aria-labelledby="mathh"></section>
   <div class="cols">
     <div class="main">
       <section class="card sec">
         <h2>${plain ? 'What is the price betting on?' : 'What is the price assuming?'}</h2>
-        <p class="muted" style="margin:0;font-size:14px">${plain ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew over the past four years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p>
+        <p class="muted" style="margin:0;font-size:14px">${plain ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew per share over the last few years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p>
         <div class="scale" id="scale"></div>
         <div class="ticks"><span>−10%</span><span>0%</span><span>+10%</span><span>+20%</span><span>+30%</span></div>
         <div class="verdict" id="verdict"></div>
-        <p class="faint" style="margin:12px 0 0;font-size:12.5px">${plain ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) over the last four fiscal years, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>
+        <p class="faint" style="margin:12px 0 0;font-size:12.5px">${plain ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>
       </section>
       <section class="card sec">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>${plain ? 'Spare cash each year' : 'Free cash flow'}</h2><span class="muted" style="font-size:13px">$ billions · ${plain ? 'after paying for everything, including stock pay' : 'after stock-based comp'}</span></div>
@@ -179,6 +209,11 @@ function show() {
     </aside>
   </div>
   <footer class="foot"><span>Educational research, not investment advice. Figures from the company’s SEC filings and the ${new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} close.</span><a href="method.html">How these numbers are calculated</a></footer>`;
+
+  const tileKeys = ['yld', 'pfcf', 'margin', 'roc', 'shares', 'net'];
+  document.querySelectorAll('#tiles .tile').forEach((t, k) => { if (tileKeys[k]) t.insertAdjacentHTML('beforeend', `<button class="mathlink" data-k="${tileKeys[k]}">Show the math</button>`); });
+  document.querySelectorAll('.mathlink').forEach(b => b.onclick = () => { mathKey = b.dataset.k; renderMath(c); document.getElementById('math').scrollIntoView({ behavior: 'smooth' }); });
+  renderMath(c);
 
   // free cash flow bars
   const H = c.hist, mx = Math.max(...H.map(h => Math.abs(h[1])), 0.001);
@@ -232,6 +267,149 @@ function update(c) {
   document.getElementById('sens').innerHTML = `<thead><tr><th scope="col" style="text-align:left;font-size:12px">Required ↓ · later growth →</th>${gs.map(x => `<th scope="col">${pl(x, 0)}</th>`).join('')}</tr></thead><tbody>`
     + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
 }
+// ---------- Show the math ----------
+let mathKey = 'yld';
+const F = c => c.m.ocf - c.m.capex - c.m.sbc;   // free cash flow from the raw filing figures
+const MKEYS = [['yld'], ['pfcf'], ['margin'], ['roc'], ['shares'], ['net'], ['rec'], ['impl']];
+function B(x) {  // dollars, readable
+  if (x == null || !isFinite(x)) return '–';
+  const a = Math.abs(x), s = x < 0 ? '−' : '';
+  return a >= 1e9 ? `${s}$${(a / 1e9).toFixed(2)} billion` : a >= 1e6 ? `${s}$${(a / 1e6).toFixed(1)} million` : `${s}$${Math.round(a).toLocaleString()}`;
+}
+const Bs = x => x == null || !isFinite(x) ? '–' : (x < 0 ? '−' : '') + '$' + (Math.abs(x) / 1e9).toFixed(3) + 'B';
+const SH = x => x == null ? '–' : (x / 1e6).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' million';
+const P = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x * 100).toFixed(d) + '%';
+const SP = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x * 100).toFixed(d) + '%';
+const NAMES = { ocf: 'Cash from operations', capex: 'Capital spending', sbc: 'Stock-based pay', rev: 'Revenue', cash: 'Cash', sti: 'Short-term investments', ltd: 'Long-term debt', equity: 'Owners’ equity', shares: 'Shares outstanding', diluted: 'Diluted shares', price: 'Share price' };
+const TAGS = { ocf: ['Cash flow statement', 'Net cash provided by operating activities', 'NetCashProvidedByUsedInOperatingActivities'],
+  capex: ['Cash flow statement (investing)', 'Purchases of property and equipment / capital expenditures', 'PaymentsToAcquirePropertyPlantAndEquipment'],
+  sbc: ['Cash flow statement (operating adjustments)', 'Stock-based compensation', 'ShareBasedCompensation'],
+  rev: ['Income statement', 'Revenue / total revenues / net sales', 'Revenues · RevenueFromContractWithCustomerExcludingAssessedTax'],
+  cash: ['Balance sheet', 'Cash and cash equivalents', 'CashAndCashEquivalentsAtCarryingValue'],
+  sti: ['Balance sheet', 'Short-term investments / marketable securities', 'ShortTermInvestments · MarketableSecuritiesCurrent'],
+  ltd: ['Balance sheet', 'Long-term debt', 'LongTermDebt · LongTermDebtNoncurrent'],
+  equity: ['Balance sheet', 'Total stockholders’ equity', 'StockholdersEquity'],
+  shares: ['Cover page (first page) of the latest 10-K or 10-Q', 'Shares of common stock outstanding as of [date]', 'dei:EntityCommonStockSharesOutstanding'],
+  diluted: ['Income statement (bottom)', 'Weighted-average shares outstanding, diluted', 'WeightedAverageNumberOfDilutedSharesOutstanding'],
+  price: ['Any quote site', 'Closing share price', ''] };
+function where(keys) {
+  const pro = CC.mode === 'pro';
+  return `<div class="where"><b style="display:block;margin-bottom:6px">Where to find each input yourself</b><table>${keys.map(k => { const t = TAGS[k];
+    return `<tr><td>${NAMES[k]}</td><td>${t[0]}: look for “${t[1]}”${pro && t[2] ? `<br><code>XBRL: ${t[2]}</code>` : ''}</td></tr>`; }).join('')}</table>
+    <p class="faint" style="margin:10px 0 0;font-size:12.5px">10-K = annual report, 10-Q = quarterly report. Both are free on SEC EDGAR (links in “Read the source” below). Our figures come from the same filings, read automatically.</p></div>`;
+}
+function ttmLine(label, p) {
+  if (!p || p.fy == null) return '';
+  return `<div class="calc">${label}: ${Bs(p.fy)} (year to ${fmtD(p.fy_end)}) + ${Bs(p.ytd)} (${fmtD(p.ytd_start)}–${fmtD(p.ytd_end)}) − ${Bs(p.prior)} (same months a year earlier) = ${Bs(p.fy + p.ytd - p.prior)}</div>`;
+}
+function fcfSteps(c) {
+  const m = c.m;
+  const ttm = m.basis === 'TTM' && m.parts;
+  let h = `<li><b>Free cash flow</b> = cash from operations − capital spending − stock-based pay.`;
+  if (ttm) h += ` The last annual report ends ${fmtD(m.parts.ocf.fy_end)}, but newer quarterly reports exist, so we use the <b>latest 12 months</b> (to ${fmtD(m.end)}): the full year, plus this year’s months so far, minus the same months last year.`
+    + ttmLine('Cash from operations', m.parts.ocf) + ttmLine('Capital spending', m.parts.capex) + (m.parts.sbc ? ttmLine('Stock-based pay', m.parts.sbc) : '');
+  else h += ` From the annual report for the year ending ${fmtD(m.end)}.`;
+  h += `<div class="calc">${Bs(m.ocf)} − ${Bs(m.capex)} − ${Bs(m.sbc)} = <b>${Bs(F(c))}</b></div>`;
+  h += `<span class="faint" style="font-size:13px">Why subtract stock-based pay? Paying employees in shares costs no cash, but it gives part of the company away, so owners lose it just the same.</span></li>`;
+  return h;
+}
+function mcapStep(c) {
+  const m = c.m;
+  return `<li><b>Company value</b> (market cap) = share price × number of shares. The share count comes from the ${m.shares_src || 'latest filing'} (${fmtD(m.shares_date)}).
+    <div class="calc">$${c.price.toFixed(2)} × ${SH(m.shares)} shares = <b>${Bs(c.mcapRaw)}</b></div></li>`;
+}
+function baseStep(c) {
+  const m = c.m;
+  if (c.baseKind === 'avg3') { const r3 = m.rows.slice(-3);
+    return `<li><b>Boom-and-bust adjustment.</b> This company’s cash swings a lot from year to year, so one year can mislead. We use the average of its last three fiscal years instead.
+      <div class="calc">(${r3.map(r => Bs(r.fcf)).join(' + ')}) ÷ 3 = <b>${Bs(m.fcf_avg3)}</b></div></li>`; }
+  if (c.baseKind === 'normalized') return `<li><b>Unusually-good-year adjustment.</b> It’s keeping far more cash per $1 of sales than usual. We assume a normal year instead: today’s sales at its ${m.margin_years}-year average margin.
+      <div class="calc">${Bs(m.revenue)} sales × ${P(m.margin_avg)} average margin = <b>${Bs(c.fcfBase * 1e9)}</b></div></li>`;
+  return '';
+}
+function mathHTML(c, k) {
+  const m = c.m, L = CC.L;
+  if (!m) return '<p class="muted">The detailed inputs for this company aren’t available in today’s data.</p>';
+  const base = c.baseKind === 'latest' ? F(c) : c.fcfBase * 1e9;
+  if (k === 'yld') return `<div class="formula">${L('yld')} <span class="eq">=</span> free cash flow ÷ company value</div><ol class="steps">${fcfSteps(c)}${mcapStep(c)}${baseStep(c)}
+    <li><b>Divide.</b><div class="calc">${Bs(base)} ÷ ${Bs(c.mcapRaw)} = <b>${P(base / c.mcapRaw, 2)}</b></div>So for every $1 you’d pay for the whole company, it produces about <b>${Math.round(base / c.mcapRaw * 100)}¢</b> of spare cash a year.</li></ol>${where(['ocf', 'capex', 'sbc', 'shares', 'price'])}`;
+  if (k === 'pfcf') return `<div class="formula">${L('pfcf')} <span class="eq">=</span> company value ÷ free cash flow</div><ol class="steps">${fcfSteps(c)}${mcapStep(c)}
+    <li><b>Divide.</b><div class="calc">${Bs(c.mcapRaw)} ÷ ${Bs(F(c))} = <b>${(c.mcapRaw / (F(c))).toFixed(1)}</b></div>If the company kept making the same cash and handed it all to you, it would take about <b>${(c.mcapRaw / (F(c))).toFixed(1)} years</b> to earn back the price. It’s also 1 ÷ cash back per $1.</li></ol>${where(['ocf', 'capex', 'sbc', 'shares', 'price'])}`;
+  if (k === 'margin') return `<div class="formula">${L('margin')} <span class="eq">=</span> free cash flow ÷ revenue (sales)</div><ol class="steps">${fcfSteps(c)}
+    <li><b>Revenue</b> for the same 12 months${m.basis === 'TTM' && m.parts && m.parts.rev ? ', built the same way:' + ttmLine('Revenue', m.parts.rev) : `: <b>${Bs(m.revenue)}</b>.`}${m.rev_estimated ? ' <span class="faint">(The latest quarter’s revenue wasn’t tagged in a standard way, so it’s estimated from the last annual report.)</span>' : ''}</li>
+    <li><b>Divide.</b><div class="calc">${Bs(F(c))} ÷ ${Bs(m.revenue)} = <b>${P(c.margin)}</b></div>Of every $1 of sales, about <b>${Math.round(c.margin * 100)}¢</b> ends up as spare cash. To make our list a company needs at least 15¢.</li></ol>${where(['ocf', 'capex', 'sbc', 'rev'])}`;
+  if (k === 'roc') { const cap = (m.equity || 0) + (m.ltd || 0);
+    return `<div class="formula">${L('roc')} <span class="eq">=</span> free cash flow ÷ (owners’ equity + long-term debt)</div><ol class="steps">${fcfSteps(c)}
+    <li><b>Money invested</b> = what owners have put in and left in the business (equity) plus what it has borrowed long-term, from the balance sheet.
+      <div class="calc">${Bs(m.equity)} equity (${fmtD(m.equity_date)}) + ${Bs(m.ltd || 0)} long-term debt (${fmtD(m.ltd_date)}) = <b>${Bs(cap)}</b></div>${m.equity != null && m.equity < 0 ? '<span class="faint" style="font-size:13px">Negative equity usually means the company has bought back more stock than it originally raised, so this ratio can look extreme.</span>' : ''}</li>
+    <li><b>Divide.</b><div class="calc">${Bs(F(c))} ÷ ${Bs(cap)} = <b>${P(c.roc, 0)}</b></div>Each year the business produces cash equal to about ${P(c.roc, 0)} of the money invested in it. Our minimum is 10%.</li></ol>${where(['ocf', 'capex', 'sbc', 'equity', 'ltd'])}`; }
+  if (k === 'shares') return `<div class="formula">${L('shares')} <span class="eq">=</span> (shares now ÷ shares then)<sup>1 ÷ years</sup> − 1</div><ol class="steps">
+    <li><b>Shares then and now:</b> the diluted share count from the annual reports for ${fmtD(m.sh_first_fy, true)} and ${fmtD(m.sh_last_fy, true)}, ${m.sh_yrs.toFixed(1)} years apart.
+      <div class="calc">${SH(m.sh_first)} → ${SH(m.sh_last)}</div></li>
+    <li><b>Yearly rate.</b> Like a savings account in reverse, we find the steady yearly change that turns one into the other:
+      <div class="calc">(${SH(m.sh_last)} ÷ ${SH(m.sh_first)})^(1 ÷ ${m.sh_yrs.toFixed(2)}) − 1 = <b>${SP(c.shares)}</b> a year</div>${c.shares < 0 ? 'Fewer shares means each remaining share owns a bigger slice of the company. Companies do this by buying back their own stock.' : 'More shares means each existing share owns a smaller slice, usually from paying employees in stock.'}</li></ol>${where(['diluted'])}`;
+  if (k === 'net') { const nd = (m.ltd || 0) - (m.cash || 0) - (m.sti || 0);
+    return `<div class="formula">${nd >= 0 ? 'Debt minus cash' : 'Cash minus debt'} <span class="eq">=</span> long-term debt − cash − short-term investments</div><ol class="steps">
+    <li><b>From the latest balance sheet:</b><div class="calc">${Bs(m.ltd || 0)} debt (${fmtD(m.ltd_date)}) − ${Bs(m.cash || 0)} cash (${fmtD(m.cash_date)}) − ${Bs(m.sti || 0)} short-term investments = <b>${Bs(nd)}</b></div></li>
+    <li>${nd > 0 && c.fcf > 0 ? `Compare it with yearly cash: ${Bs(nd)} ÷ ${Bs(F(c))} = <b>${(nd / (F(c))).toFixed(1)} years</b> of free cash flow to pay it all off. Above 3 years, we make the company clear a higher bar.` : 'The company has more cash than long-term debt, a cushion if business slows.'}</li></ol>${where(['ltd', 'cash', 'sti'])}`; }
+  if (k === 'rec') { const s = m.sh_first && m.sh_last ? Math.pow(m.sh_last / m.sh_first, 1 / m.sh_yrs) - 1 : 0;
+    const gf = m.first_fcf > 0 && c.fcf > 0 ? Math.pow(F(c) / m.first_fcf, 1 / m.yrs) - 1 : null;
+    const gr = m.first_rev > 0 && m.revenue > 0 ? Math.pow(m.revenue / m.first_rev, 1 / m.yrs) - 1 : null;
+    const ps = g => g == null ? null : (1 + g) / (1 + s) - 1;
+    return `<div class="formula">${L('rec')} <span class="eq">=</span> the slower of cash growth and sales growth, per share, capped at 20%</div><ol class="steps">
+    <li><b>Cash growth per year</b> from the year to ${fmtD(m.first_fy)} to the latest 12 months (${m.yrs.toFixed(1)} years):
+      <div class="calc">(${Bs(F(c))} ÷ ${Bs(m.first_fcf)})^(1 ÷ ${m.yrs.toFixed(2)}) − 1 = ${SP(gf)}</div></li>
+    <li><b>Sales growth per year</b>, same period:<div class="calc">(${Bs(m.revenue)} ÷ ${Bs(m.first_rev)})^(1 ÷ ${m.yrs.toFixed(2)}) − 1 = ${SP(gr)}</div></li>
+    <li><b>Per share.</b> The share count changed ${SP(s)} a year (see “${L('shares')}”), so each share’s slice grew by:
+      <div class="calc">cash: (1 ${gf >= 0 ? '+' : '−'} ${Math.abs(gf * 100).toFixed(1)}%) ÷ (1 ${s >= 0 ? '+' : '−'} ${Math.abs(s * 100).toFixed(1)}%) − 1 = ${SP(ps(gf))}<br>sales: (1 ${gr >= 0 ? '+' : '−'} ${Math.abs(gr * 100).toFixed(1)}%) ÷ (1 ${s >= 0 ? '+' : '−'} ${Math.abs(s * 100).toFixed(1)}%) − 1 = ${SP(ps(gr))}</div></li>
+    <li><b>Take the slower one</b> (so one lucky number can’t flatter it) and cap it at 20%: <b>${SP(c.rec)}</b> a year.</li></ol>${where(['ocf', 'capex', 'sbc', 'rev', 'diluted'])}`; }
+  if (k === 'impl') { const r = c.req, gt = META.rules.TERMINAL_GROWTH || 0.03, nc = (c.net || 0) * 1e9, target = c.mcapRaw - nc;
+    const g = implied(base, target, r, gt);   // re-solved from the exact inputs, so the table adds up to the penny
+    if (g == null || !isFinite(g)) return '<p class="muted">The price can’t be matched with any sensible growth rate for this company.</p>';
+    let rows = '', cash = base, tot = 0;
+    for (let t = 1; t <= 10; t++) { cash *= 1 + g; const df = 1 / Math.pow(1 + r, t), pv = cash * df; tot += pv;
+      rows += `<tr><td>Year ${t}</td><td>${Bs(cash)}</td><td>${df.toFixed(3)}</td><td>${Bs(pv)}</td></tr>`; }
+    const term = cash * (1 + gt) / (r - gt), tdf = 1 / Math.pow(1 + r, 10), tpv = term * tdf; tot += tpv;
+    const tryG = x => { let v = 0, f = base; for (let t = 1; t <= 10; t++) { f *= 1 + x; v += f / Math.pow(1 + r, t); } return v + f * (1 + gt) / (r - gt) / Math.pow(1 + r, 10); };
+    return `<div class="formula">${L('impl')} <span class="eq">=</span> the yearly growth rate that makes the value of all future cash equal today’s price</div><ol class="steps">
+    <li><b>What the price has to justify:</b> company value minus ${nc >= 0 ? 'its spare cash (cash minus debt)' : 'plus its debt (a buyer takes that on too)'}.
+      <div class="calc">${Bs(c.mcapRaw)} ${nc >= 0 ? '−' : '+'} ${Bs(Math.abs(nc))} = <b>${Bs(target)}</b></div></li>
+    <li><b>Start from this year’s cash</b> (${Bs(base)}${c.baseKind !== 'latest' ? ', adjusted as in “' + L('yld') + '”' : ''}) and grow it at a guessed rate for 10 years, then ${P(gt, 0)} a year forever.</li>
+    <li><b>Discount each year’s cash</b> back to today at ${P(r, 2)} a year, the return you’d demand (${P(META.rates.rf, 2)} safe bond + ${P(META.rules.EQUITY_PREMIUM, 0)}${c.premium ? ' + ' + P(c.premium, 1) + ' extra risk' : ''}). $1 arriving in 10 years is worth only $${(1 / Math.pow(1 + r, 10)).toFixed(2)} today.</li>
+    <li><b>Guess and check.</b> Try growth rates until the total matches ${Bs(target)}:
+      <div class="calc">0% growth → ${Bs(tryG(0))} · 5% growth → ${Bs(tryG(0.05))} · <b>${SP(g)} growth → ${Bs(tryG(g))}</b> ✓</div>
+      <table class="dcf"><thead><tr><th>Year</th><th>Cash that year</th><th>× discount</th><th>= worth today</th></tr></thead><tbody>${rows}
+      <tr><td>After year 10 (forever)</td><td>${Bs(term)}</td><td>${tdf.toFixed(3)}</td><td>${Bs(tpv)}</td></tr>
+      <tr class="tot"><td>Total</td><td></td><td></td><td>${Bs(tot)}</td></tr></tbody></table>
+      So today’s price makes sense only if cash grows about <b>${SP(g)} a year</b>. Compare that with its ${L('rec').toLowerCase()} of ${SP(c.rec)}.</li></ol>
+      <p class="faint" style="font-size:12.5px;margin:0 0 12px">The “forever” value uses the growing-perpetuity formula: cash in year 11 ÷ (return − long-run growth). Spreadsheets can do the guess-and-check for you with Goal Seek.</p>${where(['ocf', 'capex', 'sbc', 'cash', 'ltd', 'shares', 'price'])}`; }
+  return '';
+}
+function renderMath(c) {
+  const box = document.getElementById('math'), L = CC.L;
+  box.innerHTML = `<h2 id="mathh">Show the math</h2>
+    <p class="muted" style="margin:0;font-size:14px">Every number on this page, worked out step by step with ${esc(c.name)}’s own figures. The same steps work for any company: the inputs are in its annual (10-K) and quarterly (10-Q) reports.</p>
+    <div class="mtabs" role="tablist">${MKEYS.map(([k]) => `<button role="tab" aria-selected="${mathKey === k}" data-k="${k}">${L(k)}</button>`).join('')}</div>
+    <div role="tabpanel">${mathHTML(c, mathKey)}</div>
+    <details style="margin-top:18px"><summary style="cursor:pointer;font-weight:600">Try it on another company</summary>
+      <p class="muted" style="font-size:13.5px;margin:10px 0 0">Look up these numbers in any company’s latest 10-K (in millions of dollars, as the filings show them), type them in, and you’ll get the same metrics this site shows.</p>
+      <div class="calcgrid">
+        ${[['ocf', 'Cash from operations', 1000], ['capex', 'Capital spending', 200], ['sbc', 'Stock-based pay', 50], ['rev', 'Revenue', 4000], ['price', 'Share price ($)', 50], ['sh', 'Shares (millions)', 100], ['cash', 'Cash + short-term investments', 300], ['debt', 'Long-term debt', 800]]
+          .map(([id, l, v]) => `<label>${l}<input type="number" step="any" id="k_${id}" value="${v}"></label>`).join('')}
+      </div><div class="calcout" id="kout"></div></details>`;
+  box.querySelectorAll('.mtabs button').forEach(b => b.onclick = () => { mathKey = b.dataset.k; renderMath(c); });
+  const calc = () => {
+    const v = id => parseFloat(document.getElementById('k_' + id).value) || 0;
+    const fcf = v('ocf') - v('capex') - v('sbc'), mc = v('price') * v('sh'), net = v('cash') - v('debt');
+    const g = implied(fcf, mc - net, BASE_R, GT0);
+    document.getElementById('kout').innerHTML = `<div>Free cash flow<b>$${fcf.toLocaleString(undefined, { maximumFractionDigits: 0 })}M</b></div>
+      <div>${L('yld')}<b>${mc > 0 ? P(fcf / mc) : '–'}</b></div><div>${L('pfcf')}<b>${fcf > 0 ? (mc / fcf).toFixed(1) : '–'}</b></div>
+      <div>${L('margin')}<b>${v('rev') > 0 ? P(fcf / v('rev')) : '–'}</b></div><div>Company value<b>$${mc.toLocaleString(undefined, { maximumFractionDigits: 0 })}M</b></div>
+      <div>${L('impl')}<b>${isFinite(g) ? SP(g) : '–'}</b><span style="font-size:11.5px">at a ${P(BASE_R, 2)} return</span></div>`;
+  };
+  box.querySelectorAll('.calcgrid input').forEach(i => i.oninput = calc); calc();
+}
+
 window.addEventListener('hashchange', show);
 CC.on(show);
 show();
