@@ -121,7 +121,10 @@ document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fm
   s.push(`Over 12 months, the average quality company returned <b>${pts(q.mean)}</b> vs the S&amp;P 500 (${pct(q.beat,0).replace('+','')} beat it).`);
   s.push(`Valuation-gap names did <b>${word(vs(gp,q))}</b> the quality group (${pts(gp.mean)} vs the S&amp;P 500).`);
   s.push(`Gap + sharp drop, the shortlist, did <b>${word(vs(gt,q))}</b> the quality group (${pts(gt.mean)}, median ${pts(gt.median)}, n=${gt.n.toLocaleString()}).`);
-  s.push(`A sharp drop without a valuation gap: ${pts(to.mean)}.`);
+  s.push(`A sharp drop without a valuation gap: ${pts(to.mean)} (median ${pts(to.median)}).`);
+  const S=D.growth.series, end=k=>S[k][S[k].length-1].toFixed(2);
+  s.push(`As portfolios held for ${D.meta.hold_months} months, $1 grew to <b>$${end('gap_trigger')}</b> for gap + drop, $${end('gap')} for the valuation gap, $${end('quality')} for all quality companies and $${end('spy')} for the S&amp;P 500.`);
+  if(gt.median!=null && gt.mean!=null && (gt.mean>0)!==(gt.median>0)) s.push(`Note the gap + drop average and median point in different directions: a handful of big winners lift the average, while the typical pick roughly matched the market.`);
   document.getElementById('answer').innerHTML = s.join(' ');
 })();
 
