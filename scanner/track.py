@@ -18,7 +18,7 @@ from pathlib import Path
 
 from . import config as C
 
-GROUP_ORDER = ["shortlist", "watchlist", "triggered"]
+GROUP_ORDER = ["yield", "shortlist", "watchlist", "triggered"]
 
 
 def load_ledger(path: Path | None) -> dict:

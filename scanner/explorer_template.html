@@ -90,6 +90,8 @@ table.sens td{text-align:center;padding:8px 4px;border-radius:4px}
 .funnel b{color:var(--text-primary);font-variant-numeric:tabular-nums}
 .funnel .step{border:1px solid var(--border);border-radius:999px;padding:4px 10px;background:var(--card)}
 .funnel .step.hl{background:var(--implied);border-color:var(--implied);color:#fff}.funnel .step.hl b{color:#fff}
+.regime{border:1px solid var(--border);border-left:4px solid var(--implied);border-radius:0 12px 12px 0;background:var(--card);padding:12px 16px;margin:0 0 18px;font-size:14px;line-height:1.5;color:var(--text-secondary)}
+.regime b{color:var(--text-primary)}.regime a{color:var(--implied)}
 .cardhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px}
 .groups{display:flex;gap:6px;flex-wrap:wrap}
 .minictl{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary)}
@@ -117,6 +119,7 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     <p class="asof" style="margin:0">Daily scan · __ASOF__ · educational research, not investment advice</p></div>
   </div>
   <section class="intro" id="intro"></section>
+  <div class="regime" id="regime"></div>
 
   <div class="card">
     <div class="cardhead">
@@ -130,7 +133,7 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
     <div class="legend"><span><i class="sw" style="background:var(--implied)"></i>Growth today's price requires (next 10 yrs)</span><span><i class="sw" style="background:var(--track)"></i>Reference growth (per share: lower of FCF and revenue growth, capped at 20%)</span></div>
     <svg id="cmp" viewBox="0 0 1000 420" width="100%" role="img" aria-label="Growth implied by price versus reference growth, by company"></svg>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px">
-      <div class="hint" style="margin:0">Ranked by how far blue sits left of grey: the price assumes the most slowdown at the top. Click a row for detail.</div>
+      <div class="hint" style="margin:0" id="rankhint"></div>
       <div style="display:flex;gap:6px">
         <button class="tab" id="earnf" onclick="state.hideEarn=!state.hideEarn;state.sel=(ranked()[0]||{}).id;renderDetail();"></button>
         <button class="tab" id="more" onclick="state.showAll=!state.showAll;renderDetail();"></button>
@@ -195,7 +198,7 @@ details.more{margin-top:6px}details.more summary{cursor:pointer;font-weight:600;
 <script>
 const COMPANIES = __COMPANIES_JSON__;
 const META = __META_JSON__;
-const GROUPS=[['shortlist','Shortlist'],['watchlist','Watchlist'],['triggered','Triggered, still priced for growth']];
+const GROUPS=[['yield','Cash-yield leaders'],['shortlist','Shortlist'],['watchlist','Watchlist'],['triggered','Triggered, still priced for growth']];
 const BASE_R=(META.rules&&META.rules.REQUIRED_RETURN)||0.09;
 const state = { showAll:false, hideEarn:false, r:BASE_R, gt:0.03, group:(GROUPS.find(g=>COMPANIES.some(c=>c.group===g[0]))||GROUPS[0])[0], sel:null, baseIdx:{} , edits:{} };
 const onEarn=c=>(c.badges||[]).some(b=>b.k==='earn');
@@ -221,7 +224,8 @@ function showTip(ev,html){tip.innerHTML=html;tip.style.opacity=1;const x=Math.mi
 function hideTip(){tip.style.opacity=0;}
 
 const TOPN=8;
-function ranked(){ // biggest gap first (price assumes the most slowdown vs reference growth)
+function ranked(){ // cash-yield leaders: most free cash flow per dollar of market value first; other groups: biggest gap first
+  if(state.group==='yield'){ const y=c=>{const r=calc(c); return r.mcap>0? r.fcf/r.mcap : 0;}; return visible().slice().sort((a,b)=>y(b)-y(a)); }
   const gap=c=>{const r=calc(c); return isFinite(r.g)? r.g-r.track/100 : 0;}; return visible().slice().sort((a,b)=>gap(a)-gap(b)); }
 function shown(){ const r=ranked(); return state.showAll? r : r.slice(0,TOPN); }
 function drawCompare(){
@@ -248,7 +252,7 @@ function drawCompare(){
     { const t=el('text',{x:24,y:y-1,'font-size':15.5,'font-weight':700,fill:css('--text-primary')},g); el('tspan',{},t,c.name);
       if(c.isNew) el('tspan',{dx:6,'font-size':10,'font-weight':700,'letter-spacing':'0.06em',fill:css('--implied')},t,'NEW');
       if(c.fullName){ const nm=c.fullName.replace(/,? (Inc|Corp|Corporation|Co|Company|Ltd|Holdings|Group|plc|N\.V\.|S\.A\.)\.?$/i,''); el('tspan',{dx:8,'font-size':12.5,'font-weight':400,fill:css('--text-secondary')},t,nm.length>30?nm.slice(0,29)+'…':nm);} }
-    el('text',{x:24,y:y+14,'font-size':11,fill:css('--text-muted')},g,[(res.mcap/res.fcf).toFixed(0)+'x FCF'+(res.baseLabel.startsWith('3-year')?' (3-yr avg)':res.baseLabel.startsWith('Normalized')?' (normalized)':'')].concat((c.badges||[]).filter(b=>b.k!=='link').map(b=>b.s)).join(' · '));
+    el('text',{x:24,y:y+14,'font-size':11,fill:css('--text-muted')},g,[(res.fcf/res.mcap*100).toFixed(1)+'% FCF yield ('+(res.mcap/res.fcf).toFixed(0)+'x)'+(res.baseLabel.startsWith('3-year')?' (3-yr avg)':res.baseLabel.startsWith('Normalized')?' (normalized)':'')].concat((c.badges||[]).filter(b=>b.k!=='link').map(b=>b.s)).join(' · '));
     const gi=res.g, tr=res.track/100, xi=x(gi), xt=x(tr);
     el('line',{x1:Math.min(xi,xt),x2:Math.max(xi,xt),y1:y,y2:y,stroke:css('--track-soft'),'stroke-width':3,'stroke-linecap':'round'},g);
     el('circle',{cx:xt,cy:y,r:6,fill:css('--track'),stroke:css('--card'),'stroke-width':2},g);
@@ -260,6 +264,9 @@ function drawCompare(){
     hit.addEventListener('mousemove',ev=>showTip(ev,`<b>${c.name}</b> · ${c.sector||''}<br>Price implies ${pct(gi)} / yr for 10 yrs<br>Reference growth ${pct(tr)} / yr<br>Click for detail`));
     hit.addEventListener('mouseleave',hideTip);
   });
+  document.getElementById('rankhint').textContent = state.group==='yield'
+    ? 'Ranked by free-cash-flow yield: the most cash per dollar of market value at the top. The dots still show what each price assumes. Click a row for detail.'
+    : 'Ranked by how far blue sits left of grey: the price assumes the most slowdown at the top. Click a row for detail.';
   const ef=document.getElementById('earnf'); const nE=COMPANIES.filter(c=>c.group===state.group&&onEarn(c)).length;
   ef.style.display=nE?'inline-block':'none'; ef.setAttribute('aria-selected',!!state.hideEarn);
   ef.textContent=state.hideEarn?`Show ${nE} that fell on earnings`:`Hide ${nE} that fell on earnings`;
@@ -377,10 +384,16 @@ function renderBadges(c){ document.getElementById('badges').innerHTML=(c.badges|
 function renderIntro(){ const f=META.funnel||{}, R=META.rules||{}, m=META.market||{}; const n=x=>(x||0).toLocaleString(); const p=x=>Math.round(Math.abs(x||0)*100);
   let hidden=true; try{hidden=localStorage.getItem('introShown')!=='1';}catch(e){}
   const box=document.getElementById('intro');
-  if(hidden){ box.innerHTML=`<div class="intro-foot" style="margin-top:0"><span>${n(f.universe)} companies scanned → <b style="color:var(--text-primary)">${n(f.shortlist)} shortlisted</b></span><button onclick="toggleIntro(false)">How this list is built ↓</button></div>`; return; }
+  if(hidden){ box.innerHTML=`<div class="intro-foot" style="margin-top:0"><span>${n(f.universe)} companies scanned → ${n(f.quality)} quality cash generators → <b style="color:var(--text-primary)">${n(f.yield_leaders)} cash-yield leaders</b></span><button onclick="toggleIntro(false)">How this list is built ↓</button></div>`; return; }
   box.innerHTML=`
-  <p class="philo">A great business is only a great investment at the right price. <span>Each trading day this scans every US-listed company for strong cash generators whose price, after a sell-off or insider buying, now assumes <i>less</i> growth than the business has actually delivered. Those are the moments when expectations may be too low.</span></p>
-  <div class="steps">
+  <p class="philo">A great business is only a great investment at the right price. <span>Each trading day this scans every US-listed company for strong cash generators, then ranks them by how much free cash flow you get per dollar of market value. A 12-year backtest found that buying quality companies on a dip was a lottery ticket, while a high cash yield did best when interest rates were above 3%${META.regime&&META.regime.rf!=null?(META.regime.high?', as they are now':', which they currently are not'):''}. Every company also shows what growth its price assumes, so you can judge whether that's too pessimistic.</span></p>
+  <div class="steps" style="grid-template-columns:1fr 1fr 1.1fr 1.4fr">
+    <div class="step"><div class="n">${n(f.universe)}</div><div class="l">Listed companies</div><div class="d">Every company filing with the SEC under a stock ticker.</div></div>
+    <div class="step"><div class="n">${n(f.quality)}</div><div class="l">Quality cash generators</div><div class="d">${p(R.MIN_FCF_MARGIN)}%+ of revenue becomes free cash flow after stock pay, positive every year, $${Math.round((R.MIN_MARKET_CAP_USD||0)/1e9)}B+ in size.</div></div>
+    <div class="step final"><div class="n">${n(f.yield_leaders)}</div><div class="l">Cash-yield leaders</div><div class="d">The top fifth by free-cash-flow yield. Cyclicals and peak-margin names use normalized cash flow.</div></div>
+    <div class="step"><div class="n">${n(f.modest)} · ${n(f.shortlist)}</div><div class="l">Also on the page</div><div class="d">Watchlist: price implies ≤${p(R.MAX_IMPLIED_GROWTH)}%/yr, ${p(R.GAP_THRESHOLD)}+ pts under its record. Shortlist: that plus a sharp drop or insider buying. Kept for research; the backtest found no reliable edge.</div></div>
+  </div>
+  <div class="steps" style="display:none">
     <div class="step"><div class="n">${n(f.universe)}</div><div class="l">Listed companies</div><div class="d">Every company filing with the SEC under a stock ticker.</div></div>
     <div class="step"><div class="n">${n(f.quality)}</div><div class="l">Quality cash generators</div><div class="d">${p(R.MIN_FCF_MARGIN)}%+ of revenue becomes free cash flow after stock pay, positive every year, $${Math.round((R.MIN_MARKET_CAP_USD||0)/1e9)}B+ in size.</div></div>
     <div class="step test t1"><div class="n">${n(f.triggered)}</div><div class="l">Test 1 · Something happened</div><div class="d">Fell ${p(R.DROP_THRESHOLD)}+ pts more than the S&amp;P 500 this week or ${p(R.DRAWDOWN_THRESHOLD)}+ over a month, or ${R.MIN_CLUSTER_BUYERS||2}+ insiders bought.</div></div>
@@ -393,13 +406,19 @@ function rateText(){ const R=META.rates||{}; if(R.rf==null) return (BASE_R*100).
 function renderRates(){ document.querySelectorAll('.rtext').forEach(e=>e.textContent=rateText());
   const R=META.rates||{}; document.getElementById('rlab').title=R.rf!=null?`${rateText()} (${R.rf_source}, ${R.rf_date}). Drag to test other hurdles.`:'';
   const inp=document.getElementById('r'); inp.value=(BASE_R*100).toFixed(1); }
-function renderTrack(){ const T=META.track||{}, G=T.groups||[]; const names={shortlist:'Shortlist',watchlist:'Watchlist',triggered:'Triggered, still priced for growth'};
+function renderTrack(){ const T=META.track||{}, G=T.groups||[]; const names={yield:'Cash-yield leaders',shortlist:'Shortlist',watchlist:'Watchlist',triggered:'Triggered, still priced for growth'};
   const H=[['todate','To date'],['1m','1 month'],['3m','3 months'],['6m','6 months'],['12m','12 months']];
   const note=document.getElementById('tracknote'); const tbl=document.getElementById('trk');
   if(!T.started){ note.textContent='Tracking starts with the next daily run.'; tbl.innerHTML=''; return; }
   note.innerHTML=`Every flagged company is logged at that day’s close and compared with the S&amp;P 500. Cells show the <b>average return beyond the S&amp;P 500</b> and how many beat it. Tracking since ${T.started}, ${(T.n||0).toLocaleString()} entries`+(T.next?`; first ${T.next.h.replace('m',' month')} read on ${T.next.date}.`:'.')+` Early numbers are noise: judge it at 6–12 months.`;
   const cell=x=>{ if(!x||!x.n) return '<span class="v na">–</span><div class="s">not yet</div>'; const v=x.avg*100; return `<span class="v ${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${v.toFixed(1)} pts</span><div class="s">${x.n} · ${Math.round(x.beat*100)}% beat</div>`; };
   tbl.innerHTML='<tr><th>Group</th>'+H.map(h=>`<th>${h[1]}</th>`).join('')+'</tr>'+G.map(g=>`<tr><td><b>${names[g.group]||g.group}</b><div class="s" style="font-size:11.5px;color:var(--text-muted)">${g.n} logged</div></td>`+H.map(h=>`<td>${cell(g.h[h[0]])}</td>`).join('')+'</tr>').join(''); }
+function renderRegime(){ const g=META.regime, box=document.getElementById('regime'); if(!g||g.rf==null){ box.style.display='none'; return; }
+  const p=x=>(x*100).toFixed(1), pt=x=>(x>0?'+':'')+(x*100).toFixed(1)+' pts', cut=(g.cutoff*100).toFixed(0)+'%';
+  const span=g.hi_years.length? `${g.hi_years.filter(y=>y>='2020')[0]||g.hi_years[0]}–${g.hi_years[g.hi_years.length-1]}` : '';
+  box.innerHTML = g.high
+    ? `<b>Where we are now:</b> the 10-year Treasury yields <b>${p(g.rf)}%</b>, above the ${cut} line. In high-rate months since ${g.start}, the quality companies with the highest free-cash-flow yield beat those with the lowest by <b>${pt(g.hi.mean)} a year</b> (won ${Math.round(g.hi.won*100)}% of ${g.hi.months} months). In low-rate months they <i>lagged</i> by ${pt(-g.lo.mean).replace('+','')}. That's why <b>Cash-yield leaders</b> comes first. Caveat: the high-rate months are mostly one stretch (${span}), so this is a bet that today's environment holds, not a law. <a href="backtest/#ratecard">See the backtest →</a>`
+    : `<b>Where we are now:</b> the 10-year Treasury yields <b>${p(g.rf)}%</b>, below the ${cut} line. In low-rate months since ${g.start}, the highest-FCF-yield quality companies <i>lagged</i> the lowest by ${pt(-g.lo.mean).replace('+','')} a year, while in high-rate months they led by ${pt(g.hi.mean)}. In this environment, a high cash yield has historically not been an edge. <a href="backtest/#ratecard">See the backtest →</a>`; }
 function toggleIntro(h){ try{localStorage.setItem('introShown',h?'0':'1');}catch(e){} renderIntro(); }
 function renderFunnel(){ if(!document.getElementById('funnel')) return; const f=META.funnel||{}; const st=[['companies',f.universe],['quality',f.quality],['triggered',f.triggered],['shortlist',f.shortlist]];
   document.getElementById('funnel').innerHTML=st.map(([l,n],i)=>`<span class="step${i===3?' hl':''}"><b>${(n||0).toLocaleString()}</b> ${l}</span>`).join('<span>→</span>'); }
@@ -409,7 +428,7 @@ function update(){ const c=COMPANIES.find(c=>c.id===state.sel); if(!c) return;
   drawCompare(); renderTiles(c); drawPath(c); drawSens(c); }
 document.getElementById('r').oninput=e=>{state.r=e.target.value/100;update();};
 document.getElementById('gt').oninput=e=>{state.gt=e.target.value/100;update();};
-renderRates(); renderIntro(); renderFunnel(); renderTrack(); drawFlow(); renderDetail();
+renderRates(); renderIntro(); renderRegime(); renderFunnel(); renderTrack(); drawFlow(); renderDetail();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawFlow();update();});
 </script>
 </body>

@@ -166,14 +166,21 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     funnel["shortlist"] = len(shortlist)
 
     funnel["peak_margin"] = sum(1 for c in priced if c.get("peak_margin"))
+    # Cash-yield leaders: the top fifth of the quality universe by free-cash-flow yield (FCF on the screen's
+    # own base, so cyclicals and peak-margin names use their normalized figure). The backtest found this
+    # measure did best when the 10-year yield was 3% or higher; see meta["regime"].
+    leaders = sorted(priced, key=lambda c: -c["fcf_yield"])[:max(1, len(priced) // 5)] if priced else []
+    funnel["yield_leaders"] = len(leaders)
+    regime = load_regime(rates["rf"])
 
     # 7. Track record: log today's flags, then measure every open entry against the S&P 500
     ledger = T.load_ledger(ledger_path)
-    groups = {"shortlist": shortlist, "watchlist": gap_only, "triggered": triggered_only}
+    groups = {"yield": leaders, "shortlist": shortlist, "watchlist": gap_only, "triggered": triggered_only}
     changes = T.list_changes(ledger, asof, groups)
     for g, cs in groups.items():
         for c in cs:
-            c["is_new"] = c["ticker"] in changes["new"][g]
+            if c["ticker"] in changes["new"][g]:
+                c.setdefault("new_in", []).append(g)
     if changes["prev_date"]:
         log("since " + changes["prev_date"] + ": " + "; ".join(
             f"{g} +{len(changes['new'][g])} new, -{len(changes['dropped'][g])} dropped" for g in groups))
@@ -192,8 +199,8 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
 
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market,
-            "rates": rates, "track": track, "changes": changes}
-    write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced)
+            "rates": rates, "track": track, "changes": changes, "regime": regime}
+    write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders)
     (out_dir / "track").mkdir(exist_ok=True)
     T.write_csv(out_dir / "track" / "track_record.csv", ledger)
     T.save_ledger(out_dir / "track" / "ledger.json", ledger)
@@ -265,11 +272,12 @@ def value_company(co, ps, mkt_chg, mkt_dd, base_r):
            if use and x and x > 0]
     if alt:
         g = implied_growth(min(alt), mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+    fcf_base = min(alt) if alt else co["fcf"]
     ref = reference_growth(co)
     ok = lambda x: x is not None and math.isfinite(x)
     gap = (g - ref) if (ok(g) and ref is not None) else None
     return {**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap,
-            "p_fcf": mcap / co["fcf"], "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
+            "p_fcf": mcap / co["fcf"], "fcf_yield": fcf_base / mcap, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
             "gap_ttm": (g_ttm - ref) if (ok(g_ttm) and ref is not None) else None,
             "risk_premium": prem, "risk_why": why, "required_return": r}
 
@@ -281,6 +289,22 @@ def price_flags(c) -> dict:
 def gap_flag(gap, implied_g) -> bool:
     return bool(gap is not None and implied_g is not None and math.isfinite(implied_g)
                 and gap <= C.GAP_THRESHOLD and implied_g <= C.MAX_IMPLIED_GROWTH)
+
+
+def load_regime(rf, path: Path = Path("backtest/results.json")) -> dict | None:
+    """What the backtest says about today's rate environment, for the note on the home page."""
+    try:
+        b = json.loads(path.read_text())["baskets"]
+    except (OSError, ValueError, KeyError):
+        return None
+    cut = b.get("cutoff", 0.03)
+    f = next((f for f in b["factors"] if f["id"] == "fcf_yield"), None)
+    lv = (((f or {}).get("h", {}).get("12m") or {}).get("regime") or {}).get("level", {}).get(f"{cut:.3f}")
+    if not lv:
+        return None
+    hi_years = sorted({d[:4] for d, v in zip(b["rates"]["dates"], b["rates"]["rf"]) if v is not None and v >= cut})
+    return {"rf": rf, "cutoff": cut, "high": rf is not None and rf >= cut, "hi": lv["high"], "lo": lv["low"],
+            "hi_years": hi_years, "start": b["rates"]["dates"][0][:4]}
 
 
 def quality_fail_reasons(fu) -> list[str]:
@@ -311,7 +335,8 @@ def score(c) -> float:
 def _row(c):
     fin = lambda x: (round(x, 4) if isinstance(x, float) and math.isfinite(x) else None)
     return {
-        "ticker": c["ticker"], "name": c["name"], "cik": c["cik"], "is_new": bool(c.get("is_new")),
+        "ticker": c["ticker"], "name": c["name"], "cik": c["cik"], "new_in": c.get("new_in", []),
+        "fcf_yield": fin(c.get("fcf_yield")),
         "sector": c.get("sector", "Other"), "sic_desc": c.get("sic_desc", ""),
         "price": round(c["last"], 2), "price_date": c["last_date"],
         "chg_5d": fin(c["chg"]), "rel_chg_5d": fin(c["rel_chg"]),
@@ -340,8 +365,8 @@ def _row(c):
     }
 
 
-def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced):
-    data = {"meta": meta,
+def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders=()):
+    data = {"meta": meta, "yield_leaders": [_row(c) for c in leaders],
             "shortlist": [_row(c) for c in shortlist],
             "triggered_only": [_row(c) for c in triggered_only[:25]],
             "gap_only": [_row(c) for c in gap_only[:25]],
@@ -362,19 +387,17 @@ def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced):
 
 def render_explorer(data, per_group=25) -> str:
     """The explorer page, loaded with today's names in three groups."""
-    groups = [("shortlist", data["shortlist"]), ("watchlist", data["gap_only"]), ("triggered", data["triggered_only"])]
-    cos, seen = [], set()
-    for gname, rows in groups:
-        for r in rows[:per_group]:
-            if r["ticker"] in seen:
-                continue
-            seen.add(r["ticker"])
+    groups = [("yield", data.get("yield_leaders", [])), ("shortlist", data["shortlist"]),
+              ("watchlist", data["gap_only"]), ("triggered", data["triggered_only"])]
+    cos = []
+    for gname, rows in groups:   # a company can appear in more than one group
+        for r in rows[:(60 if gname == "yield" else per_group)]:
             cos.append(explorer_company(r, gname))
     cfg = data["meta"]["config"]
     meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"],
             "market": data["meta"].get("market", {}),
             "rates": data["meta"].get("rates", {}), "track": data["meta"].get("track", {}),
-            "changes": data["meta"].get("changes", {}),
+            "changes": data["meta"].get("changes", {}), "regime": data["meta"].get("regime"),
             "rules": {k: cfg[k] for k in ("MIN_FCF_MARGIN", "MIN_MARKET_CAP_USD", "DROP_THRESHOLD", "DRAWDOWN_THRESHOLD",
                                           "MIN_CLUSTER_BUYERS", "MAX_IMPLIED_GROWTH", "GAP_THRESHOLD", "REQUIRED_RETURN",
                                           "EQUITY_PREMIUM", "PEAK_MARGIN_RATIO")}}
@@ -421,8 +444,8 @@ def explorer_company(r, group):
     badges.append({"k": "link", "t": "Insider filings ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=4&owner=include&count=40"})
     badges.append({"k": "link", "t": "10-K / 10-Q ↗", "u": f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={r['cik']}&type=10-&count=40"})
     return {
-        "id": r["ticker"].lower(), "name": r["ticker"], "fullName": r["name"], "group": group, "badges": badges,
-        "isNew": bool(r.get("is_new")),
+        "id": f"{group}-{r['ticker'].lower()}", "name": r["ticker"], "fullName": r["name"], "group": group, "badges": badges,
+        "isNew": group in (r.get("new_in") or []), "fcfYield": r.get("fcf_yield"),
         "defaultBase": default_base,
         "sector": r["sector"], "score": r["score"], "gap": r["gap"],
         "mcap": r["mcap_bn"], "mcapNote": f"{r['price_date']} close · {r['name']}" + (f" · {r['sic_desc'].title()}" if r["sic_desc"] else ""),

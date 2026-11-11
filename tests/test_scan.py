@@ -99,7 +99,7 @@ class TestEndToEnd(unittest.TestCase):
     def test_explorer_written(self):
         html = (self.tmp / "out/explorer.html").read_text()
         self.assertNotIn("__COMPANIES_JSON__", html)
-        self.assertIn('"id": "smpb"', html)
+        self.assertIn('"id": "shortlist-smpb"', html)
 
     def test_hurdle_from_treasury(self):
         r = self.data["meta"]["rates"]
@@ -110,7 +110,8 @@ class TestEndToEnd(unittest.TestCase):
     def test_ledger_logs_todays_flags(self):
         led = json.loads((self.tmp / "ledger.json").read_text())
         got = {(e["ticker"], e["group"]) for e in led["entries"]}
-        self.assertEqual(got, {("SMPB", "shortlist"), ("SMPD", "watchlist"), ("SMPA", "triggered"), ("SMPC", "triggered")})
+        self.assertEqual(got, {("SMPB", "shortlist"), ("SMPD", "watchlist"), ("SMPA", "triggered"), ("SMPC", "triggered"),
+                               ("SMPD", "yield")})  # yield = top fifth by FCF yield
         self.assertTrue((self.tmp / "out/track/track_record.csv").exists())
         self.assertIn('"track"', (self.tmp / "out/index.html").read_text())
 
@@ -164,8 +165,9 @@ class TestTrackMath(unittest.TestCase):
         T.update_returns(led, {"X": [(d, p * 2) for d, p in stock]}, spy)   # later prices don't rewrite history
         self.assertEqual(led["entries"][0]["x1m"], frozen)
         s = T.summarize(led, d0 + timedelta(days=100))
-        self.assertEqual(s["groups"][0]["h"]["3m"]["n"], 1)
-        self.assertEqual(s["groups"][0]["h"]["3m"]["beat"], 1.0)
+        g = next(g for g in s["groups"] if g["group"] == "shortlist")
+        self.assertEqual(g["h"]["3m"]["n"], 1)
+        self.assertEqual(g["h"]["3m"]["beat"], 1.0)
 
 
 class TestListChanges(unittest.TestCase):
