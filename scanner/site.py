@@ -106,7 +106,7 @@ GLOSSARY = {
     "gt": ("Growth after year 10", "Long-run growth", "How fast cash grows forever after the first 10 years. Usually set near the economy's long-run growth, 2–4%."),
     "leaders": ("Cash-yield leaders", "Most cash per $1", "The top fifth of the strong cash businesses, ranked by cash back per $1."),
     "quality": ("Quality universe", "Strong cash businesses",
-                "Companies that turn at least 15% of sales into spare cash, every year, after paying their people in stock too."),
+                "Companies that kept at least 15¢ of every $1 of sales as spare cash over the last 12 months, made spare cash in each of the last three years, and earn at least 10% a year on the money invested in them."),
     "drop": ("Fell sharply this week", "Dropped a lot lately", "The share price fell at least 10 points more than the market in a week, or 15 points more from its 1-month high."),
     "gap": ("Priced below its record", "Price bets on a slowdown", "The price only makes sense if growth slows a lot compared with the company's own past."),
     "insiders": ("Insider buying", "Bosses buying shares", "At least two of the company's own executives or directors bought shares with their own money this week."),

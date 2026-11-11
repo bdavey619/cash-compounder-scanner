@@ -332,7 +332,7 @@ function mathHTML(c, k) {
     <li><b>Divide.</b><div class="calc">${Bs(c.mcapRaw)} ÷ ${Bs(F(c))} = <b>${(c.mcapRaw / (F(c))).toFixed(1)}</b></div>If the company kept making the same cash and handed it all to you, it would take about <b>${(c.mcapRaw / (F(c))).toFixed(1)} years</b> to earn back the price. It’s also 1 ÷ cash back per $1.</li></ol>`;
   if (k === 'margin') return `<div class="formula">${L('margin')} <span class="eq">=</span> free cash flow ÷ revenue (sales)</div><ol class="steps">${fcfSteps(c)}
     <li><b>Revenue</b> for the same 12 months${m.basis === 'TTM' && m.parts && m.parts.rev ? ', built the same way:' + ttmLine('Revenue', m.parts.rev) : `: <b>${Bs(m.revenue)}</b>.`}${m.rev_estimated ? ' <span class="faint">(The latest quarter’s revenue wasn’t tagged in a standard way, so it’s estimated from the last annual report.)</span>' : ''}</li>
-    <li><b>Divide.</b><div class="calc">${Bs(F(c))} ÷ ${Bs(m.revenue)} = <b>${P(c.margin)}</b></div>Of every $1 of sales, about <b>${Math.round(c.margin * 100)}¢</b> ends up as spare cash. To make our list a company needs at least 15¢.</li></ol>`;
+    <li><b>Divide.</b><div class="calc">${Bs(F(c))} ÷ ${Bs(m.revenue)} = <b>${P(c.margin)}</b></div>Of every $1 of sales, about <b>${Math.round(c.margin * 100)}¢</b> ends up as spare cash. To make our list a company needs at least 15¢ over the latest 12 months.</li></ol>`;
   if (k === 'roc') { const cap = (m.equity || 0) + (m.ltd || 0);
     return `<div class="formula">${L('roc')} <span class="eq">=</span> free cash flow ÷ (owners’ equity + long-term debt)</div><ol class="steps">${fcfSteps(c)}
     <li><b>Money invested</b> = what owners have put in and left in the business (equity) plus what it has borrowed long-term, from the balance sheet.
