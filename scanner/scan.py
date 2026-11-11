@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import math
 import sys
 from collections import defaultdict
@@ -135,6 +136,15 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
                 rec["buyers"][o["name"]] = o["role"]
                 rec["by_buyer"][o["name"]] += v / max(1, len(parsed["owners"]))
             rec["value"] += v
+
+    for c in priced:   # diagnostic: raw share inputs for names set in SHARES_DEBUG (comma-separated tickers)
+        if c["ticker"] in os.environ.get("SHARES_DEBUG", "").split(","):
+            log(f"shares debug {c['ticker']}: using {c.get('shares'):,.0f} as of {c.get('shares_asof')}; price {c.get('last')}")
+            raw = _raw_facts(cache_dir, c["cik"])
+            for ns, k, u in (("dei", "EntityCommonStockSharesOutstanding", "shares"), ("us-gaap", "EarningsPerShareDiluted", "USD/shares"),
+                             ("us-gaap", "WeightedAverageNumberOfDilutedSharesOutstanding", "shares")):
+                rows = sorted(raw.get(ns, {}).get(k, {}).get("units", {}).get(u, []), key=lambda x: x["end"])[-6:]
+                log(f"   {k}: " + "; ".join(f"{x.get('start','')}..{x['end']} {x['val']:,} {x.get('form','')} {x.get('accn','')[-8:]}" for x in rows))
 
     # 5. Industry codes and earnings dates (SEC submissions API, one call per quality name)
     for c in priced:
@@ -328,6 +338,13 @@ def quality_fail_reasons(fu) -> list[str]:
     if fu["fcf_margin"] is not None and fu["fcf_margin"] > C.MAX_FCF_MARGIN:
         r.append("implausible_fcf_margin")
     return r
+
+
+def _raw_facts(cache_dir, cik):
+    try:
+        return json.loads((Path(cache_dir) / f"CIK{cik:010d}.json").read_text()).get("facts", {})
+    except Exception:
+        return {}
 
 
 def is_financial(sic) -> bool:

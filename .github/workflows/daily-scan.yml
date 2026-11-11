@@ -40,6 +40,7 @@ jobs:
       - name: Run scan
         env:
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          SHARES_DEBUG: V,BKNG,MA
         run: python -m scanner.scan --out site --ledger track/ledger.json
 
       - name: Include the latest backtest

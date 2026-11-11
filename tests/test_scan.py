@@ -214,6 +214,16 @@ class TestShares(unittest.TestCase):
                             {"start": "2026-07-01", "end": "2026-09-30", "val": 2.0, "filed": "2026-10-28"}]}}}}
         self.assertEqual(shares_outstanding(f)[0], 1.0e9)     # 3% apart: cover page is more current
 
+    def test_split_after_eps_keeps_cover_page(self):
+        from scanner.analysis import shares_outstanding
+        f = {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+                {"end": "2026-10-20", "val": 800e6, "accn": "A2", "filed": "2026-10-28"}]}}},   # after a 25:1 split
+             "us-gaap": {"NetIncomeLoss": {"units": {"USD": [
+                            {"start": "2026-04-01", "end": "2026-06-30", "val": 3.2e9, "filed": "2026-07-28"}]}},
+                         "EarningsPerShareDiluted": {"units": {"USD/shares": [
+                            {"start": "2026-04-01", "end": "2026-06-30", "val": 100.0, "filed": "2026-07-28"}]}}}}
+        self.assertEqual(shares_outstanding(f)[0], 800e6)
+
     def test_financials_excluded(self):
         from scanner.scan import is_financial
         self.assertTrue(is_financial(6021))      # national commercial bank

@@ -202,11 +202,14 @@ def shares_outstanding(f):
         best = max(rows, key=lambda x: (x["end"], x.get("filed", "")))
         same = {x["val"] for x in rows if x["end"] == best["end"] and x.get("accn") == best.get("accn")}
         total, asof = float(sum(same)), best["end"]
-    imp, imp_asof = implied_shares(f)
-    if imp and (total is None or abs(total / imp - 1) > 0.10):
-        return imp, imp_asof
+    # Cover pages sometimes list only some classes (undercounting); net income / EPS and diluted shares can
+    # lag a stock split (also undercounting). So keep the cover page unless another measure is 10%+ higher.
+    cands = [c for c in (implied_shares(f), latest_diluted_shares(f)) if c[0]]
+    best = max(cands, key=lambda c: c[0]) if cands else (None, None)
     if total is None:
-        return latest_diluted_shares(f)
+        return best
+    if best[0] and best[0] > 1.10 * total:
+        return best
     return total, asof
 
 
