@@ -23,7 +23,6 @@ from pathlib import Path
 from . import config as C
 from . import track as T
 from .analysis import fundamentals, implied_growth, parse_form4, price_stats
-from .report import render_report
 from .sources import (load_risk_free, FetchError, FixtureFetcher, LiveFetcher, env_user_agent,
                       load_company_facts, load_filing_text, load_form4_index,
                       load_prices, load_tickers, refresh_facts_bulk, SourceBreaker, load_submissions, sector_for)
@@ -408,32 +407,8 @@ def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, le
         w.writeheader()
         for r in sorted(data["all_quality"], key=lambda r: -r["score"]):
             w.writerow(r)
-    (out_dir / "report.html").write_text(render_report(data))
-    explorer = render_explorer(data)
-    (out_dir / "explorer.html").write_text(explorer)
-    (out_dir / "index.html").write_text(explorer)  # the explorer is the home page
-
-
-def render_explorer(data, per_group=25) -> str:
-    """The explorer page, loaded with today's names in three groups."""
-    groups = [("yield", data.get("yield_leaders", [])), ("shortlist", data["shortlist"]),
-              ("watchlist", data["gap_only"]), ("triggered", data["triggered_only"])]
-    cos = []
-    for gname, rows in groups:   # a company can appear in more than one group
-        for r in rows[:(60 if gname == "yield" else per_group)]:
-            cos.append(explorer_company(r, gname))
-    cfg = data["meta"]["config"]
-    meta = {"asof": data["meta"]["asof"], "funnel": data["meta"]["funnel"],
-            "market": data["meta"].get("market", {}),
-            "rates": data["meta"].get("rates", {}), "track": data["meta"].get("track", {}),
-            "changes": data["meta"].get("changes", {}), "regime": data["meta"].get("regime"),
-            "rules": {k: cfg[k] for k in ("MIN_FCF_MARGIN", "MIN_MARKET_CAP_USD", "DROP_THRESHOLD", "DRAWDOWN_THRESHOLD",
-                                          "MIN_CLUSTER_BUYERS", "MAX_IMPLIED_GROWTH", "GAP_THRESHOLD", "REQUIRED_RETURN",
-                                          "EQUITY_PREMIUM", "PEAK_MARGIN_RATIO")}}
-    tpl = (Path(__file__).parent / "explorer_template.html").read_text()
-    return (tpl.replace("__COMPANIES_JSON__", json.dumps(cos))
-               .replace("__META_JSON__", json.dumps(meta))
-               .replace("__ASOF__", data["meta"]["asof"]))
+    from .site import write_site
+    write_site(out_dir, data, explorer_company)
 
 
 def explorer_company(r, group):

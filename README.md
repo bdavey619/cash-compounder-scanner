@@ -1,4 +1,6 @@
-# Daily cash-compounder scan
+# Cash Compounders
+
+https://bdavey619.github.io/cash-compounder-scanner/ · a daily, self-grading research tool for US quality cash generators
 
 Every weekday after the close, this scans US-listed companies for one pattern: a **quality cash
 generator** that just hit a **trigger** (a sharp drop or several insiders buying), where the
@@ -107,3 +109,10 @@ buying and earnings tags aren't part of it.
 - **Banks and insurers** don't fit a free-cash-flow screen and will mostly fail or mislead.
 - Companies with **several share classes** may be missing a share count and drop out.
 - Stooq and Yahoo are unofficial price sources and can rate-limit or change format.
+
+
+## The site
+
+- **Today** (`index.html`): the quality universe ranked by free-cash-flow yield, with the cash-yield leaders (top fifth) first, filters for sharp drops, valuation gaps and insider buying, and the current interest-rate regime.
+- **Company pages** (`company.html#TICKER`): key numbers, what the price assumes (reverse DCF with adjustable required return, terminal growth and starting cash flow), free-cash-flow history, price trend, sensitivity table and filing links.
+- **Backtest** (`backtest/`), **Track record** (`track.html`) and **Method** (`method.html`).

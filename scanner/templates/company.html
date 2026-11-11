@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cash Compounders · Company</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+__CSS__
+.crumbs{font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:20px}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.tile{padding:14px 16px}.tile .k{font-size:12px;font-weight:500;color:var(--muted)}.tile .v{font-size:23px;font-weight:700;margin-top:2px}.tile .d{font-size:12px;color:var(--faint)}
+.cols{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.side{flex:1 1 330px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.sec{padding:22px 24px}.sec h2{margin:0 0 4px;font-size:17px;font-weight:700}.side .sec{padding:18px 20px}.side .sec h2{font-size:15px}
+.scale{position:relative;height:96px;margin:18px 10px 0}
+.scale .axis{position:absolute;left:0;right:0;top:46px;height:2px;background:var(--border)}
+.scale .zero{position:absolute;top:38px;width:1px;height:18px;background:var(--faint)}
+.scale .span{position:absolute;top:46px;height:2px;background:var(--accent);opacity:.35}
+.scale .pt{position:absolute;top:0;transform:translateX(-50%);text-align:center;white-space:nowrap}
+.scale .pt b{font-size:20px}.scale .pt i{display:block;width:16px;height:16px;border-radius:50%;margin:6px auto 0;border:3px solid var(--card)}
+.scale .pt span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+.ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin:6px 10px 18px}
+.verdict{background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.55;color:var(--ink)}
+.bars{display:grid;gap:14px;align-items:end;height:190px}
+.bars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.bars i{display:block;width:100%;max-width:64px;border-radius:6px 6px 0 0}
+label.sl{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}label.sl b{color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+table.sens{width:100%;border-collapse:separate;border-spacing:3px;font-size:13px;text-align:center}
+table.sens th{font-weight:500;color:var(--muted)}table.sens td{padding:8px;border-radius:6px;background:var(--accent-soft)}
+table.sens td.on{background:var(--accent);color:#fff;font-weight:700}
+.notes li{margin:0 0 8px}
+@media (max-width:1000px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.sec{padding:18px}}
+</style>
+</head>
+<body>
+__NAV__
+<main class="wrap" id="page"></main>
+<script>
+const COS = __COMPANIES__;
+const META = __META__;
+const pct = (x, d = 1) => x == null || !isFinite(x) ? (x === Infinity ? '>200%' : '–') : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x * 100).toFixed(d) + '%';
+const pl = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x * 100).toFixed(d) + '%';
+const money = b => b == null ? '–' : Math.abs(b) >= 1000 ? '$' + (b / 1000).toFixed(2) + 'T' : Math.abs(b) >= 100 ? '$' + b.toFixed(0) + 'B' : '$' + b.toFixed(Math.abs(b) < 10 ? 2 : 1) + 'B';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const BASE_R = META.rules.REQUIRED_RETURN, GT0 = META.rules.TERMINAL_GROWTH || 0.03;
+let st = {};
+
+function pv(f0, g, r, gt) { let v = 0, f = f0; for (let t = 1; t <= 10; t++) { f *= 1 + g; v += f / Math.pow(1 + r, t); } return v + f * (1 + gt) / (r - gt) / Math.pow(1 + r, 10); }
+function implied(f0, target, r, gt) {
+  if (f0 <= 0 || target <= 0) return NaN;
+  let lo = -0.6, hi = 2; if (pv(f0, hi, r, gt) < target) return Infinity; if (pv(f0, lo, r, gt) > target) return -Infinity;
+  for (let i = 0; i < 90; i++) { const m = (lo + hi) / 2; if (pv(f0, m, r, gt) < target) lo = m; else hi = m; } return (lo + hi) / 2;
+}
+
+function show() {
+  const t = decodeURIComponent(location.hash.slice(1)).toUpperCase();
+  const i = COS.findIndex(c => c.t === t);
+  const page = document.getElementById('page');
+  if (i < 0) { document.title = 'Cash Compounders · Company'; page.innerHTML = `<p class="muted">${t ? esc(t) + ' isn’t in today’s quality universe.' : 'No company selected.'} <a href="index.html">Back to today’s ranking</a></p>`; return; }
+  const c = COS[i], prev = COS[i - 1], next = COS[i + 1];
+  st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 };
+  document.title = `${c.t} · ${c.name} · Cash Compounders`;
+  const tags = c.tags.map(([x, k]) => `<span class="tag ${k}">${x}</span>`).join(' ');
+  const netNote = c.net < 0 && c.fcf > 0 ? `${(-c.net / c.fcf).toFixed(1)}× free cash flow` : 'cash − long-term debt';
+  page.innerHTML = `
+  <div class="crumbs"><span><a href="index.html">Today</a> <span aria-hidden="true">›</span> ${esc(c.name)}</span>
+    <span>${prev ? `<a href="#${prev.t}">‹ ${prev.t}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="#${next.t}">${next.t} ›</a>` : ''} <span class="faint">by FCF yield</span></span></div>
+  <div class="top">
+    <div>
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <h1 class="h1" style="margin:0;font-size:34px">${c.t}</h1>
+        <span style="font-size:18px;color:var(--ink2)">${esc(c.name)}</span>
+        <span class="pill" style="padding:3px 10px">#${c.rank} of ${COS.length} by FCF yield</span>
+        ${c.lists.leaders ? '<span class="pill" style="padding:3px 10px">Cash-yield leader</span>' : ''}
+      </div>
+      <div class="muted" style="font-size:14px;margin-top:6px">${esc(c.sector)}${c.sic ? ' · ' + esc(c.sic) : ''} ${tags ? ' &nbsp;' + tags : ''}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:30px;font-weight:700;letter-spacing:-.02em">$${c.price.toFixed(2)}</div>
+      <div class="muted" style="font-size:14px"><span class="${c.m1 <= -0.10 ? 'down' : ''}" style="font-weight:600">${pct(c.m1)}</span> from 1-month high · market cap ${money(c.mcap)}</div>
+    </div>
+  </div>
+  <section class="tiles" aria-label="Key numbers">
+    <div class="card tile"><div class="k">FCF yield</div><div class="v">${pl(c.yld)}</div><div class="d">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
+    <div class="card tile"><div class="k">Price / FCF</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + '×' : '–'}</div><div class="d">${money(c.fcf)} free cash flow</div></div>
+    <div class="card tile"><div class="k">FCF margin</div><div class="v">${pl(c.margin)}</div><div class="d">after stock comp${c.sbc ? ' (' + pl(c.sbc) + ' of revenue)' : ''}</div></div>
+    <div class="card tile"><div class="k">Cash return on capital</div><div class="v">${pl(c.roc, 0)}</div><div class="d">FCF ÷ (equity + debt)</div></div>
+    <div class="card tile"><div class="k">Share count</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? ', from buybacks' : c.shares > 0.01 ? ', dilution' : ''}</div></div>
+    <div class="card tile"><div class="k">${c.net < 0 ? 'Net debt' : 'Net cash'}</div><div class="v">${money(Math.abs(c.net))}</div><div class="d">${netNote}</div></div>
+  </section>
+  <div class="cols">
+    <div class="main">
+      <section class="card sec">
+        <h2>What is the price assuming?</h2>
+        <p class="muted" style="margin:0;font-size:14px">The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.</p>
+        <div class="scale" id="scale"></div>
+        <div class="ticks"><span>−10%</span><span>0%</span><span>+10%</span><span>+20%</span><span>+30%</span></div>
+        <div class="verdict" id="verdict"></div>
+        <p class="faint" style="margin:12px 0 0;font-size:12.5px">Growth record: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) over the last four fiscal years, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>
+      </section>
+      <section class="card sec">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>Free cash flow</h2><span class="muted" style="font-size:13px">$ billions · after stock-based comp</span></div>
+        <div class="bars" id="bars"></div>
+      </section>
+      ${c.notes.length ? `<section class="card sec"><h2>Worth knowing</h2><ul class="notes" style="margin:10px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)">${c.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>` : ''}
+    </div>
+    <aside class="side">
+      <section class="card sec">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px"><h2>Price trend</h2><span class="muted" style="font-size:13px" id="sparkcap"></span></div>
+        <svg viewBox="0 0 300 90" width="100%" role="img" id="spark"></svg>
+      </section>
+      <section class="card sec">
+        <h2 style="margin-bottom:12px">Assumptions</h2>
+        <label class="sl" for="base"><span>Starting cash flow</span></label>
+        <select id="base" style="width:100%;margin:4px 0 14px">${c.bases.map((b, k) => `<option value="${k}">${esc(b.label)} · ${money(b.fcf)}</option>`).join('')}</select>
+        <label class="sl" for="rr"><span>Required return</span><b id="rtext"></b></label>
+        <input id="rr" type="range" min="6" max="13" step="0.25">
+        <div class="faint" style="font-size:12px;margin:2px 0 14px" id="rnote"></div>
+        <label class="sl" for="gt"><span>Growth after year 10</span><b id="gttext"></b></label>
+        <input id="gt" type="range" min="1" max="4" step="0.5">
+        <button class="btn" id="reset" style="margin-top:12px;height:32px;font-size:13px">Reset</button>
+      </section>
+      <section class="card sec">
+        <h2>How sensitive is it?</h2>
+        <p class="muted" style="margin:0 0 10px;font-size:12.5px">Growth the price implies under other assumptions</p>
+        <table class="sens" id="sens"></table>
+      </section>
+      <section class="card sec" style="font-size:14px">
+        <h2 style="margin-bottom:10px">Filings</h2>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=10-&count=40">10-K and 10-Q reports ↗</a>
+          <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=8-K&count=40">Earnings releases (8-K) ↗</a>
+          <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=4&owner=include&count=40">Insider transactions (Form 4) ↗</a>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <footer class="foot"><span>Educational research, not investment advice. Figures from the company’s SEC filings and the ${new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} close.</span><a href="method.html">How these numbers are calculated</a></footer>`;
+
+  // free cash flow bars
+  const H = c.hist, mx = Math.max(...H.map(h => Math.abs(h[1])), 0.001);
+  const bars = document.getElementById('bars'); bars.style.gridTemplateColumns = `repeat(${H.length}, minmax(0,1fr))`;
+  bars.innerHTML = H.map((h, k) => `<div><span style="font-size:13px;font-weight:600" class="${h[1] < 0 ? 'down' : ''}">${money(h[1]).replace('B', '')}</span>
+    <i style="height:${Math.max(3, Math.round(Math.abs(h[1]) / mx * 140))}px;background:${h[1] < 0 ? 'var(--down)' : k === H.length - 1 ? 'var(--accent)' : 'var(--accent-bg)'}"></i><span class="muted" style="font-size:12px">${h[0]}</span></div>`).join('');
+
+  // price trend
+  const s = c.spark || [];
+  if (s.length > 2) {
+    const mn = Math.min(...s), mxs = Math.max(...s);
+    const pts = s.map((v, k) => (k / (s.length - 1) * 296 + 2).toFixed(1) + ',' + (84 - (v - mn) / ((mxs - mn) || 1) * 78).toFixed(1)).join(' ');
+    const sv = document.getElementById('spark');
+    sv.setAttribute('aria-label', `${c.t} share price over the last ${s.length} trading days, from $${s[0].toFixed(2)} to $${s[s.length - 1].toFixed(2)}`);
+    sv.innerHTML = `<polyline points="${pts}" fill="none" stroke="currentColor" class="acc" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    document.getElementById('sparkcap').textContent = `${s.length} trading days · $${s[0].toFixed(2)} → $${s[s.length - 1].toFixed(2)}`;
+  }
+
+  const base = document.getElementById('base'), rr = document.getElementById('rr'), gt = document.getElementById('gt');
+  base.value = st.base; rr.value = (st.r * 100).toFixed(2); gt.value = (st.gt * 100).toFixed(1);
+  base.onchange = () => { st.base = +base.value; update(c); };
+  rr.oninput = () => { st.r = +rr.value / 100; update(c); };
+  gt.oninput = () => { st.gt = +gt.value / 100; update(c); };
+  document.getElementById('reset').onclick = () => { st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 }; base.value = st.base; rr.value = (st.r * 100).toFixed(2); gt.value = (st.gt * 100).toFixed(1); update(c); };
+  update(c);
+  window.scrollTo(0, 0);
+}
+
+function update(c) {
+  const f0 = c.bases[st.base].fcf, ev = c.mcap - c.net, rTot = st.r + (c.premium || 0);
+  const g = implied(f0, ev, rTot, st.gt), rec = c.rec;
+  const pos = x => Math.max(0, Math.min(100, (x + 0.10) / 0.40 * 100));
+  const gp = isFinite(g) ? pos(g) : (g > 0 ? 100 : 0), rp = rec == null ? null : pos(rec);
+  document.getElementById('scale').innerHTML = `<div class="axis"></div><div class="zero" style="left:${pos(0)}%"></div>`
+    + (rp != null ? `<div class="span" style="left:${Math.min(gp, rp)}%;width:${Math.abs(rp - gp)}%"></div>` : '')
+    + `<div class="pt" style="left:${gp}%"><b class="acc">${pct(g)}</b><i style="background:var(--accent);box-shadow:0 0 0 1px var(--accent)"></i><span>Price implies</span></div>`
+    + (rp != null ? `<div class="pt" style="left:${rp}%"><b class="muted">${pct(rec)}</b><i style="background:var(--faint);box-shadow:0 0 0 1px var(--faint)"></i><span>Growth record</span></div>` : '');
+  const at = `At a ${pl(rTot, 2)} required return${c.premium ? ` (including ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')})` : ''}`;
+  let v;
+  if (!isFinite(g)) v = `${at}, the price can’t be explained by any plausible growth rate from this starting cash flow. Try another starting point.`;
+  else if (g < 0) v = `${at}, today’s price assumes free cash flow <b>shrinks about ${Math.abs(g * 100).toFixed(1)}% a year</b> for a decade. The business has grown it ${pct(rec)} a year per share. The question for your research: is that slowdown likely, or is the market too pessimistic?`;
+  else if (rec != null && g < rec - 0.05) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, ${((rec - g) * 100).toFixed(1)} points below the ${pct(rec)} the business has delivered per share. The market expects a real slowdown.`;
+  else if (rec != null && g > rec + 0.03) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, faster than the ${pct(rec)} the business has delivered per share. The price already counts on acceleration.`;
+  else v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, roughly in line with the ${pct(rec)} the business has delivered per share. The price looks fair if that record holds.`;
+  document.getElementById('verdict').innerHTML = v;
+  document.getElementById('rtext').textContent = pl(st.r, 2) + (c.premium ? ' + ' + pl(c.premium, 1) : '');
+  const R = META.rates || {};
+  document.getElementById('rnote').textContent = R.rf != null ? `Default: 10-yr Treasury ${pl(R.rf, 2)} + ${pl(R.premium, 1)} premium` + (c.premium ? `, plus ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')}` : '') : '';
+  document.getElementById('gttext').textContent = pl(st.gt, 1);
+  const rs = [-0.01, 0, 0.01].map(d => st.r + d), gs = [0.02, 0.03, 0.04];
+  document.getElementById('sens').innerHTML = `<thead><tr><th scope="col" style="text-align:left;font-size:12px">Required ↓ · later growth →</th>${gs.map(x => `<th scope="col">${pl(x, 0)}</th>`).join('')}</tr></thead><tbody>`
+    + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
+}
+window.addEventListener('hashchange', show);
+show();
+</script>
+</body>
+</html>

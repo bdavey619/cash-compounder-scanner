@@ -87,7 +87,7 @@ class TestEndToEnd(unittest.TestCase):
         rows = {r["ticker"]: r for r in self.data["all_quality"]}
         self.assertEqual(rows["SMPA"]["earnings_in_window"], "2026-11-04")  # 8-K Item 2.02 during the drop
         self.assertIsNone(rows["SMPC"]["earnings_in_window"])               # only an older 8-K
-        html = (self.tmp / "out/explorer.html").read_text()
+        html = (self.tmp / "out/company.html").read_text()
         self.assertIn("Fell on its own earnings", html)
         self.assertIn("Fell with the market", html)
 
@@ -96,10 +96,15 @@ class TestEndToEnd(unittest.TestCase):
         self.assertLess(a["off_1m_high"], -0.10)
         self.assertIn("flag_drawdown", a)
 
-    def test_explorer_written(self):
-        html = (self.tmp / "out/explorer.html").read_text()
-        self.assertNotIn("__COMPANIES_JSON__", html)
-        self.assertIn('"id": "shortlist-smpb"', html)
+    def test_site_written(self):
+        for page in ("index.html", "company.html", "track.html", "method.html"):
+            html = (self.tmp / "out" / page).read_text()
+            for ph in ("__CSS__", "__NAV__", "__COMPANIES__", "__META__"):
+                self.assertNotIn(ph, html, page)
+            self.assertIn('aria-label="Main"', html)
+        home = (self.tmp / "out/index.html").read_text()
+        self.assertIn('"t":"SMPB"', home)
+        self.assertIn('"name":"Sample Beta Payments Inc"', home)
 
     def test_hurdle_from_treasury(self):
         r = self.data["meta"]["rates"]

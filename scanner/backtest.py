@@ -485,7 +485,11 @@ def main(argv=None):
     ap.add_argument("--cache", type=Path, default=Path(".cache"))
     ap.add_argument("--limit", type=int, help="only the first N companies (for a quick trial)")
     ap.add_argument("--workers", type=int, default=os.cpu_count() or 2)
+    ap.add_argument("--render", type=Path, help="only re-render the page from an existing results.json into --out")
     a = ap.parse_args(argv)
+    if a.render:
+        write_results(a.out, json.loads(a.render.read_text()))
+        return
     t0 = time.time()
     fetcher = LiveFetcher(env_user_agent(), C.SEC_RATE_LIMIT_PER_SEC)
     facts_dir = a.cache / "companyfacts"
@@ -585,7 +589,10 @@ def write_results(out: Path, res: dict) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / "results.json").write_text(json.dumps(res, separators=(",", ":")))
     tpl = (Path(__file__).parent / "backtest_template.html").read_text()
-    (out / "index.html").write_text(tpl.replace("__DATA__", json.dumps(res, separators=(",", ":")).replace("</", "<\\/")))
+    from .site import NAV_CSS, nav
+    asof = res.get("meta", {}).get("generated", "")[:10]
+    page = tpl.replace("__NAVCSS__", NAV_CSS).replace("__NAV__", nav("Backtest", f"Backtest run {asof}", prefix="../"))
+    (out / "index.html").write_text(page.replace("__DATA__", json.dumps(res, separators=(",", ":")).replace("</", "<\\/")))
 
 
 if __name__ == "__main__":

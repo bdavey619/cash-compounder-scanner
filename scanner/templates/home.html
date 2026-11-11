@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cash Compounders · Quality companies ranked by cash per dollar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+__CSS__
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:22px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 12px}
+.bar .l,.bar .r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tblbox{overflow-x:auto}
+table.rank{width:100%;border-collapse:collapse;font-size:14px;min-width:1100px}
+table.rank th{text-align:right;padding:9px 8px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg)}
+table.rank th:nth-child(-n+3),table.rank td:nth-child(-n+3),table.rank th:last-child,table.rank td:last-child{text-align:left}
+table.rank th:first-child,table.rank td:first-child{padding-left:18px}table.rank th:last-child,table.rank td:last-child{padding-right:18px}
+table.rank th button{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+table.rank th button[aria-sort]{color:var(--ink)}
+table.rank td{padding:10px 8px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+table.rank tbody tr{cursor:pointer}table.rank tbody tr:hover td{background:var(--hover)}
+.tk{font-weight:700;color:var(--ink)}.nm{color:var(--muted);margin-left:6px;display:inline-block;max-width:230px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.yb{display:inline-block;width:56px;height:6px;border-radius:3px;background:var(--accent-soft);overflow:hidden;vertical-align:middle;margin-right:8px}
+.yb i{display:block;height:6px;border-radius:3px;background:var(--accent)}
+.tblfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.cards{display:none;flex-direction:column;gap:8px}
+.cardrow{display:flex;align-items:center;gap:12px;padding:10px 12px;color:var(--ink);text-decoration:none}
+.cardrow:hover{text-decoration:none;background:var(--hover)}
+@media (max-width:820px){.tblbox{display:none}.cards{display:flex}.bar .r{width:100%}.bar .r input{flex:1}}
+</style>
+</head>
+<body>
+__NAV__
+<main class="wrap">
+  <div class="head">
+    <div>
+      <h1 class="h1">Quality companies, ranked by cash per dollar</h1>
+      <p class="lede" id="lede"></p>
+    </div>
+    <a href="results.csv" style="font-size:14px;font-weight:500">Download CSV</a>
+  </div>
+
+  <section class="kpis" aria-label="Key numbers" id="kpis"></section>
+  <div class="card note" id="regime" style="margin-top:12px"></div>
+
+  <div class="bar">
+    <div class="l" role="group" aria-label="Lists" id="chips"></div>
+    <div class="r">
+      <label for="sector" class="muted" style="font-size:13px">Sector</label>
+      <select id="sector"></select>
+      <label for="q" class="sr">Search companies</label>
+      <input id="q" type="search" placeholder="Search ticker or name" style="width:220px">
+    </div>
+  </div>
+  <div class="muted" id="changes" style="font-size:13px;margin:-4px 0 10px"></div>
+
+  <div class="card">
+    <div class="tblbox"><table class="rank"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
+    <div class="cards" id="cards" style="padding:8px"></div>
+    <div class="tblfoot"><span id="footnote"></span><button class="btn" id="more" style="height:34px;font-size:13px"></button></div>
+  </div>
+
+  <footer class="foot">
+    <span>Educational research, not investment advice. Free cash flow = operating cash flow − capex − stock-based comp. Banks, lenders, insurers and real estate excluded.</span>
+    <span>Sources: SEC EDGAR filings · daily closes · 10-year Treasury yield</span>
+  </footer>
+</main>
+<script>
+const COS = __COMPANIES__;
+const META = __META__;
+const F = META.funnel || {}, R = META.rates || {}, G = META.regime, T = META.track || {};
+const pct = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x * 100).toFixed(d) + '%';
+const pl = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x * 100).toFixed(d) + '%';
+const money = b => b == null ? '–' : b >= 1000 ? '$' + (b / 1000).toFixed(2) + 'T' : b >= 100 ? '$' + b.toFixed(0) + 'B' : '$' + b.toFixed(1) + 'B';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const n = x => (x || 0).toLocaleString();
+const TOPN = 25;
+const fd = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '–';
+const NEWS = (((META.changes || {}).new || {}).yield || []);
+const SHOW_NEW = NEWS.length > 0 && NEWS.length <= 10;   // on a list's first day everything is 'new': not worth flagging
+const state = { list: 'leaders', sort: 'yld', dir: -1, sector: '', q: '', all: false };
+try { const s = JSON.parse(sessionStorage.getItem('cc-home') || '{}'); Object.assign(state, s); } catch (e) {}
+const save = () => { try { sessionStorage.setItem('cc-home', JSON.stringify(state)); } catch (e) {} };
+
+document.getElementById('lede').textContent = `Every US-listed business that turns ${Math.round((META.rules.MIN_FCF_MARGIN || .15) * 100)}%+ of revenue into free cash flow, year after year, ranked by free-cash-flow yield: the cash it produces per dollar of market value. Each one also shows what growth its price assumes.`;
+
+// key numbers
+(function () {
+  const leaders = COS.filter(c => c.lists.leaders).length;
+  const tg = (T.groups || []).find(g => g.group === 'yield');
+  const td = tg && tg.h && tg.h.todate;
+  const track = td && td.n ? `<div class="v ${td.avg > 0 ? 'up' : td.avg < 0 ? 'down' : ''}">${pct(td.avg)}</div><div class="d">vs S&amp;P 500 to date · ${td.n} picks, ${Math.round(td.beat * 100)}% ahead</div>`
+    : `<div class="v faint">Tracking</div><div class="d">since ${fd(T.started)}${T.next ? ' · first read ' + fd(T.next.date) : ''}</div>`;
+  const hi = G && G.high;
+  document.getElementById('kpis').innerHTML = `
+    <div class="card kpi"><div class="k">10-year Treasury</div><div class="v">${R.rf != null ? (R.rf * 100).toFixed(2) + '%' : '–'}</div><div class="d">${G ? `<span class="pill">${hi ? 'High' : 'Low'}-rate regime</span> ${hi ? 'above' : 'below'} ${(G.cutoff * 100).toFixed(0)}%` : 'hurdle ' + pl(R.base, 2)}</div></div>
+    <div class="card kpi"><div class="k">Quality universe</div><div class="v">${n(COS.length)}</div><div class="d">of ${n(F.universe)} listed companies</div></div>
+    <div class="card kpi"><div class="k">Cash-yield leaders</div><div class="v">${leaders}</div><div class="d">top fifth by FCF yield</div></div>
+    <div class="card kpi"><div class="k">Leaders vs S&amp;P 500</div>${track}</div>`;
+})();
+
+// rate regime note
+(function () {
+  const box = document.getElementById('regime');
+  if (!G || G.rf == null) { box.style.display = 'none'; return; }
+  const pts = x => (x > 0 ? '+' : '−') + Math.abs(x * 100).toFixed(1) + ' pts';
+  const yrs = (G.hi_years || []).filter(y => y >= '2020');
+  const span = yrs.length ? `${yrs[0]}–${String(yrs[yrs.length - 1]).slice(2)}` : '';
+  const icon = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex:none"><circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5" class="acc"/><path d="M9 8v5M9 5.2v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="acc"/></svg>';
+  box.innerHTML = icon + `<span style="flex:1 1 520px">` + (G.high
+    ? `Rates are above ${(G.cutoff * 100).toFixed(0)}%. In high-rate months since ${G.start}, the top fifth by FCF yield beat the bottom fifth by <b>${pts(G.hi.mean).replace('+', '')} a year</b> (won ${Math.round(G.hi.won * 100)}% of ${G.hi.months} months); in low-rate months it lagged by ${pts(-G.lo.mean).replace('+', '')}. Those high-rate months are mostly one stretch, ${span}, so treat this as a bet that the regime holds.`
+    : `Rates are below ${(G.cutoff * 100).toFixed(0)}%. In low-rate months since ${G.start}, the top fifth by FCF yield lagged the bottom fifth by ${pts(-G.lo.mean).replace('+', '')} a year, so a high cash yield has not been an edge in this environment.`)
+    + `</span><a href="backtest/#ratecard" style="font-weight:500;white-space:nowrap">See the backtest</a>`;
+})();
+
+const LISTS = [['leaders', 'Cash-yield leaders', c => c.lists.leaders], ['all', 'All quality', c => true],
+  ['drop', 'Fell sharply this week', c => c.lists.drop], ['gap', 'Priced below its record', c => c.lists.gap],
+  ['insiders', 'Insider buying', c => c.lists.insiders]];
+const COLS = [['rank', '#', c => c.rank, 1], ['t', 'Company', c => c.t, 1], ['sector', 'Sector', c => c.sector, 1],
+  ['yld', 'FCF yield', c => c.yld, -1], ['pfcf', 'P/FCF', c => c.pfcf, 1], ['margin', 'FCF margin', c => c.margin, -1],
+  ['rec', 'Growth record', c => c.rec, -1], ['impl', 'Price implies', c => c.impl, 1], ['mcap', 'Mkt cap', c => c.mcap, -1],
+  ['m1', '1 month', c => c.m1, 1], ['notes', 'Notes', null, 0]];
+
+const sectors = [...new Set(COS.map(c => c.sector))].sort();
+document.getElementById('sector').innerHTML = '<option value="">All sectors</option>' + sectors.map(s => `<option${s === state.sector ? ' selected' : ''}>${esc(s)}</option>`).join('');
+document.getElementById('sector').onchange = e => { state.sector = e.target.value; state.all = false; render(); };
+const q = document.getElementById('q'); q.value = state.q; q.oninput = e => { state.q = e.target.value.trim().toLowerCase(); render(); };
+document.getElementById('more').onclick = () => { state.all = !state.all; render(); };
+
+function rowsNow() {
+  const lst = LISTS.find(l => l[0] === state.list) || LISTS[0];
+  let rs = COS.filter(lst[2]).filter(c => !state.sector || c.sector === state.sector)
+    .filter(c => !state.q || c.t.toLowerCase().includes(state.q) || c.name.toLowerCase().includes(state.q));
+  const col = COLS.find(c => c[0] === state.sort) || COLS[3];
+  rs.sort((a, b) => { const x = col[2](a), y = col[2](b);
+    if (x == null) return 1; if (y == null) return -1;
+    return (typeof x === 'string' ? x.localeCompare(y) : x - y) * state.dir; });
+  return rs;
+}
+function render() {
+  save();
+  document.getElementById('chips').innerHTML = LISTS.map(([id, label, f]) =>
+    `<button class="chip" aria-pressed="${state.list === id}" data-l="${id}">${label}<span>${COS.filter(f).length}</span></button>`).join('');
+  document.querySelectorAll('#chips .chip').forEach(b => b.onclick = () => { state.list = b.dataset.l; state.all = false; render(); });
+  const ch = META.changes || {}, nw = (ch.new || {}).yield || [], dr = (ch.dropped || {}).yield || [];
+  document.getElementById('changes').innerHTML = state.list === 'leaders' && ch.prev_date && SHOW_NEW && (nw.length || dr.length)
+    ? `Since ${fd(ch.prev_date)}: ` + [nw.length ? `<b class="acc">${nw.length} new</b> (${nw.join(', ')})` : '', dr.length ? `${dr.length} dropped off (${dr.join(', ')})` : ''].filter(Boolean).join(' · ') : '';
+  document.getElementById('thead').innerHTML = COLS.map(([k, label, , dir]) => {
+    const on = state.sort === k;
+    return `<th scope="col">${dir ? `<button data-k="${k}" ${on ? `aria-sort="${state.dir < 0 ? 'descending' : 'ascending'}"` : ''}>${label}${on ? (state.dir < 0 ? ' ↓' : ' ↑') : ''}</button>` : `<span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${label}</span>`}</th>`;
+  }).join('');
+  document.querySelectorAll('#thead button').forEach(b => b.onclick = () => {
+    const k = b.dataset.k, col = COLS.find(c => c[0] === k);
+    if (state.sort === k) state.dir = -state.dir; else { state.sort = k; state.dir = col[3]; }
+    render();
+  });
+  const all = rowsNow(), rs = state.all ? all : all.slice(0, TOPN);
+  const maxY = Math.max(...COS.map(c => c.yld || 0), 0.01);
+  const tags = c => (c.isNew && SHOW_NEW && state.list === 'leaders' ? '<span class="tag new">New</span> ' : '') + c.tags.map(([t, k]) => `<span class="tag ${k}">${t}</span>`).join(' ');
+  document.getElementById('tbody').innerHTML = rs.map(c => `<tr data-t="${c.t}">
+    <td class="faint">${c.rank}</td>
+    <td><a class="tk" href="company.html#${c.t}">${c.t}</a><span class="nm">${esc(c.name)}</span></td>
+    <td class="muted">${esc(c.sector)}</td>
+    <td><span class="yb"><i style="width:${Math.max(2, Math.round((c.yld || 0) / maxY * 100))}%"></i></span><b>${pl(c.yld)}</b></td>
+    <td>${c.pfcf != null ? c.pfcf.toFixed(1) + '×' : '–'}</td>
+    <td>${pl(c.margin, 0)}</td>
+    <td>${pct(c.rec)}</td>
+    <td class="acc" style="font-weight:600">${pct(c.impl)}</td>
+    <td>${money(c.mcap)}</td>
+    <td class="${c.m1 != null && c.m1 <= -0.10 ? 'down' : 'muted'}" style="${c.m1 != null && c.m1 <= -0.10 ? 'font-weight:600' : ''}">${pct(c.m1)}</td>
+    <td>${tags(c)}</td></tr>`).join('') || `<tr><td colspan="11" class="muted" style="text-align:left;padding:24px 18px">No companies match.</td></tr>`;
+  document.querySelectorAll('#tbody tr[data-t]').forEach(tr => tr.onclick = e => { if (e.target.tagName !== 'A') location.href = 'company.html#' + tr.dataset.t; });
+  document.getElementById('cards').innerHTML = rs.map(c => `<a class="card cardrow" href="company.html#${c.t}">
+      <span class="faint" style="width:22px;font-size:12px">${c.rank}</span>
+      <span style="flex:1;min-width:0"><span style="font-weight:700">${c.t}</span> <span class="muted" style="font-size:13px">${esc(c.name)}</span>
+        <span style="display:block;font-size:12px" class="muted">P/FCF ${c.pfcf != null ? c.pfcf.toFixed(1) + '×' : '–'} · price implies <b class="acc">${pct(c.impl)}</b> vs ${pct(c.rec)}</span></span>
+      <span style="text-align:right"><b style="font-size:17px">${pl(c.yld)}</b><span class="faint" style="display:block;font-size:11px">FCF yield</span></span></a>`).join('');
+  const lst = LISTS.find(l => l[0] === state.list);
+  document.getElementById('footnote').innerHTML = `Showing ${rs.length} of ${all.length} · ${lst[1].toLowerCase()} · <b class="acc">Price implies</b> = the yearly free-cash-flow growth over 10 years that today's price requires, at a ${pl(META.rules.REQUIRED_RETURN, 2)} required return`;
+  const more = document.getElementById('more');
+  more.style.display = all.length > TOPN ? '' : 'none';
+  more.textContent = state.all ? 'Show top ' + TOPN : 'Show all ' + all.length;
+}
+render();
+</script>
+</body>
+</html>
