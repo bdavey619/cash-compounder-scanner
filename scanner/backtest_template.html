@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backtest · Would the screen have worked?</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface:#fcfcfb; --card:#ffffff; --border:#e6e4df; --grid:#ecebe7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#86857f;
+  --s-gap_trigger:#2a78d6; --s-trigger_only:#d0632b; --s-gap:#7a3fc4; --s-quality:#1D9E75; --s-spy:#8a8984;
+  --up:#1c7c4a; --dn:#b3261e; --up-bg:#e3f2e9; --dn-bg:#fbe7e5; --hl:#eef5fd;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --surface:#1a1a19; --card:#222220; --border:#3a3936; --grid:#2e2d2b;
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#8f8e86;
+    --s-gap_trigger:#3987e5; --s-trigger_only:#e07a45; --s-gap:#9a6ae0; --s-quality:#2bb88a; --s-spy:#9b9a93;
+    --up:#5cc08a; --dn:#f08a82; --up-bg:#183a28; --dn-bg:#43201d; --hl:#1c2c40;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text-primary);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:36px 24px 80px}
+a{color:var(--s-gap_trigger)}
+.back{font-size:13px;text-decoration:none}
+h1{font-size:28px;line-height:1.2;margin:10px 0 8px;letter-spacing:-0.01em}
+h2{font-size:18px;margin:0 0 4px}
+.lede{color:var(--text-secondary);max-width:780px;margin:0 0 6px;font-size:16px}
+.asof{color:var(--text-muted);font-size:13px;margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin:0 0 20px}
+.sub{color:var(--text-secondary);margin:0 0 14px;font-size:14px;max-width:800px}
+.answer{font-size:17px;line-height:1.55;margin:0}
+.answer b{font-weight:650}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13.5px}
+th{font-size:12px;font-weight:600;color:var(--text-muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--grid);text-align:right;vertical-align:middle}
+th:first-child,td:first-child{text-align:left}
+tr.ctrl td{background:var(--hl)}
+.gname{display:flex;align-items:center;gap:8px;font-weight:600}
+.gname i{width:10px;height:10px;border-radius:3px;flex:none}
+.gdesc{font-size:12px;color:var(--text-muted);font-weight:400;margin-top:2px}
+.v{font-weight:650}.up{color:var(--up)}.dn{color:var(--dn)}
+.s{font-size:11.5px;color:var(--text-muted)}
+.chartbox{position:relative}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--text-secondary);margin:0 0 10px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px}
+.tip{position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.08);display:none;min-width:190px;z-index:2}
+.tip b{font-weight:650}
+.tip .row{display:flex;justify-content:space-between;gap:14px}
+.yrs td{padding:6px 8px;font-size:13px}
+.cell{display:inline-block;min-width:62px;padding:2px 6px;border-radius:5px;font-weight:600}
+.cell.up{background:var(--up-bg)}.cell.dn{background:var(--dn-bg)}
+.cases{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cases h3{font-size:14px;margin:0 0 6px}
+.cases td{font-size:13px;padding:6px 6px}
+ul.notes{margin:6px 0 0;padding-left:18px;color:var(--text-secondary);font-size:14px}
+ul.notes li{margin:0 0 6px}
+@media (max-width:760px){.cases{grid-template-columns:1fr}.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">← Back to today's scan</a>
+  <h1>Backtest: would the screen have worked?</h1>
+  <p class="lede">Every month-end since <span id="start"></span>, the same rules as today's scan were applied using only what was knowable that day: SEC numbers already filed, that day's prices, that day's 10-year Treasury yield. Then each flagged stock was measured against the S&amp;P 500 over the next 3, 6 and 12 months.</p>
+  <p class="asof" id="asof"></p>
+
+  <div class="card"><p class="answer" id="answer"></p></div>
+
+  <div class="card">
+    <h2>Return beyond the S&amp;P 500, per flag</h2>
+    <p class="sub">Average total return (dividends included) minus the S&amp;P 500's over the same window. The first row is the control group: if the other rows don't beat it, the valuation gap and the drop trigger aren't adding anything beyond "buy quality".</p>
+    <div style="overflow-x:auto"><table id="tbl"></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Growth of $1</h2>
+    <p class="sub" id="growthsub"></p>
+    <div class="legend" id="legend"></div>
+    <div class="chartbox"><svg id="growth" role="img" aria-label="Growth of one dollar for each group compared with the S&amp;P 500"></svg><div class="tip" id="tip"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Year by year</h2>
+    <p class="sub">Each group's return minus the S&amp;P 500's, by calendar year, from the same portfolios as the chart. This is where you see the bad stretches you'd have to sit through.</p>
+    <div style="overflow-x:auto"><table class="yrs" id="yrs"></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Case studies from the shortlist group</h2>
+    <p class="sub" id="casesub"></p>
+    <div class="cases"><div><h3>Best 12-month outcomes</h3><table id="best"></table></div><div><h3>Worst 12-month outcomes</h3><table id="worst"></table></div></div>
+  </div>
+
+  <div class="card">
+    <h2>How to read this, and what it can't tell you</h2>
+    <ul class="notes" id="notes"></ul>
+  </div>
+</div>
+<script>
+const D = __DATA__;
+const G = Object.fromEntries(D.table.map(r=>[r.id,r]));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pct = (x,d=1)=> x==null?'–':(x>0?'+':'')+(x*100).toFixed(d)+'%';
+const pts = (x,d=1)=> x==null?'–':(x>0?'+':'')+(x*100).toFixed(d)+' pts';
+const fmtMonth = d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'});
+document.getElementById('start').textContent = fmtMonth(D.meta.start);
+document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fmtMonth(D.meta.start)} to ${fmtMonth(D.meta.end)} · ${D.meta.company_months.toLocaleString()} company-months in the quality universe · ${D.meta.ever_quality.toLocaleString()} companies passed quality at some point · run ${D.meta.generated}`;
+
+// Plain-language answer, generated from the numbers
+(function(){
+  const h='12m', q=G.quality.h[h], gp=G.gap.h[h], gt=G.gap_trigger.h[h], to=G.trigger_only.h[h];
+  const vs=(a,b)=> (a.mean==null||b.mean==null)?null:a.mean-b.mean;
+  const word=x=> x==null?'–':Math.abs(x)<0.01?'about the same as':x>0?`${(x*100).toFixed(1)} pts better than`:`${(-x*100).toFixed(1)} pts worse than`;
+  const s=[];
+  s.push(`Over 12 months, the average quality company returned <b>${pts(q.mean)}</b> vs the S&amp;P 500 (${pct(q.beat,0).replace('+','')} beat it).`);
+  s.push(`Valuation-gap names did <b>${word(vs(gp,q))}</b> the quality group (${pts(gp.mean)} vs the S&amp;P 500).`);
+  s.push(`Gap + sharp drop, the shortlist, did <b>${word(vs(gt,q))}</b> the quality group (${pts(gt.mean)}, median ${pts(gt.median)}, n=${gt.n.toLocaleString()}).`);
+  s.push(`A sharp drop without a valuation gap: ${pts(to.mean)}.`);
+  document.getElementById('answer').innerHTML = s.join(' ');
+})();
+
+// Comparison table
+(function(){
+  const H=['3m','6m','12m'];
+  const cell=x=>{ if(!x||!x.n) return '<td>–</td>'; const c=x.mean>0?'up':x.mean<0?'dn':'';
+    return `<td><span class="v ${c}">${pts(x.mean)}</span><div class="s">median ${pts(x.median)} · ${Math.round(x.beat*100)}% beat</div></td>`; };
+  document.getElementById('tbl').innerHTML = '<tr><th>Group</th><th class="hide-sm">Flags</th><th>3 months</th><th>6 months</th><th>12 months</th></tr>' +
+    D.table.map(r=>`<tr class="${r.id==='quality'?'ctrl':''}"><td><div class="gname"><i style="${css('--s-'+r.id)?'background:'+css('--s-'+r.id):'border:1.5px solid var(--text-muted)'}"></i>${r.label}</div><div class="gdesc">${r.desc}</div></td>`+
+      `<td class="hide-sm">${r.flags.toLocaleString()}<div class="s">${r.companies.toLocaleString()} companies · ${r.avg_per_month}/mo</div></td>`+H.map(h=>cell(r.h[h])).join('')+'</tr>').join('');
+})();
+
+// Growth of $1 (log scale) with hover crosshair
+(function(){
+  const keys=['spy','quality','gap','gap_trigger','trigger_only'];
+  const label={spy:'S&P 500',quality:G.quality.label,gap:G.gap.label,gap_trigger:G.gap_trigger.label,trigger_only:G.trigger_only.label};
+  const col=k=>css('--s-'+k);
+  document.getElementById('growthsub').textContent = `Each month, an equal-weight portfolio holds every name the group flagged in the last ${D.meta.hold_months} month-ends; months with nothing to hold sit in the index. Log scale, so equal slopes mean equal growth rates.`;
+  document.getElementById('legend').innerHTML = keys.map(k=>`<span><i style="background:${col(k)};${k==='spy'?'height:2px':''}"></i>${label[k]}</span>`).join('');
+  const dates=D.growth.dates, S=D.growth.series;
+  const W=1000,Hh=380,L=48,R=150,T=12,B=30;
+  const all=keys.flatMap(k=>S[k]); const lo=Math.log(Math.min(...all)*0.95), hi=Math.log(Math.max(...all)*1.05);
+  const x=i=>L+i/(dates.length-1)*(W-L-R), y=v=>T+(hi-Math.log(v))/(hi-lo)*(Hh-T-B);
+  const svg=document.getElementById('growth'); svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`);
+  const NS='http://www.w3.org/2000/svg', el=(t,a,p,txt)=>{const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); if(txt!=null) e.textContent=txt; (p||svg).appendChild(e); return e;};
+  let ticks=[0.5,0.75,1,1.5,2,3,4,6,8,12,16].filter(v=>Math.log(v)>=lo&&Math.log(v)<=hi);
+  ticks.forEach(v=>{ el('line',{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css('--grid'),'stroke-width':1});
+    el('text',{x:L-8,y:y(v)+4,'text-anchor':'end','font-size':11.5,fill:css('--text-muted')},null,'$'+v); });
+  dates.forEach((d,i)=>{ if(d.slice(5,7)==='01'||i===0 && false){ const yr=d.slice(0,4); if(+yr%2===0){ el('text',{x:x(i),y:Hh-8,'text-anchor':'middle','font-size':11.5,fill:css('--text-muted')},null,yr);} } });
+  const ends=[];
+  keys.forEach(k=>{ const pth=S[k].map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+    el('path',{d:pth,fill:'none',stroke:col(k),'stroke-width':k==='gap_trigger'?2.5:2,'stroke-dasharray':k==='spy'?'5 4':'','stroke-linejoin':'round'});
+    ends.push({k,y:y(S[k][S[k].length-1]),v:S[k][S[k].length-1]}); });
+  // direct end labels, nudged apart so they never collide
+  ends.sort((a,b)=>a.y-b.y); for(let i=1;i<ends.length;i++) if(ends[i].y-ends[i-1].y<15) ends[i].y=ends[i-1].y+15;
+  ends.forEach(e=>{ const t=el('text',{x:W-R+8,y:e.y+4,'font-size':12,fill:css('--text-secondary')}); el('tspan',{'font-weight':650,fill:css('--text-primary')},t,'$'+e.v.toFixed(2)); el('tspan',{dx:5},t,label[e.k].replace('&amp;','&')); });
+  const cross=el('line',{y1:T,y2:Hh-B,stroke:css('--text-muted'),'stroke-width':1,opacity:0});
+  const dots=keys.map(k=>el('circle',{r:3.5,fill:col(k),stroke:css('--card'),'stroke-width':1.5,opacity:0}));
+  const tip=document.getElementById('tip'), box=svg.parentElement;
+  const hit=el('rect',{x:L,y:T,width:W-L-R,height:Hh-T-B,fill:'transparent'});
+  hit.addEventListener('mousemove',ev=>{ const r=svg.getBoundingClientRect(); const sx=(ev.clientX-r.left)/r.width*W;
+    const i=Math.max(0,Math.min(dates.length-1,Math.round((sx-L)/(W-L-R)*(dates.length-1))));
+    cross.setAttribute('x1',x(i)); cross.setAttribute('x2',x(i)); cross.setAttribute('opacity',.5);
+    keys.forEach((k,n)=>{dots[n].setAttribute('cx',x(i)); dots[n].setAttribute('cy',y(S[k][i])); dots[n].setAttribute('opacity',1);});
+    tip.innerHTML=`<b>${fmtMonth(dates[i])}</b>`+keys.slice().sort((a,b)=>S[b][i]-S[a][i]).map(k=>`<div class="row"><span>${label[k]}</span><b>$${S[k][i].toFixed(2)}</b></div>`).join('');
+    tip.style.display='block'; const bx=box.getBoundingClientRect(); let lx=ev.clientX-bx.left+14; if(lx>bx.width-220) lx=ev.clientX-bx.left-224; tip.style.left=lx+'px'; tip.style.top=(ev.clientY-bx.top-20)+'px'; });
+  hit.addEventListener('mouseleave',()=>{tip.style.display='none'; cross.setAttribute('opacity',0); dots.forEach(d=>d.setAttribute('opacity',0));});
+})();
+
+// Year by year, vs the S&P 500
+(function(){
+  const keys=['quality','gap','gap_trigger','trigger_only'];
+  const c=x=>x==null?'<td>–</td>':`<td><span class="cell ${x>0.005?'up':x<-0.005?'dn':''}">${pts(x,0)}</span></td>`;
+  document.getElementById('yrs').innerHTML='<tr><th>Year</th><th>S&amp;P 500</th>'+keys.map(k=>`<th>${G[k].label}</th>`).join('')+'</tr>'+
+    D.years.map(y=>`<tr><td><b>${y.year}</b></td><td>${pct(y.spy,0)}</td>`+keys.map(k=>c(y[k]==null||y.spy==null?null:(1+y[k])/(1+y.spy)-1)).join('')+'</tr>').join('');
+})();
+
+// Case studies
+(function(){
+  document.getElementById('casesub').textContent=`The first time each company entered the "${G.gap_trigger.label}" group (repeats within 6 months skipped), ${D.cases.n.toLocaleString()} cases in all. These are illustrations, not evidence: the averages above are the evidence.`;
+  const row=c=>`<tr><td><b>${c.t}</b> <span class="s">${fmtMonth(c.d)}</span><div class="s">${(c.name||'').slice(0,32)}</div></td><td><span class="s">implied ${pct(c.implied_g,0)} vs record ${pct(c.ref_g,0)}</span></td><td><span class="v ${c.excess>0?'up':'dn'}">${pts(c.excess,0)}</span><div class="s">${pct(c.ret,0)} vs ${pct(c.spy,0)}${c.early?' · stopped trading':''}</div></td></tr>`;
+  document.getElementById('best').innerHTML=D.cases.best.map(row).join('');
+  document.getElementById('worst').innerHTML=D.cases.worst.map(row).join('');
+})();
+
+// Notes
+document.getElementById('notes').innerHTML=[
+  `<b>Survivorship bias.</b> The universe is companies listed today, so firms that later went bankrupt or were bought out are mostly missing. That flatters every group, the control included, so <b>compare the rows with each other</b> rather than with the S&amp;P 500.`,
+  `<b>No look-ahead.</b> At each month-end only SEC numbers already filed were used, the share count was restated for later stock splits, and the hurdle rate was that day's 10-year Treasury yield plus ${(D.meta.rules.EQUITY_PREMIUM*100).toFixed(0)} points.`,
+  `<b>Not included:</b> insider buying and the earnings-date tag, which need data this backtest doesn't rebuild. Trading costs and taxes are ignored.`,
+  `<b>Overlapping windows.</b> A company flagged several months running counts each month, so the per-flag averages lean toward long-lasting flags. The growth chart avoids this by holding each name once.`,
+  `<b>Entry price</b> is the closing price on the flag date. ${D.meta.price_missing} of ${D.meta.ever_quality} companies had no price history and were skipped.`,
+].map(x=>`<li>${x}</li>`).join('');
+</script>
+</body>
+</html>

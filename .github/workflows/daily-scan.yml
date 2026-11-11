@@ -42,6 +42,9 @@ jobs:
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
         run: python -m scanner.scan --out site --ledger track/ledger.json
 
+      - name: Include the latest backtest
+        run: if [ -d backtest ]; then cp -r backtest site/backtest; fi
+
       # The track record has to survive between runs, so it lives in the repo
       - name: Save track record
         run: |

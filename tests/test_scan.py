@@ -211,3 +211,64 @@ class TestPeakMargin(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBacktest(unittest.TestCase):
+    """Synthetic end-to-end: one quality company with a 2-for-1 split and a sharp drop."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(ROOT / "tests"))
+        import make_fixtures as mf
+        from scanner import backtest as B
+        cls.B = B
+        cls.facts = mf.company_facts(9000002, "Sample Beta Payments Inc", [2.0, 2.4, 2.9], 0.41, 12.0, 1.0, 1e9)
+        days, d = [], date(2024, 1, 2)
+        while d <= date(2027, 12, 31):
+            if d.weekday() < 5:
+                days.append(d.isoformat())
+            d += timedelta(days=1)
+        spy = [500 * 1.0003 ** i for i in range(len(days))]
+        stock = []
+        for i, day in enumerate(days):
+            p = 21.5 * 1.0002 ** i                      # split-adjusted: raw price was 2x before the split
+            if "2026-08-25" <= day <= "2026-08-31":
+                p *= 0.78                               # sharp drop in the last week of August 2026
+            elif day > "2026-08-31":
+                p *= 0.9
+            stock.append(p)
+        cls.spy = B.Series(days, spy, spy, [])
+        cls.stock = B.Series(days, stock, stock, [("2026-06-01", 2.0)])
+        cls.months = B.month_ends(cls.spy, "2025-01")
+
+    def test_facts_asof_hides_later_filings(self):
+        early = self.B.facts_asof(self.facts, "2025-03-01")
+        rows = early["facts"]["us-gaap"]["RevenueFromContractWithCustomerExcludingAssessedTax"]["units"]["USD"]
+        self.assertTrue(rows and all(r["filed"] <= "2025-03-01" for r in rows))
+        self.assertNotIn("EntityCommonStockSharesOutstanding", early["facts"]["dei"])
+
+    def test_walk_forward(self):
+        B = self.B
+        pit = B.pit_fundamentals(self.facts, self.months)
+        self.assertNotIn("2025-03-31", pit)                 # only two years filed: fails the 3-year rule
+        self.assertIn("2026-03-31", pit)
+        meta = {"SMPB": {"ticker": "SMPB", "name": "Sample Beta", "cik": 9000002}}
+        walked = B.walk({"SMPB": pit}, meta, {"SMPB": self.stock}, self.spy, None, self.months)
+        rows = {r["d"]: r for r in walked["rows"]}
+        # market cap uses the real (pre-split) price: 2x the adjusted 21.5ish, times 1B shares
+        i = self.stock.idx("2026-03-31")
+        self.assertAlmostEqual(rows["2026-03-31"]["mcap"], 2 * self.stock.close[i] * 1e9, delta=1e6)
+        self.assertIn("quality", rows["2026-03-31"]["groups"])
+        self.assertIn("12m", rows["2026-03-31"]["fw"])
+        aug = rows["2026-08-31"]["groups"]
+        self.assertTrue("gap_trigger" in aug or "trigger_only" in aug)   # the drop fires a trigger
+        res = B.summarize(walked, {"SMPB": self.stock}, self.spy, self.months, meta)
+        self.assertEqual(res["table"][0]["id"], "quality")
+        self.assertEqual(len(res["growth"]["dates"]), len(res["growth"]["series"]["spy"]))
+        out = Path(tempfile.mkdtemp())
+        res["meta"] = {"generated": "test", "start": self.months[0], "end": self.months[-1], "months": len(self.months),
+                       "company_months": len(walked["rows"]), "ever_quality": 1, "price_missing": 0, "hold_months": 6,
+                       "rules": {"EQUITY_PREMIUM": 0.04}}
+        B.write_results(out, res)
+        self.assertIn('"table"', (out / "index.html").read_text())
+        type(self).html = out / "index.html"

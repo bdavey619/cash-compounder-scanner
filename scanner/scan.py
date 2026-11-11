@@ -108,28 +108,10 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     log(f"prices: {len(quality) - missing} ok, {missing} missing; source failures: {breaker.fails}")
     funnel["price_missing"] = missing
     for co in quality:
-        closes = closes_by.get(co["ticker"], [])
-        ps = price_stats(closes, C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS)
-        if not ps or not co.get("shares"):
-            continue
-        mcap = ps["last"] * co["shares"]
-        if mcap < C.MIN_MARKET_CAP_USD:
-            continue
-        prem, why = risk_premium(co)
-        r = C.REQUIRED_RETURN + prem
-        g = implied_growth(co["fcf"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
-        g_ttm = g
-        # Cyclicals are judged on a 3-year average and peak-margin names on normalized cash flow
-        # (revenue x their own average margin), not one boom year. If both apply, the lower base wins.
-        alt = [x for x, use in ((co["fcf_avg3"], co["volatile"]), (co.get("fcf_normalized"), co.get("peak_margin")))
-               if use and x and x > 0]
-        if alt:
-            g = implied_growth(min(alt), mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
-        ref = reference_growth(co)
-        gap = (g - ref) if (g is not None and math.isfinite(g) and ref is not None) else None
-        priced.append({**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap, "p_fcf": mcap / co["fcf"],
-                       "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
-                       "risk_premium": prem, "risk_why": why, "required_return": r})
+        v = value_company(co, price_stats(closes_by.get(co["ticker"], []), C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS),
+                          mkt_chg, mkt_dd, C.REQUIRED_RETURN)
+        if v:
+            priced.append(v)
     funnel["quality"] = len(priced)
     log(f"quality + priced + above market-cap floor: {len(priced)}")
 
@@ -166,15 +148,13 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         c["insider_buyers"] = sorted((n, r) for n, r in ins["buyers"].items()
                                      if ins["by_buyer"][n] >= C.MIN_BUY_VALUE_USD) if ins else []
         c["insider_value"] = ins["value"] if ins else 0.0
-        c["flag_drop"] = c["rel_chg"] <= C.DROP_THRESHOLD
-        c["flag_drawdown"] = c["rel_dd"] <= C.DRAWDOWN_THRESHOLD
+        c.update(price_flags(c))
         # Did it fall on its own earnings report, or with the market?
         since = min([c["chg_start_date"]] + ([c["high_1m_date"]] if c["flag_drawdown"] else []))
         hits = sorted(d for d in c["earnings_dates"] if d >= since)
         c["earnings_in_window"] = hits[-1] if hits else None
         c["flag_cluster"] = len(c["insider_buyers"]) >= C.MIN_CLUSTER_BUYERS
-        c["flag_gap"] = (c["gap"] is not None and c["gap"] <= C.GAP_THRESHOLD
-                         and c["implied_g"] <= C.MAX_IMPLIED_GROWTH)
+        c["flag_gap"] = gap_flag(c["gap"], c["implied_g"])
         c["price_trigger"] = c["flag_drop"] or c["flag_drawdown"]
         c["triggered"] = c["price_trigger"] or c["flag_cluster"]
         c["score"] = score(c)
@@ -265,6 +245,42 @@ def reference_growth(co):
     if not cands:
         return None
     return min(min(cands), C.TRACK_CAP)
+
+
+def value_company(co, ps, mkt_chg, mkt_dd, base_r):
+    """Market cap, risk-adjusted required return, implied growth and the gap to reference growth.
+    Shared by the daily scan and the backtest so both apply identical rules. None if unpriced or too small."""
+    if not ps or not co.get("shares"):
+        return None
+    mcap = ps["last"] * co["shares"]
+    if mcap < C.MIN_MARKET_CAP_USD:
+        return None
+    prem, why = risk_premium(co)
+    r = base_r + prem
+    g = implied_growth(co["fcf"], mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+    g_ttm = g
+    # Cyclicals are judged on a 3-year average and peak-margin names on normalized cash flow
+    # (revenue x their own average margin), not one boom year. If both apply, the lower base wins.
+    alt = [x for x, use in ((co["fcf_avg3"], co["volatile"]), (co.get("fcf_normalized"), co.get("peak_margin")))
+           if use and x and x > 0]
+    if alt:
+        g = implied_growth(min(alt), mcap - co["net_cash"], r, C.TERMINAL_GROWTH, C.FORECAST_YEARS)
+    ref = reference_growth(co)
+    ok = lambda x: x is not None and math.isfinite(x)
+    gap = (g - ref) if (ok(g) and ref is not None) else None
+    return {**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap,
+            "p_fcf": mcap / co["fcf"], "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
+            "gap_ttm": (g_ttm - ref) if (ok(g_ttm) and ref is not None) else None,
+            "risk_premium": prem, "risk_why": why, "required_return": r}
+
+
+def price_flags(c) -> dict:
+    return {"flag_drop": c["rel_chg"] <= C.DROP_THRESHOLD, "flag_drawdown": c["rel_dd"] <= C.DRAWDOWN_THRESHOLD}
+
+
+def gap_flag(gap, implied_g) -> bool:
+    return bool(gap is not None and implied_g is not None and math.isfinite(implied_g)
+                and gap <= C.GAP_THRESHOLD and implied_g <= C.MAX_IMPLIED_GROWTH)
 
 
 def quality_fail_reasons(fu) -> list[str]:

@@ -75,6 +75,16 @@ versus SPY at 1, 3, 6 and 12 months; a result is frozen once measured. The same 
 in the same group within 30 days. Nothing is back-filled, so the record starts the day tracking began.
 The site shows a summary table and `track/track_record.csv` has the full log.
 
+## Backtest
+
+`python -m scanner.backtest` (or the **Backtest** workflow, run by hand from the Actions tab) replays the
+screen at every month-end since 2014 using only what was knowable then: SEC numbers filtered by their
+filing date, share counts restated for later splits, that day's prices and 10-year Treasury yield. It
+compares the quality universe (the control group) against the gap, gap + drop, drop-only and
+unadjusted-gap groups at 3, 6 and 12 months, and writes `backtest/index.html` (published at
+`/backtest/`). Survivorship bias flatters every group, so compare groups with each other. Insider
+buying and earnings tags aren't part of it.
+
 ## Known blind spots
 
 - SEC publishes its bulk company-facts archive nightly, so a 10-Q filed today shows up in tomorrow's

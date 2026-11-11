@@ -1,0 +1,66 @@
+name: Backtest
+
+# Run by hand from the Actions tab. Rebuilds the screen at every month-end since the start month
+# using only what was knowable then, saves the results to backtest/, and republishes the site.
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "First month (YYYY-MM)"
+        default: "2014-01"
+
+permissions:
+  contents: write   # to save backtest/ results to the repo
+  actions: write    # to trigger the daily workflow, which republishes the site
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore fundamentals cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/companyfacts
+          key: companyfacts-${{ github.run_id }}
+          restore-keys: companyfacts-
+
+      - name: Restore price-history cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/bt_prices
+          key: bt-prices-${{ github.run_id }}
+          restore-keys: bt-prices-
+
+      - name: Self-test
+        run: python -m unittest discover tests
+
+      - name: Run backtest
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python -m scanner.backtest --start "${{ inputs.start }}" --out backtest
+
+      - name: Save results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add backtest/
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "Backtest results: $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase --quiet && git push && exit 0; sleep 5; done
+          exit 1
+
+      - name: Republish the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run daily-scan.yml --ref main
