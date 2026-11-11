@@ -36,6 +36,12 @@ TRACK_CAP = 0.20                 # reference growth = lower of FCF and revenue g
                                  # so a rebound from a depressed base (e.g. a memory-chip upcycle) can't
                                  # make every price look cheap
 
+# Banks, lenders, brokers and insurers: "free cash flow" doesn't mean the same thing for them (a lender's
+# loans are investing outflows, an insurer's float is operating inflow), so they're excluded, as most
+# FCF screens do. SIC code ranges from the SEC.
+EXCLUDED_SIC = [(6000, 6199), (6211, 6211), (6300, 6411)]
+MAX_FCF_MARGIN = 0.9             # FCF above 90% of revenue isn't a normal operating business; treat as bad data
+
 # --- Peak margins ---
 # Today's FCF margin far above the company's own multi-year average often means the market expects it
 # to fall back, so a "cheap" price may be fair. Those names are judged on normalized free cash flow

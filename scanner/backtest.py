@@ -36,7 +36,8 @@ from pathlib import Path
 from . import config as C
 from .analysis import fundamentals, price_stats
 from .scan import env_user_agent, gap_flag, price_flags, quality_fail_reasons, value_company
-from .sources import FetchError, LiveFetcher, load_tickers, refresh_facts_bulk
+from .scan import is_financial
+from .sources import FetchError, LiveFetcher, load_submissions, load_tickers, refresh_facts_bulk
 
 START = "2014-01"
 HORIZONS = {"3m": 63, "6m": 126, "12m": 252}       # trading days
@@ -517,6 +518,19 @@ def main(argv=None):
             if k % 1000 == 0:
                 log(f"  fundamentals {k}/{len(jobs)} ({len(pit)} ever pass quality)")
     log(f"point-in-time fundamentals: {len(jobs)} companies with SEC data, {len(pit)} pass quality in at least one month")
+
+    # Banks, lenders, brokers and insurers are excluded, same as the daily scan (industry code from SEC)
+    sic_cache = a.cache / "bt_sic.json"
+    sics = json.loads(sic_cache.read_text()) if sic_cache.exists() else {}
+    for t in sorted(pit):
+        if t not in sics:
+            sics[t] = load_submissions(fetcher, meta[t]["cik"])["sic"]
+    sic_cache.parent.mkdir(parents=True, exist_ok=True)
+    sic_cache.write_text(json.dumps(sics))
+    fin = [t for t in pit if is_financial(sics.get(t))]
+    for t in fin:
+        pit.pop(t); meta.pop(t)
+    log(f"excluded {len(fin)} banks, lenders, brokers and insurers -> {len(pit)} companies")
 
     # 2. Daily price history for those companies
     prices, missing = {}, []

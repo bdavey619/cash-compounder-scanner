@@ -185,6 +185,32 @@ class TestListChanges(unittest.TestCase):
         self.assertEqual((ch["prev_date"], ch["new"]["shortlist"], ch["dropped"]["shortlist"]), ("2026-11-10", [], ["B", "C"]))
 
 
+class TestShares(unittest.TestCase):
+    def test_share_classes_add_up(self):
+        from scanner.analysis import shares_outstanding
+        f = {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+            {"end": "2026-10-20", "val": 800e6, "accn": "A2", "filed": "2026-10-28"},   # class A
+            {"end": "2026-10-20", "val": 7e6, "accn": "A2", "filed": "2026-10-28"},     # class B
+            {"end": "2026-07-20", "val": 810e6, "accn": "A1", "filed": "2026-07-28"}]}}}}
+        self.assertEqual(shares_outstanding(f), (807e6, "2026-10-20"))
+
+    def test_diluted_wins_when_classes_convert(self):
+        from scanner.analysis import shares_outstanding
+        f = {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+                {"end": "2026-10-20", "val": 1.7e9, "accn": "A2", "filed": "2026-10-28"}]}}},
+             "us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [
+                {"start": "2026-07-01", "end": "2026-09-30", "val": 1.95e9}]}}}}
+        self.assertEqual(shares_outstanding(f)[0], 1.95e9)
+
+    def test_financials_excluded(self):
+        from scanner.scan import is_financial
+        self.assertTrue(is_financial(6021))      # national commercial bank
+        self.assertTrue(is_financial(6331))      # insurance
+        self.assertFalse(is_financial(6200))     # exchanges
+        self.assertFalse(is_financial(7389))     # business services (Visa, Mastercard)
+        self.assertFalse(is_financial(None))
+
+
 class TestPeakMargin(unittest.TestCase):
     def _facts(self, margins):
         sys.path.insert(0, str(ROOT / "tests"))

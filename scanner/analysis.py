@@ -129,9 +129,7 @@ def fundamentals(facts: dict) -> dict | None:
     ltd, _ = latest_instant(f, ["LongTermDebt", "LongTermDebtNoncurrent"])
     cash, _ = latest_instant(f, ["CashAndCashEquivalentsAtCarryingValue"])
     sti, _ = latest_instant(f, ["MarketableSecuritiesCurrent", "ShortTermInvestments"])
-    shares, shares_asof = latest_instant(f, ["EntityCommonStockSharesOutstanding"], ns="dei", unit="shares")
-    if shares is None:
-        shares, shares_asof = latest_diluted_shares(f)
+    shares, shares_asof = shares_outstanding(f)
     capital = (equity or 0) + (ltd or 0)
     first = rows[-3]
     yrs = (date.fromisoformat(cur["end"]) - date.fromisoformat(first["fy_end"])).days / 365.25
@@ -191,6 +189,23 @@ def fundamentals(facts: dict) -> dict | None:
         "shares_asof": shares_asof,
         "capex_missing": last["capex_missing"],
     }
+
+
+def shares_outstanding(f):
+    """Total shares across all classes. The cover page reports each class separately (Mastercard, Visa,
+    CME, Alphabet...), so add up every class from the latest filing. Then cross-check against diluted
+    shares, which convert every class into common-equivalent shares: if that's materially larger (Visa's
+    class B and C convert into several A shares each), use it."""
+    rows = f.get("dei", {}).get("EntityCommonStockSharesOutstanding", {}).get("units", {}).get("shares", [])
+    total, asof = None, None
+    if rows:
+        best = max(rows, key=lambda x: (x["end"], x.get("filed", "")))
+        same = {x["val"] for x in rows if x["end"] == best["end"] and x.get("accn") == best.get("accn")}
+        total, asof = float(sum(same)), best["end"]
+    dil, dil_asof = latest_diluted_shares(f)
+    if dil and (total is None or dil > 1.10 * total):
+        return dil, dil_asof
+    return total, asof
 
 
 def latest_diluted_shares(f):

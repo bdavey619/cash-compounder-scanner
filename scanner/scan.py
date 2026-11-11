@@ -141,6 +141,12 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         sub = load_submissions(fetcher, c["cik"])
         c["sector"], c["sic_desc"] = sector_for(sub["sic"]), sub["sic_desc"]
         c["earnings_dates"] = sub["earnings_dates"]
+        c["sic"] = sub["sic"]
+    n_fin = sum(1 for c in priced if is_financial(c.get("sic")))
+    priced = [c for c in priced if not is_financial(c.get("sic"))]
+    funnel["financials_excluded"] = n_fin
+    funnel["quality"] = len(priced)
+    log(f"excluded {n_fin} banks, lenders, brokers and insurers -> {len(priced)} in the quality universe")
 
     # 6. Flags and shortlist
     for c in priced:
@@ -319,7 +325,13 @@ def quality_fail_reasons(fu) -> list[str]:
         r.append("return_on_capital")
     if fu["capex_missing"]:
         r.append("capex_missing")
+    if fu["fcf_margin"] is not None and fu["fcf_margin"] > C.MAX_FCF_MARGIN:
+        r.append("implausible_fcf_margin")
     return r
+
+
+def is_financial(sic) -> bool:
+    return sic is not None and any(lo <= sic <= hi for lo, hi in C.EXCLUDED_SIC)
 
 
 def score(c) -> float:
