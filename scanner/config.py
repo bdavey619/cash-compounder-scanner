@@ -39,7 +39,7 @@ TRACK_CAP = 0.20                 # reference growth = lower of FCF and revenue g
 # Banks, lenders, brokers and insurers: "free cash flow" doesn't mean the same thing for them (a lender's
 # loans are investing outflows, an insurer's float is operating inflow), so they're excluded, as most
 # FCF screens do. SIC code ranges from the SEC.
-EXCLUDED_SIC = [(6000, 6199), (6211, 6211), (6300, 6411)]
+EXCLUDED_SIC = [(6000, 6799)]   # the whole finance, insurance & real estate division, as ex-financials screens do
 MAX_FCF_MARGIN = 0.9             # FCF above 90% of revenue isn't a normal operating business; treat as bad data
 
 # --- Peak margins ---

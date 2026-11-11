@@ -194,19 +194,32 @@ class TestShares(unittest.TestCase):
             {"end": "2026-07-20", "val": 810e6, "accn": "A1", "filed": "2026-07-28"}]}}}}
         self.assertEqual(shares_outstanding(f), (807e6, "2026-10-20"))
 
-    def test_diluted_wins_when_classes_convert(self):
+    def test_net_income_over_eps_wins_when_classes_convert(self):
         from scanner.analysis import shares_outstanding
         f = {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
                 {"end": "2026-10-20", "val": 1.7e9, "accn": "A2", "filed": "2026-10-28"}]}}},
-             "us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [
-                {"start": "2026-07-01", "end": "2026-09-30", "val": 1.95e9}]}}}}
-        self.assertEqual(shares_outstanding(f)[0], 1.95e9)
+             "us-gaap": {"NetIncomeLoss": {"units": {"USD": [
+                            {"start": "2026-07-01", "end": "2026-09-30", "val": 5.85e9, "filed": "2026-10-28"}]}},
+                         "EarningsPerShareDiluted": {"units": {"USD/shares": [
+                            {"start": "2026-07-01", "end": "2026-09-30", "val": 3.0, "filed": "2026-10-28"}]}}}}
+        self.assertAlmostEqual(shares_outstanding(f)[0], 1.95e9)
+
+    def test_cover_page_kept_when_close(self):
+        from scanner.analysis import shares_outstanding
+        f = {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+                {"end": "2026-10-20", "val": 1.0e9, "accn": "A2", "filed": "2026-10-28"}]}}},
+             "us-gaap": {"NetIncomeLoss": {"units": {"USD": [
+                            {"start": "2026-07-01", "end": "2026-09-30", "val": 2.06e9, "filed": "2026-10-28"}]}},
+                         "EarningsPerShareDiluted": {"units": {"USD/shares": [
+                            {"start": "2026-07-01", "end": "2026-09-30", "val": 2.0, "filed": "2026-10-28"}]}}}}
+        self.assertEqual(shares_outstanding(f)[0], 1.0e9)     # 3% apart: cover page is more current
 
     def test_financials_excluded(self):
         from scanner.scan import is_financial
         self.assertTrue(is_financial(6021))      # national commercial bank
         self.assertTrue(is_financial(6331))      # insurance
-        self.assertFalse(is_financial(6200))     # exchanges
+        self.assertTrue(is_financial(6282))      # asset managers
+        self.assertTrue(is_financial(6200))      # exchanges
         self.assertFalse(is_financial(7389))     # business services (Visa, Mastercard)
         self.assertFalse(is_financial(None))
 

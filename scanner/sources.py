@@ -200,9 +200,11 @@ def load_company_facts(fetcher, cik: int, cache_dir: Path | None, max_age_days: 
     return slim
 
 
-CACHE_VERSION = "v2"  # bump when WANTED_CONCEPTS changes so cached files get rebuilt
+CACHE_VERSION = "v3"  # bump when WANTED_CONCEPTS changes so cached files get rebuilt
 
 WANTED_CONCEPTS = {
+    "NetIncomeLoss",
+    "EarningsPerShareDiluted",
     "NetCashProvidedByUsedInOperatingActivities",
     "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
     "PaymentsToAcquirePropertyPlantAndEquipment",

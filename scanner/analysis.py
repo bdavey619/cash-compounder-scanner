@@ -202,10 +202,28 @@ def shares_outstanding(f):
         best = max(rows, key=lambda x: (x["end"], x.get("filed", "")))
         same = {x["val"] for x in rows if x["end"] == best["end"] and x.get("accn") == best.get("accn")}
         total, asof = float(sum(same)), best["end"]
-    dil, dil_asof = latest_diluted_shares(f)
-    if dil and (total is None or dil > 1.10 * total):
-        return dil, dil_asof
+    imp, imp_asof = implied_shares(f)
+    if imp and (total is None or abs(total / imp - 1) > 0.10):
+        return imp, imp_asof
+    if total is None:
+        return latest_diluted_shares(f)
     return total, asof
+
+
+def implied_shares(f):
+    """Net income / diluted EPS for the latest period reporting both: the company's own share count in
+    common-equivalent units, whatever its class structure (Visa's B and C shares convert into several A)."""
+    g = f.get("us-gaap", {})
+    ni = {(x.get("start"), x["end"]): x for x in g.get("NetIncomeLoss", {}).get("units", {}).get("USD", []) if "start" in x}
+    best = None
+    for x in g.get("EarningsPerShareDiluted", {}).get("units", {}).get("USD/shares", []):
+        n = ni.get((x.get("start"), x["end"]))
+        if not n or abs(x["val"]) < 0.05 or n["val"] == 0 or (n["val"] > 0) != (x["val"] > 0):
+            continue
+        key = (x["end"], x.get("filed", ""))
+        if best is None or key > best[0]:
+            best = (key, n["val"] / x["val"], x["end"])
+    return (best[1], best[2]) if best else (None, None)
 
 
 def latest_diluted_shares(f):
