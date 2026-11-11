@@ -50,7 +50,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add track/ledger.json
+          mkdir -p data && cp site/results.json data/latest.json
+          git add track/ledger.json data/latest.json
           if git diff --cached --quiet; then echo "track record unchanged"; exit 0; fi
           git commit -m "Track record: $(date -u +%F)"
           for i in 1 2 3; do git pull --rebase --quiet && git push && exit 0; sleep 5; done
