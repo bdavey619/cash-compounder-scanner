@@ -51,7 +51,7 @@ table.sens td.on{background:var(--accent);color:#fff;font-weight:700}
 .formula .eq{color:var(--accent)}
 ol.steps{margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.7;color:var(--ink2)}
 ol.steps li{margin-bottom:10px}ol.steps b{color:var(--ink)}
-.calc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:6px 0 2px;color:var(--ink);overflow-x:auto;white-space:nowrap}
+.calc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:6px 0 2px;color:var(--ink);white-space:normal;overflow-wrap:anywhere;line-height:1.6}
 .where{border-top:1px solid var(--line);padding-top:14px;font-size:13.5px;color:var(--ink2)}
 .where table{width:100%;border-collapse:collapse}.where td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
 .where td:first-child{font-weight:600;color:var(--ink);white-space:nowrap;padding-left:0}
@@ -310,6 +310,7 @@ function fcfSteps(c) {
     + ttmLine('Cash from operations', m.parts.ocf) + ttmLine('Capital spending', m.parts.capex) + (m.parts.sbc ? ttmLine('Stock-based pay', m.parts.sbc) : '');
   else h += ` From the annual report for the year ending ${fmtD(m.end)}.`;
   h += `<div class="calc">${Bs(m.ocf)} − ${Bs(m.capex)} − ${Bs(m.sbc)} = <b>${Bs(F(c))}</b></div>`;
+  if (!m.sbc) h += `<span style="font-size:13px;display:block;margin-bottom:4px" class="muted"><b>Note:</b> no stock-based pay was found in this company’s filings under the standard label, so it counts as $0 here. If its cash flow statement lists stock-based compensation, the true free cash flow is a little lower.</span>`;
   h += `<span class="faint" style="font-size:13px">Why subtract stock-based pay? Paying employees in shares costs no cash, but it gives part of the company away, so owners lose it just the same.</span></li>`;
   return h;
 }
