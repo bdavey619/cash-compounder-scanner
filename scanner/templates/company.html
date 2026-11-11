@@ -41,12 +41,13 @@ table.sens td.on{background:var(--accent);color:#fff;font-weight:700}
 .plain p{margin:0;font-size:16.5px;line-height:1.65;color:var(--ink)}
 .mathlink{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);margin-top:6px;display:inline-block}
 .mathlink:hover{text-decoration:underline}.mathlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#math{padding:18px 22px;margin-bottom:20px;scroll-margin-top:16px}
+#math{padding:18px 22px;margin:0 0 20px;scroll-margin-top:16px}
+.sec #math{margin:16px 0 0;box-shadow:none}
+.mhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.mclose{all:unset;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:20px;line-height:1}
+.mclose:hover{background:var(--hover)}.mclose:focus-visible{outline:2px solid var(--accent)}
+.mathlink[aria-expanded=true]{color:var(--ink)}
 #math h2{margin:0 0 4px;font-size:17px;font-weight:700}
-.mtabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 14px}
-.mtabs button{all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--border);color:var(--ink2);background:var(--card)}
-.mtabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.mtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .formula{font-size:15.5px;font-weight:600;padding:10px 14px;background:var(--accent-soft);border-radius:10px;margin-bottom:12px;line-height:1.45}
 .formula .eq{color:var(--accent)}
 ol.steps{margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:var(--ink2)}
@@ -149,7 +150,6 @@ function show() {
     <div class="card tile"><div class="k">${L('shares')}${I('shares')}</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? (plain ? ': buying back its own shares' : ', from buybacks') : c.shares > 0.01 ? (plain ? ': issuing new shares' : ', dilution') : ''}</div></div>
     <div class="card tile"><div class="k">${c.net < 0 ? (plain ? 'Debt minus cash' : 'Net debt') : (plain ? 'Cash minus debt' : 'Net cash')}${I('net')}</div><div class="v">${money(Math.abs(c.net))}</div><div class="d">${plain && c.net < 0 && c.fcf > 0 ? `about ${(-c.net / c.fcf).toFixed(1)} years of cash` : netNote}</div></div>
   </section>
-  <section class="card" id="math" aria-labelledby="mathh"></section>
   <div class="cols">
     <div class="main">
       <section class="card sec">
@@ -158,6 +158,10 @@ function show() {
         <div class="scale" id="scale"></div>
         <div class="ticks"><span>−10%</span><span>0%</span><span>+10%</span><span>+20%</span><span>+30%</span></div>
         <div class="verdict" id="verdict"></div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px" id="betlinks">
+          <button class="mathlink" data-k="impl">Show the math: ${L('impl')}</button>
+          <button class="mathlink" data-k="rec">Show the math: ${L('rec')}</button>
+        </div>
         <p class="faint" style="margin:12px 0 0;font-size:12.5px">${plain ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>
       </section>
       <section class="card sec">
@@ -202,8 +206,8 @@ function show() {
 
   const tileKeys = ['yld', 'pfcf', 'margin', 'roc', 'shares', 'net'];
   document.querySelectorAll('#tiles .tile').forEach((t, k) => { if (tileKeys[k]) t.insertAdjacentHTML('beforeend', `<button class="mathlink" data-k="${tileKeys[k]}">Show the math</button>`); });
-  document.querySelectorAll('.mathlink').forEach(b => b.onclick = () => { mathKey = b.dataset.k; renderMath(c); document.getElementById('math').scrollIntoView({ behavior: 'smooth' }); });
-  renderMath(c);
+  mathKey = null;
+  document.querySelectorAll('.mathlink').forEach(b => { b.setAttribute('aria-expanded', 'false'); b.onclick = () => toggleMath(c, b); });
 
   // free cash flow bars
   const H = c.hist, mx = Math.max(...H.map(h => Math.abs(h[1])), 0.001);
@@ -258,9 +262,8 @@ function update(c) {
     + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
 }
 // ---------- Show the math ----------
-let mathKey = 'yld';
+let mathKey = null;
 const F = c => c.m.ocf - c.m.capex - c.m.sbc;   // free cash flow from the raw filing figures
-const MKEYS = [['yld'], ['pfcf'], ['margin'], ['roc'], ['shares'], ['net'], ['rec'], ['impl']];
 function B(x) {  // dollars, readable
   if (x == null || !isFinite(x)) return '–';
   const a = Math.abs(x), s = x < 0 ? '−' : '';
@@ -364,7 +367,7 @@ function mathHTML(c, k) {
     const term = cash * (1 + gt) / (r - gt), tdf = 1 / Math.pow(1 + r, 10), tpv = term * tdf; tot += tpv;
     const tryG = x => { let v = 0, f = base; for (let t = 1; t <= 10; t++) { f *= 1 + x; v += f / Math.pow(1 + r, t); } return v + f * (1 + gt) / (r - gt) / Math.pow(1 + r, 10); };
     return `<div class="formula">${L('impl')} <span class="eq">=</span> the yearly growth rate that makes the value of all future cash equal today’s price</div><ol class="steps">
-    <li><b>What the price has to justify:</b> company value minus ${nc >= 0 ? 'its spare cash (cash minus debt)' : 'plus its debt (a buyer takes that on too)'}.
+    <li><b>What the price has to justify:</b> company value ${nc >= 0 ? 'minus its spare cash (cash minus debt), which you’d get with it' : 'plus its net debt, which a buyer takes on too'}.
       <div class="calc">${Bs(c.mcapRaw)} ${nc >= 0 ? '−' : '+'} ${Bs(Math.abs(nc))} = <b>${Bs(target)}</b></div></li>
     <li><b>Start from this year’s cash</b> (${Bs(base)}${c.baseKind !== 'latest' ? ', adjusted as in “' + L('yld') + '”' : ''}) and grow it at a guessed rate for 10 years, then ${P(gt, 0)} a year forever.</li>
     <li><b>Discount each year’s cash</b> back to today at ${P(r, 2)} a year, the return you’d demand (${P(META.rates.rf, 2)} safe bond + ${P(META.rules.EQUITY_PREMIUM, 0)}${c.premium ? ' + ' + P(c.premium, 1) + ' extra risk' : ''}). $1 arriving in 10 years is worth only $${(1 / Math.pow(1 + r, 10)).toFixed(2)} today.</li>
@@ -377,15 +380,25 @@ function mathHTML(c, k) {
       <p class="faint" style="font-size:12.5px;margin:0 0 12px">The “forever” value uses the growing-perpetuity formula: cash in year 11 ÷ (return − long-run growth). Spreadsheets can do the guess-and-check for you with Goal Seek.</p>`; }
   return '';
 }
-function renderMath(c) {
-  const box = document.getElementById('math'), L = CC.L;
-  box.innerHTML = `<h2 id="mathh">Show the math</h2>
-    <p class="muted" style="margin:0;font-size:14px">Every number on this page, worked out with ${esc(c.name)}’s own figures from its annual (10-K) and quarterly (10-Q) reports.</p>
-    <div class="mtabs" role="tablist">${MKEYS.map(([k]) => `<button role="tab" aria-selected="${mathKey === k}" data-k="${k}">${L(k)}</button>`).join('')}</div>
-    <div role="tabpanel">${mathHTML(c, mathKey)}</div>
-`;
-  box.querySelectorAll('.mtabs button').forEach(b => b.onclick = () => { mathKey = b.dataset.k; renderMath(c); });
-
+function toggleMath(c, btn) {
+  const k = btn.dataset.k;
+  let box = document.getElementById('math');
+  document.querySelectorAll('.mathlink').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  if (box && mathKey === k) { box.remove(); mathKey = null; btn.focus(); return; }   // second click closes it
+  if (box) box.remove();
+  mathKey = k;
+  box = document.createElement('section');
+  box.id = 'math'; box.className = 'card'; box.setAttribute('aria-label', 'How ' + CC.L(k) + ' is calculated');
+  box.innerHTML = `<div class="mhead"><div><h2 style="margin:0 0 2px">How “${CC.L(k)}” is calculated</h2>
+      <p class="muted" style="margin:0;font-size:13px">Using ${esc(c.name)}’s own figures from its annual (10-K) and quarterly (10-Q) reports.</p></div>
+      <button class="mclose" aria-label="Close">×</button></div>${mathHTML(c, k)}`;
+  // open it right where the link was clicked: under the row of numbers, or inside the price chart card
+  const inBet = btn.closest('#betlinks');
+  if (inBet) inBet.insertAdjacentElement('afterend', box); else document.getElementById('tiles').insertAdjacentElement('afterend', box);
+  btn.setAttribute('aria-expanded', 'true');
+  box.querySelector('.mclose').onclick = () => toggleMath(c, btn);
+  const r = box.getBoundingClientRect();
+  if (r.top < 0 || r.top > innerHeight * 0.6) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 window.addEventListener('hashchange', show);
