@@ -87,6 +87,16 @@ ul.notes li{margin:0 0 6px}
     <table class="vm" id="vm"></table>
   </div>
 
+  <div class="card" id="ratecard">
+    <h2>Does the interest-rate environment decide?</h2>
+    <p class="sub" id="ratesub"></p>
+    <div class="legend"><span><i style="background:var(--s-quality);height:10px;width:10px;border-radius:3px"></i>Months with the 10-year yield below <span class="cut"></span></span><span><i style="background:var(--s-trigger_only);height:10px;width:10px;border-radius:3px"></i>Months at or above <span class="cut"></span></span></div>
+    <svg id="ratebars" role="img" aria-label="First-minus-last-fifth spread in low- and high-rate months for each measure"></svg>
+    <svg id="rateline" role="img" aria-label="10-year Treasury yield over the backtest period" style="margin-top:14px"></svg>
+    <div style="overflow-x:auto;margin-top:12px"><table id="ratetbl"></table></div>
+    <p class="sub" id="ratenote" style="margin:12px 0 0"></p>
+  </div>
+
   <div class="card">
     <h2>Return beyond the S&amp;P 500, per flag</h2>
     <p class="sub">Average total return (dividends included) minus the S&amp;P 500's over the same window. The first row is the control group: if the other rows don't beat it, the valuation gap and the drop trigger aren't adding anything beyond "buy quality".</p>
@@ -166,6 +176,44 @@ document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fm
     box.appendChild(c); });
   const vm=B.value_momentum['12m']; if(vm){ const cell=k=>{const v=vm[k]; if(!v||v.mean==null) return '<td>–</td>'; return `<td><span class="cell ${v.mean>0.005?'up':v.mean<-0.005?'dn':''}" style="font-size:15px">${pts(v.mean)}</span><div class="s" style="margin-top:4px">before ${sy} ${pts(v.early)} · since ${pts(v.late)}</div></td>`;};
     document.getElementById('vm').innerHTML=`<tr><th></th><th>Price rising (top half)</th><th>Price falling (bottom half)</th></tr><tr><td><b>Cheap</b><div class="s">bigger valuation gap</div></td>${cell('cheap_up')}${cell('cheap_down')}</tr><tr><td><b>Pricey</b><div class="s">smaller gap</div></td>${cell('pricey_up')}${cell('pricey_down')}</tr>`; }
+})();
+
+// Rate regimes
+(function(){
+  const B=D.baskets; if(!B||!B.rates){ document.getElementById('ratecard').style.display='none'; return; }
+  const cut=B.cutoff, key=cut.toFixed(3), F=B.factors.filter(f=>f.h['12m']&&f.h['12m'].regime);
+  document.querySelectorAll('.cut').forEach(e=>e.textContent=(cut*100).toFixed(0)+'%');
+  const rf=B.rates.rf, ds=B.rates.dates; const last=rf.filter(x=>x!=null).slice(-1)[0];
+  const nHi=F[0].h['12m'].regime.level[key].high.months, nLo=F[0].h['12m'].regime.level[key].low.months;
+  document.getElementById('ratesub').textContent=`The same first-fifth-minus-last-fifth spreads as above (12 months), split by the 10-year Treasury yield on the day the baskets were formed: ${nLo} low-rate months and ${nHi} high-rate months.`;
+  const NS='http://www.w3.org/2000/svg';
+  // grouped bars
+  (function(){ const svg=document.getElementById('ratebars'); const W=1000,H=230,T=20,Bm=40,L=40,R=10; svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+    const vals=F.flatMap(f=>{const g=f.h['12m'].regime.level[key]; return [g.low&&g.low.mean,g.high&&g.high.mean];}).filter(x=>x!=null);
+    const ext=Math.max(0.05,...vals.map(Math.abs))*1.15, mid=T+(H-T-Bm)/2, sc=(H-T-Bm)/2/ext, gw=(W-L-R)/F.length;
+    let o=`<line x1="${L}" x2="${W-R}" y1="${mid}" y2="${mid}" stroke="${css('--text-muted')}"/>`;
+    [-0.1,-0.05,0.05,0.1].filter(t=>Math.abs(t)<ext).forEach(t=>{o+=`<line x1="${L}" x2="${W-R}" y1="${mid-t*sc}" y2="${mid-t*sc}" stroke="${css('--grid')}"/><text x="${L-6}" y="${mid-t*sc+4}" text-anchor="end" font-size="11" fill="${css('--text-muted')}">${t>0?'+':''}${t*100}</text>`;});
+    F.forEach((f,i)=>{ const g=f.h['12m'].regime.level[key]; const bw=gw*0.3;
+      [[g.low,'--s-quality',0],[g.high,'--s-trigger_only',1]].forEach(([st,c,k])=>{ if(!st) return; const v=st.mean, x=L+i*gw+gw*0.18+k*(bw+4), hh=Math.abs(v)*sc, y=v>=0?mid-hh:mid;
+        o+=`<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(1,hh)}" rx="3" fill="${css(c)}"><title>${f.label}, ${k?'high':'low'}-rate months: ${pts(v)} (won ${Math.round(st.won*100)}% of ${st.months})</title></rect>`;
+        o+=`<text x="${x+bw/2}" y="${v>=0?y-4:y+hh+12}" text-anchor="middle" font-size="11" fill="${css('--text-secondary')}">${(v>0?'+':'')+(v*100).toFixed(1)}</text>`; });
+      o+=`<text x="${L+i*gw+gw/2}" y="${H-8}" text-anchor="middle" font-size="12" fill="${css('--text-secondary')}">${f.label}</text>`; });
+    svg.innerHTML=o; })();
+  // rate line with cutoff
+  (function(){ const svg=document.getElementById('rateline'); const W=1000,H=110,T=10,Bm=22,L=40,R=10; svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+    const mx=Math.max(0.06,...rf.filter(x=>x!=null)), x=i=>L+i/(ds.length-1)*(W-L-R), y=v=>T+(1-v/mx)*(H-T-Bm);
+    let o=`<line x1="${L}" x2="${W-R}" y1="${y(cut)}" y2="${y(cut)}" stroke="${css('--text-muted')}" stroke-dasharray="4 4"/><text x="${L-6}" y="${y(cut)+4}" text-anchor="end" font-size="11" fill="${css('--text-muted')}">${(cut*100).toFixed(0)}%</text>`;
+    o+=`<path d="${rf.map((v,i)=>v==null?'':(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ')}" fill="none" stroke="${css('--text-secondary')}" stroke-width="2"/>`;
+    ds.forEach((d,i)=>{ if(d.slice(5,7)==='01'&&(+d.slice(0,4))%2===0) o+=`<text x="${x(i)}" y="${H-4}" text-anchor="middle" font-size="11" fill="${css('--text-muted')}">${d.slice(0,4)}</text>`; });
+    o+=`<text x="${W-R}" y="${y(last)-6}" text-anchor="end" font-size="11.5" fill="${css('--text-primary')}">10-year yield ${(last*100).toFixed(1)}%</text>`;
+    svg.innerHTML=o; })();
+  // robustness table
+  const cuts=Object.keys(F[0].h['12m'].regime.level);
+  const c=st=>!st||st.mean==null?'<td>–</td>':`<td><span class="cell ${st.mean>0.005?'up':st.mean<-0.005?'dn':''}">${pts(st.mean)}</span><div class="s">won ${Math.round(st.won*100)}% of ${st.months} mo</div></td>`;
+  document.getElementById('ratetbl').innerHTML='<tr><th>Measure (first vs last fifth)</th>'+cuts.map(k=>`<th>Below ${(k*100).toFixed(1)}%</th><th>At/above ${(k*100).toFixed(1)}%</th>`).join('')+'<th>Rates rising</th><th>Rates falling</th></tr>'+
+    F.map(f=>{const g=f.h['12m'].regime; return `<tr><td><b>${f.label}</b></td>`+cuts.map(k=>c(g.level[k].low)+c(g.level[k].high)).join('')+c(g.rising)+c(g.falling)+'</tr>';}).join('');
+  const yrs=[...new Set(ds.filter((d,i)=>rf[i]!=null&&rf[i]>=cut).map(d=>d.slice(0,4)))];
+  document.getElementById('ratenote').innerHTML=`<b>Read with care:</b> the high-rate months are mostly one stretch (${yrs.join(', ')}), so "high rates" and "the years since 2022" are hard to tell apart. Overlapping 12-month windows also mean ${nHi} months hold far fewer than ${nHi} independent results. Today's 10-year yield is ${(last*100).toFixed(1)}%.`;
 })();
 
 // Comparison table
