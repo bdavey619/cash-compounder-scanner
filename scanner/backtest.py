@@ -35,7 +35,7 @@ from pathlib import Path
 
 from . import config as C
 from .analysis import fundamentals, price_stats
-from .scan import gap_flag, price_flags, quality_fail_reasons, value_company
+from .scan import env_user_agent, gap_flag, price_flags, quality_fail_reasons, value_company
 from .sources import FetchError, LiveFetcher, load_tickers, refresh_facts_bulk
 
 START = "2014-01"
@@ -369,7 +369,7 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=os.cpu_count() or 2)
     a = ap.parse_args(argv)
     t0 = time.time()
-    fetcher = LiveFetcher()
+    fetcher = LiveFetcher(env_user_agent(), C.SEC_RATE_LIMIT_PER_SEC)
     facts_dir = a.cache / "companyfacts"
     price_dir = a.cache / "bt_prices"
 
