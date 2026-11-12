@@ -406,7 +406,7 @@ function peHTML(c) {
   const rows = [[plain ? 'Price ÷ profit (P/E)' : 'P/E (trailing)', c.pe], [plain ? 'Price ÷ spare cash' : 'P/FCF', c.pfcf]];
   const gap = c.pfcf ? c.pfcf / c.pe : null;
   let why = '';
-  if (gap != null && gap > 1.15) why = `Spare cash is lower than profit. Profit doesn’t subtract stock pay or count all the money spent on buildings and equipment up front, and cash does, so we lean on cash.`;
+  if (gap != null && gap > 1.15) why = `Spare cash is lower than profit. Cash counts three things profit spreads out or skips: stock pay, money spent on buildings and equipment, and money tied up in inventory or in bills customers haven’t paid yet. Fast growers often tie up a lot in the last one. We lean on cash because it’s what owners can actually get.`;
   else if (gap != null && gap < 0.87) why = `Spare cash is higher than profit, often because profit subtracts large non-cash charges (like wear-and-tear on equipment) that don’t use cash this year.`;
   else if (gap != null) why = 'Profit and spare cash tell a similar story here.';
   else why = 'It has profit but no spare cash: the profit is being spent (or tied up) before it reaches owners.';
