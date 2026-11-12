@@ -1,7 +1,7 @@
 {
  "meta": {
   "asof": "2026-11-12",
-  "generated": "2026-11-12 22:50 UTC",
+  "generated": "2026-11-12 23:36 UTC",
   "config": {
    "COMMODITY_SIC": [
     [
@@ -289,10 +289,10 @@
     "2026"
    ],
    "start": "2014",
-   "drop_only_median": -0.1112,
-   "drop_only_beat": 0.3874,
-   "gap_drop_median": -0.0552,
-   "gap_drop_mean": 0.0484
+   "drop_only_median": -0.1111,
+   "drop_only_beat": 0.3875,
+   "gap_drop_median": -0.0556,
+   "gap_drop_mean": 0.0428
   }
  },
  "yield_leaders": [
