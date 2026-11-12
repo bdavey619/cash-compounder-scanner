@@ -60,6 +60,10 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
 .why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
+.needc{display:block;overflow:visible}.needc .gl{stroke:var(--line)}.needc .ax{font-size:11px;fill:var(--faint)}
+.needc .hb0{fill:var(--accent-bg)}.needc .ref{stroke:var(--faint);stroke-dasharray:2 4}.needc .now{stroke:var(--border);stroke-dasharray:3 3}
+.needc .lp1{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}.needc .lp2{fill:none;stroke:var(--faint);stroke-width:2;stroke-dasharray:5 4}
+.needc .st{fill:var(--card);stroke:var(--accent);stroke-width:2}.needc .el{font-size:12px}.needc .el.acc{fill:var(--accent)}.needc .el.mut{fill:var(--muted)}
 .hb{display:flex;flex-direction:column;gap:8px}
 .hbr{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:10px;font-size:13px}
 .hbr .hbn{grid-column:2/4;margin-top:-6px;font-size:11.5px;color:var(--faint)}
@@ -338,18 +342,47 @@ function needHTML(c, f0, g, r, gt) {
   const past = c.rec != null ? f0 * Math.pow(1 + c.rec, 10) : null;
   const big = COS.filter(x => x.t !== c.t && x.fcf > 0).sort((a, b) => b.fcf - a.fcf)[0];
   const rev = c.m && c.m.revenue ? c.m.revenue / 1e9 : null, rev10 = rev ? rev * Math.pow(1 + g, 10) : null;
-  const rows = [[plain ? 'Today' : `Base (${c.baseKind === 'latest' ? 'latest' : c.baseKind === 'avg3' ? '3-yr avg' : 'normalized'})`, f0, 'b0'],
-    [`${YR + 5}, needed`, c5, 'b1'], [`${YR + 10}, needed`, c10, 'b2']];
-  if (past != null) rows.push([`${YR + 10} at its past pace`, past, 'b3', `${pct(c.rec, 0)}/yr`]);
-  if (big) rows.push([`Biggest on the list today`, big.fcf, 'b4', esc(big.t)]);
-  const mx = Math.max(...rows.map(x => x[1]));
   let txt = g <= 0 ? `Today’s price only needs ${esc(c.name)}’s spare cash to <b>${g < 0 ? 'shrink about ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. If it simply keeps making ${money(f0)} a year, the price looks low.`
     : `For today’s price to make sense, ${esc(c.name)}’s spare cash has to grow from ${money(f0)} to about <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.`
       + (rev10 ? ` If it keeps the same share of each sales dollar, sales would have to reach about <b>${money(rev10)} a year</b>, up from ${money(rev)}.` : '')
       + (big && c10 > big.fcf * 1.05 ? ` For scale, the biggest cash maker on our list (${esc(big.name)}) makes ${money(big.fcf)} a year today.` : '');
   if (past != null && g > 0) txt += past >= c10 ? ` If it kept growing like its recent past, it would get there.` : ` Even at its recent pace (${pct(c.rec, 0)} a year, which few companies keep up for a decade), it would reach about ${money(past)}, short of what the price needs.`;
-  return `<p style="margin:6px 0 14px;font-size:14.5px;line-height:1.6">${txt}</p>${hbar(rows, mx)}
-    <p class="faint" style="margin:10px 0 0;font-size:12.5px">Uses the starting cash, return and long-run growth from “${plain ? 'Try your own assumptions' : 'Assumptions'}”, so it changes when you move them. $ billions a year.</p>`;
+  return `<p style="margin:6px 0 10px;font-size:14.5px;line-height:1.6">${txt}</p>${needChart(c, f0, g, past != null ? c.rec : null, big)}
+    `;
+}
+function needChart(c, f0, g, gp, big) {
+  // Past cash (bars) and the two paths ahead: what the price needs, and its own past pace
+  const H = (c.hist || []).filter(h => h[1] != null), n = 10, W = 640, Ht = 230, L = 46, R = 112, T = 14, Bm = 26;
+  const need = [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + g, t));
+  const pace = gp == null ? null : [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + gp, t));
+  const top = Math.max(...need, ...(pace || []), ...H.map(h => h[1]), big ? big.fcf : 0) * 1.05;
+  const nx = H.length + n, step = (W - L - R) / Math.max(1, nx - 1);
+  const X = k => L + k * step, Y = v => T + (1 - Math.max(0, v) / top) * (Ht - T - Bm);
+  const nowK = H.length - 1, nice = [1, 2, 2.5, 5, 10], mag = Math.pow(10, Math.floor(Math.log10(top / 3)));
+  const tick = mag * nice.find(m => top / (m * mag) <= 4.5);
+  let g0 = '';
+  for (let v = 0; v <= top; v += tick) g0 += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" class="gl"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" class="ax">${v ? money(v).replace('.00', '') : '$0'}</text>`;
+  const bw = Math.min(18, step * 0.6);
+  const bars = H.map((h, k) => `<rect x="${X(k) - bw / 2}" y="${Y(h[1])}" width="${bw}" height="${Math.max(1, Y(0) - Y(h[1]))}" rx="3" class="hb0"/>`).join('');
+  const path = arr => arr.map((v, t) => `${t ? 'L' : 'M'}${X(nowK + t).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  const xl = H.map((h, k) => `<text x="${X(k)}" y="${Ht - 8}" text-anchor="middle" class="ax">${h[0]}</text>`).join('')
+    + [5, 10].map(t => `<text x="${X(nowK + t)}" y="${Ht - 8}" text-anchor="middle" class="ax">${YR + t}</text>`).join('');
+  // end labels, nudged apart if they'd collide
+  let yN = Y(need[n]), yP = pace ? Y(pace[n]) : null;
+  if (yP != null && Math.abs(yN - yP) < 28) { if (yN <= yP) yP = yN + 28; else yN = yP + 28; }
+  const lab = (y, v, t, cls) => `<text x="${W - R + 8}" y="${y}" class="el ${cls}"><tspan font-weight="700">${money(v)}</tspan><tspan x="${W - R + 8}" dy="13">${t}</tspan></text>`;
+  const hov = [...Array(nx)].map((_, k) => { const t = k - nowK, hist = k < H.length;
+    const tip = hist ? `${H[k][0]}: ${money(H[k][1])} of spare cash` : `${YR + t}: price needs ${money(need[t])}` + (pace ? `; at its past pace ${money(pace[t])}` : '');
+    return `<rect x="${X(k) - step / 2}" y="${T}" width="${step}" height="${Ht - T - Bm}" fill="transparent" data-tip="${tip}"/>`; }).join('');
+  return `<svg viewBox="0 0 ${W} ${Ht}" width="100%" class="needc" role="img" aria-label="Spare cash so far and the path the price needs: ${money(need[n])} a year by ${YR + 10}${pace ? `, against ${money(pace[n])} at its past pace` : ''}.">
+    ${g0}${bars}
+    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${L + 4}" y="${Y(big.fcf) - 5}" class="ax">${esc(big.t)} today, the list’s biggest: ${money(big.fcf)}</text>` : ''}
+    <line x1="${X(nowK)}" x2="${X(nowK)}" y1="${T}" y2="${Y(0)}" class="now"/>
+    ${pace ? `<path d="${path(pace)}" class="lp2"/>` : ''}<path d="${path(need)}" class="lp1"/>
+    <circle cx="${X(nowK)}" cy="${Y(f0)}" r="4.5" class="st"/>
+    ${lab(yN, need[n], 'price needs', 'acc')}${pace ? lab(yP, pace[n], `past pace ${pct(gp, 0)}/yr`, 'mut') : ''}
+    ${xl}${hov}</svg>
+    <div class="faint" style="font-size:12.5px;margin-top:4px">Bars: spare cash so far. Dot: the starting point${c.bases[st.base] ? ` (${esc(c.bases[st.base].label.split(':')[0].replace(/ \(.*\)/, ''))}, ${money(f0)})` : ''}. Lines change with “${CC.mode === 'plain' ? 'Try your own assumptions' : 'Assumptions'}”. Hover for each year.</div>`;
 }
 function mosHTML(c, f0, g, r, gt) {
   const plain = CC.mode === 'plain', sh = c.mcapRaw / c.price, net = c.net * 1e9;

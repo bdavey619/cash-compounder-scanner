@@ -352,3 +352,26 @@ class TestBacktest(unittest.TestCase):
         B.write_results(out, res)
         self.assertIn('"table"', (out / "index.html").read_text())
         type(self).html = out / "index.html"
+
+
+class TestRisingIsNotCyclical(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "tests"))
+        import make_fixtures as mf
+        from scanner.analysis import fundamentals, price_stats
+        self.fu = fundamentals(mf.company_facts(1, "X", [1.0, 1.6, 2.6], 0.3, 5.0, 0.0, 1e8))
+        self.ps = price_stats([(f"2026-{1 + i // 28:02d}-{1 + i % 28:02d}", 50.0) for i in range(260)], 5, 21)
+
+    def test_steady_growth_not_boom_and_bust(self):
+        self.assertTrue(self.fu["swing_rising"])
+        self.assertFalse(self.fu["volatile"])
+
+    def test_commodity_producer_still_cyclical(self):
+        from scanner import scan
+        v = scan.value_company({**self.fu, "ticker": "X", "sic": 1040}, self.ps, 0, 0, 0.09, min_mcap=0)
+        w = scan.commodity_recheck(v, 0, 0)
+        self.assertTrue(w["volatile"])
+        self.assertEqual(w["base_kind"], "avg3")
+        self.assertIn("cyclical", w["risk_why"])
+        sw = scan.commodity_recheck({**v, "sic": 7372}, 0, 0)   # software: left alone
+        self.assertFalse(sw["volatile"])

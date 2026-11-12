@@ -153,6 +153,8 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
         c["sector"], c["sic_desc"] = sector_for(sub["sic"]), sub["sic_desc"]
         c["earnings_dates"] = sub["earnings_dates"]
         c["sic"] = sub["sic"]
+    for k, c in enumerate(priced):
+        priced[k] = commodity_recheck(c, mkt_chg, mkt_dd)
     n_fin = sum(1 for c in priced if is_financial(c.get("sic")))
     priced = [c for c in priced if not is_financial(c.get("sic"))]
     funnel["financials_excluded"] = n_fin
@@ -250,6 +252,7 @@ def value_lookup(fetcher, others, closes_by, mkt_chg, mkt_dd, fin_quality=()):
         subs = list(ex.map(lambda c: load_submissions(fetcher, c["cik"]), pool))
     for c, sub in zip(pool, subs):
         c["sector"], c["sic_desc"], c["sic"], c["earnings_dates"] = sector_for(sub["sic"]), sub["sic_desc"], sub["sic"], sub["earnings_dates"]
+    pool = [commodity_recheck(c, mkt_chg, mkt_dd) for c in pool]
     for c in list(pool) + [dict(c, why_not=[]) for c in fin_quality]:
         why = list(c.get("why_not", []))
         if c["mcap"] < C.MIN_MARKET_CAP_USD:
@@ -266,6 +269,23 @@ def value_lookup(fetcher, others, closes_by, mkt_chg, mkt_dd, fin_quality=()):
         c["triggered"] = c["price_trigger"]
         out.append(c)
     return out
+
+
+PRICE_KEYS = ("last", "last_date", "chg", "chg_start_date", "off_1m_high", "high_1m_date", "off_high", "hi52", "hi52_date", "spark")
+
+
+def is_commodity(sic) -> bool:
+    return sic is not None and any(lo <= sic <= hi for lo, hi in C.COMMODITY_SIC)
+
+
+def commodity_recheck(c, mkt_chg, mkt_dd):
+    """A miner or oil producer whose cash rose three years running is riding prices, not compounding:
+    put it back on the boom-and-bust footing (3-year average, higher bar)."""
+    if c.get("swing_rising") and not c.get("volatile") and is_commodity(c.get("sic")):
+        ps = {k: c[k] for k in PRICE_KEYS if k in c}
+        v = value_company({**c, "volatile": True}, ps, mkt_chg, mkt_dd, C.REQUIRED_RETURN, min_mcap=0)
+        return v or c
+    return c
 
 
 def write_step_summary(meta, shortlist):

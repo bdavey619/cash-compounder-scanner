@@ -158,7 +158,9 @@ def fundamentals(facts: dict) -> dict | None:
     per_share = lambda g: None if g is None else (1 + g) / (1 + (share_cagr or 0.0)) - 1
     fy3 = [r["fcf"] for r in rows[-3:]]
     avg3 = sum(fy3) / 3
-    volatile = avg3 > 0 and (max(fy3) - min(fy3)) / avg3 >= 0.6
+    swing = avg3 > 0 and (max(fy3) - min(fy3)) / avg3 >= 0.6
+    rising = all(b > a for a, b in zip(fy3, fy3[1:]))
+    volatile = swing and not rising   # steady growth isn't boom-and-bust (commodity producers re-checked in the scan)
     history = rows + ([{"fy_end": cur["end"], "fcf": cur["fcf"], "ttm": True}] if cur["basis"] == "TTM" else [])
     # Peak-margin check: today's FCF margin against the company's own multi-year average
     margins = []
@@ -206,7 +208,7 @@ def fundamentals(facts: dict) -> dict | None:
         "margin_years": len(margins),
         "peak_margin": peak_margin,
         "fcf_normalized": (cur["revenue"] * margin_avg) if (margin_avg and cur["revenue"]) else None,
-        "volatile": volatile,
+        "volatile": volatile, "swing_rising": swing and rising,
         "cash_roc": (cur["fcf"] / capital) if capital > 0 else None,
         "net_cash": (cash or 0) + (sti or 0) - (ltd or 0),
         "shares": shares,

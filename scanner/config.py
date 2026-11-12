@@ -25,6 +25,9 @@ RISK_FREE_FALLBACK = 0.045       # used only if the 10-year yield can't be fetch
 REQUIRED_RETURN_MIN = 0.07
 REQUIRED_RETURN_MAX = 0.13
 REQUIRED_RETURN = RISK_FREE_FALLBACK + EQUITY_PREMIUM  # replaced at run time by the live figure
+# Cash that rose in each of the last three years is growth, not a cycle, unless the company sells a
+# commodity (mining, oil and gas, refining, metals), whose cash rises with prices in a boom.
+COMMODITY_SIC = [(1000, 1499), (2900, 2999), (3300, 3399)]
 RISK_PREMIUM_CYCLICAL = 0.015    # added when free cash flow swings with the cycle
 RISK_PREMIUM_LEVERAGE = 0.01     # added when net debt exceeds LEVERAGE_NET_DEBT_TO_FCF x free cash flow
 LEVERAGE_NET_DEBT_TO_FCF = 3.0
