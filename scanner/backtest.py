@@ -272,7 +272,7 @@ def walk(pit: dict[str, dict[str, dict]], meta: dict[str, dict], prices: dict[st
                                                            ("gap_unadjusted", gap_raw)) if on],
                 "implied_g": v["implied_g"], "ref_g": v["ref_g"], "mcap": v["mcap"], "hurdle": base_r,
                 "gap": v["gap"] if v["gap"] is not None and math.isfinite(v["gap"]) else None,
-                "fcf_yield": (1 / v["p_fcf"]) if v["p_fcf"] else None, "mom": mom,
+                "fcf_yield": v["fcf_yield"], "mom": mom,   # same adjusted base as the live ranking
                 "fcf_margin": fu.get("fcf_margin"), "roc": fu.get("cash_roc"),
                 "fw": {h: x for h, x in fw.items() if x is not None},
             })
