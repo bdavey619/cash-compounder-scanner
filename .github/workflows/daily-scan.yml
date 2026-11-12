@@ -20,7 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
+      # Always start from the newest main, even if this run waited in the queue behind another
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
@@ -54,7 +57,8 @@ jobs:
           git add track/ledger.json data/latest.json
           if git diff --cached --quiet; then echo "track record unchanged"; exit 0; fi
           git commit -m "Track record: $(date -u +%F)"
-          for i in 1 2 3; do git pull --rebase --quiet && git push && exit 0; sleep 5; done
+          # If another run saved first, this (newer) run's files win; then retry the push
+          for i in 1 2 3; do git pull --rebase --quiet -X theirs && git push && exit 0; git rebase --abort 2>/dev/null; sleep 5; done
           echo "::warning::Could not save the track record this run"
 
       - name: Keep a dated copy
