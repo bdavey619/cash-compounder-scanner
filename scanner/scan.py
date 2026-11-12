@@ -188,9 +188,9 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     funnel["shortlist"] = len(shortlist)
 
     funnel["peak_margin"] = sum(1 for c in priced if c.get("peak_margin"))
-    # Cash-yield leaders: the top fifth of the quality universe by free-cash-flow yield (FCF on the screen's
-    # own base, so cyclicals and peak-margin names use their normalized figure). The backtest found this
-    # measure did best when the 10-year yield was 3% or higher; see meta["regime"].
+    # Cash-yield leaders: the top fifth of the quality universe by free-cash-flow yield on the latest 12 months.
+    # (The backtest found this raw yield ranked better than the cycle- and margin-adjusted one, which is kept
+    # for the price's bet and the warnings.) It did best when the 10-year yield was 3% or higher; see meta["regime"].
     leaders = sorted(priced, key=lambda c: -c["fcf_yield"])[:max(1, len(priced) // 5)] if priced else []
     funnel["yield_leaders"] = len(leaders)
     regime = load_regime(rates["rf"])
@@ -352,7 +352,7 @@ def value_company(co, ps, mkt_chg, mkt_dd, base_r, min_mcap=None):
     ok = lambda x: x is not None and math.isfinite(x)
     gap = (g - ref) if (ok(g) and ref is not None) else None
     return {**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap,
-            "p_fcf": mcap / co["fcf"] if co["fcf"] > 0 else None, "fcf_yield": fcf_base / mcap, "fcf_base": fcf_base, "base_kind": base_kind, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
+            "p_fcf": mcap / co["fcf"] if co["fcf"] > 0 else None, "fcf_yield": co["fcf"] / mcap, "fcf_base": fcf_base, "base_kind": base_kind, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
             "gap_ttm": (g_ttm - ref) if (ok(g_ttm) and ref is not None) else None,
             "risk_premium": prem, "risk_why": why, "required_return": r}
 

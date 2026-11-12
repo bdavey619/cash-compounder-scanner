@@ -513,8 +513,8 @@ function mathHTML(c, k) {
   const m = c.m, L = CC.L;
   if (!m) return '<p class="muted">The detailed inputs for this company aren’t available in today’s data.</p>';
   const base = c.baseKind === 'latest' ? F(c) : c.fcfBase * 1e9;
-  if (k === 'yld') return `<div class="formula">${L('yld')} <span class="eq">=</span> free cash flow ÷ company value</div><ol class="steps">${fcfSteps(c)}${mcapStep(c)}${baseStep(c)}
-    <li><b>Divide.</b><div class="calc">${Bs(base)} ÷ ${Bs(c.mcapRaw)} = <b>${P(base / c.mcapRaw, 2)}</b></div>So for every $1 you’d pay for the whole company, it produces about <b>${Math.round(base / c.mcapRaw * 100)}¢</b> of spare cash a year.</li></ol>`;
+  if (k === 'yld') return `<div class="formula">${L('yld')} <span class="eq">=</span> free cash flow ÷ company value</div><ol class="steps">${fcfSteps(c)}${mcapStep(c)}
+    <li><b>Divide.</b><div class="calc">${Bs(F(c))} ÷ ${Bs(c.mcapRaw)} = <b>${P(F(c) / c.mcapRaw, 2)}</b></div>So for every $1 you’d pay for the whole company, it produced about <b>${Math.round(F(c) / c.mcapRaw * 100)}¢</b> of spare cash over the last 12 months. The list is ranked on this number.${c.baseKind !== 'latest' ? ` <span class="muted">(The price’s bet starts from an adjusted, lower figure for this company; see “${L('impl')}”.)</span>` : ''}</li></ol>`;
   if (k === 'pfcf') return `<div class="formula">${L('pfcf')} <span class="eq">=</span> company value ÷ free cash flow</div><ol class="steps">${fcfSteps(c)}${mcapStep(c)}
     <li><b>Divide.</b><div class="calc">${Bs(c.mcapRaw)} ÷ ${Bs(F(c))} = <b>${(c.mcapRaw / (F(c))).toFixed(1)}</b></div>If the company kept making the same cash and handed it all to you, it would take about <b>${(c.mcapRaw / (F(c))).toFixed(1)} years</b> to earn back the price. It’s also 1 ÷ cash back per $1.</li></ol>`;
   if (k === 'margin') return `<div class="formula">${L('margin')} <span class="eq">=</span> free cash flow ÷ revenue (sales)</div><ol class="steps">${fcfSteps(c)}
@@ -556,7 +556,7 @@ function mathHTML(c, k) {
     return `<div class="formula">${L('impl')} <span class="eq">=</span> the yearly growth rate that makes the value of all future cash equal today’s price</div><ol class="steps">
     <li><b>What the price has to justify:</b> company value ${nc >= 0 ? 'minus its spare cash (cash minus debt), which you’d get with it' : 'plus its net debt, which a buyer takes on too'}.
       <div class="calc">${Bs(c.mcapRaw)} ${nc >= 0 ? '−' : '+'} ${Bs(Math.abs(nc))} = <b>${Bs(target)}</b></div></li>
-    <li><b>Start from this year’s cash</b> (${Bs(base)}${c.baseKind !== 'latest' ? ', adjusted as in “' + L('yld') + '”' : ''}) and grow it at a guessed rate for 10 years, then ${P(gt, 0)} a year forever.</li>
+    ${baseStep(c)}<li><b>Start from this year’s cash</b> (${Bs(base)}${c.baseKind !== 'latest' ? ', the adjusted figure above' : ''}) and grow it at a guessed rate for 10 years, then ${P(gt, 0)} a year forever.</li>
     <li><b>Discount each year’s cash</b> back to today at ${P(r, 2)} a year, the return you’d demand (${P(META.rates.rf, 2)} safe bond + ${P(META.rules.EQUITY_PREMIUM, 0)}${c.premium ? ' + ' + P(c.premium, 1) + ' extra risk' : ''}). $1 arriving in 10 years is worth only $${(1 / Math.pow(1 + r, 10)).toFixed(2)} today.</li>
     <li><b>Guess and check.</b> Try growth rates until the total matches ${Bs(target)}:
       <div class="calc">0% growth → ${Bs(tryG(0))} · 5% growth → ${Bs(tryG(0.05))} · <b>${SP(g)} growth → ${Bs(tryG(g))}</b> ✓</div>
