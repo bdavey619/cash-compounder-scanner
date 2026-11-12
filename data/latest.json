@@ -1,7 +1,7 @@
 {
  "meta": {
   "asof": "2026-11-12",
-  "generated": "2026-11-12 22:11 UTC",
+  "generated": "2026-11-12 22:30 UTC",
   "config": {
    "DRAWDOWN_DAYS": 21,
    "DRAWDOWN_THRESHOLD": -0.15,
@@ -55,7 +55,7 @@
    "price_missing": 0,
    "quality": 186,
    "financials_excluded": 54,
-   "lookup": 1403,
+   "lookup": 1405,
    "triggered": 17,
    "modest": 30,
    "shortlist": 6,
