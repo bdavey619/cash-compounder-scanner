@@ -278,12 +278,12 @@ def is_commodity(sic) -> bool:
     return sic is not None and any(lo <= sic <= hi for lo, hi in C.COMMODITY_SIC)
 
 
-def commodity_recheck(c, mkt_chg, mkt_dd):
+def commodity_recheck(c, mkt_chg, mkt_dd, base_r=None):
     """A miner or oil producer whose cash rose three years running is riding prices, not compounding:
     put it back on the boom-and-bust footing (3-year average, higher bar)."""
     if c.get("swing_rising") and not c.get("volatile") and is_commodity(c.get("sic")):
         ps = {k: c[k] for k in PRICE_KEYS if k in c}
-        v = value_company({**c, "volatile": True}, ps, mkt_chg, mkt_dd, C.REQUIRED_RETURN, min_mcap=0)
+        v = value_company({**c, "volatile": True}, ps, mkt_chg, mkt_dd, C.REQUIRED_RETURN if base_r is None else base_r, min_mcap=0)
         return v or c
     return c
 

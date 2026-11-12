@@ -36,7 +36,7 @@ from pathlib import Path
 from . import config as C
 from .analysis import fundamentals, price_stats
 from .scan import env_user_agent, gap_flag, price_flags, quality_fail_reasons, value_company
-from .scan import is_financial
+from .scan import commodity_recheck, is_financial
 from .sources import FetchError, LiveFetcher, load_submissions, load_tickers, refresh_facts_bulk
 
 START = "2014-01"
@@ -258,6 +258,7 @@ def walk(pit: dict[str, dict[str, dict]], meta: dict[str, dict], prices: dict[st
             v = value_company(co, ps, mkt["chg"], mkt["off_1m_high"], base_r)
             if not v:
                 continue
+            v = commodity_recheck(v, mkt["chg"], mkt["off_1m_high"], base_r)   # same rule as the daily scan
             pf = price_flags(v)
             trig = pf["flag_drop"] or pf["flag_drawdown"]
             gap = gap_flag(v["gap"], v["implied_g"])
@@ -534,6 +535,8 @@ def main(argv=None):
     fin = [t for t in pit if is_financial(sics.get(t))]
     for t in fin:
         pit.pop(t); meta.pop(t)
+    for t in meta:
+        meta[t]["sic"] = sics.get(t)
     log(f"excluded {len(fin)} banks, lenders, brokers and insurers -> {len(pit)} companies")
 
     # 2. Daily price history for those companies
