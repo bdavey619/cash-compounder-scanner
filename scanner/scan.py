@@ -42,7 +42,7 @@ def business_days_back(asof: date, n_calendar: int) -> list[str]:
 
 
 def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int | None, tickers_only: list[str] | None,
-        ledger_path: Path | None = None):
+        ledger_path: Path | None = None, lookup: bool = True):
     out_dir.mkdir(parents=True, exist_ok=True)
     funnel = {}
 
@@ -70,7 +70,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     bulk = cache_dir is not None and not tickers_only and hasattr(fetcher, "download_to")
     if bulk:
         refresh_facts_bulk(fetcher, cache_dir, C.FUNDAMENTALS_CACHE_DAYS, log, only_ciks={u["cik"] for u in universe})
-    quality = []
+    quality, others = [], []   # others: big enough to look up, but not on the list
     for i, co in enumerate(universe, 1):
         if i % 250 == 0:
             log(f"  fundamentals {i}/{len(universe)}")
@@ -82,6 +82,8 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             continue
         reasons = quality_fail_reasons(fu)
         if reasons:
+            if lookup and fu.get("revenue") and fu["revenue"] >= C.MIN_REVENUE_USD and "capex_missing" not in reasons:
+                others.append({**co, **fu, "why_not": reasons})
             continue
         quality.append({**co, **fu})
     funnel["has_data_and_quality"] = len(quality)
@@ -91,12 +93,12 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     priced = []
     breaker = SourceBreaker()
     with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(load_prices, fetcher, co["ticker"], breaker): co for co in quality}
+        futures = {pool.submit(load_prices, fetcher, co["ticker"], breaker): co for co in quality + others}
         closes_by = {}
         for k, fut in enumerate(as_completed(futures), 1):
             closes_by[futures[fut]["ticker"]] = fut.result()
-            if k % 100 == 0:
-                log(f"  prices {k}/{len(quality)}")
+            if k % 250 == 0:
+                log(f"  prices {k}/{len(quality) + len(others)}")
     spy_closes = load_prices(fetcher, "SPY", breaker)
     mkt = price_stats(spy_closes, C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS) if C.DROP_RELATIVE_TO_MARKET else None
     mkt_chg = mkt["chg"] if mkt else 0.0
@@ -104,7 +106,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     log(f"market (SPY): {C.DROP_LOOKBACK_DAYS}-day change {mkt_chg*100:+.1f}%, {mkt_dd*100:+.1f}% from its 1-month high"
         if mkt else "market: SPY unavailable, using absolute moves")
     meta_market = {"chg": mkt_chg, "off_1m_high": mkt_dd} if mkt else {}
-    missing = sum(1 for v in closes_by.values() if not v)
+    missing = sum(1 for co in quality if not closes_by.get(co["ticker"]))
     log(f"prices: {len(quality) - missing} ok, {missing} missing; source failures: {breaker.fails}")
     funnel["price_missing"] = missing
     for co in quality:
@@ -154,6 +156,9 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     n_fin = sum(1 for c in priced if is_financial(c.get("sic")))
     priced = [c for c in priced if not is_financial(c.get("sic"))]
     funnel["financials_excluded"] = n_fin
+    lookup_rows = value_lookup(fetcher, others, closes_by, mkt_chg, mkt_dd, fin_quality=[c for c in by_cik.values() if is_financial(c.get("sic"))])
+    funnel["lookup"] = len(lookup_rows)
+    log(f"lookup: {len(lookup_rows)} more companies valued for the search box")
     funnel["quality"] = len(priced)
     log(f"excluded {n_fin} banks, lenders, brokers and insurers -> {len(priced)} in the quality universe")
 
@@ -215,7 +220,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market,
             "rates": rates, "track": track, "changes": changes, "regime": regime}
-    write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders)
+    write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders, lookup_rows)
     (out_dir / "track").mkdir(exist_ok=True)
     T.write_csv(out_dir / "track" / "track_record.csv", ledger)
     T.save_ledger(out_dir / "track" / "ledger.json", ledger)
@@ -229,6 +234,38 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
             f"implied {c['implied_g']*100:5.1f}%  ref {c['ref_g']*100:5.1f}%  r {c['required_return']*100:.1f}%  P/FCF {c['p_fcf']:5.1f}  {c['fcf_basis']}")
     write_step_summary(meta, shortlist)
     return meta, shortlist
+
+
+def value_lookup(fetcher, others, closes_by, mkt_chg, mkt_dd, fin_quality=()):
+    """Value every other company with $500M+ of sales the same way, so anyone can be looked up, and record
+    in plain words why it isn't on the list. Banks and insurers that passed the cash tests come along too."""
+    out = []
+    pool = []
+    for co in others:
+        v = value_company(co, price_stats(closes_by.get(co["ticker"], []), C.DROP_LOOKBACK_DAYS, C.DRAWDOWN_DAYS),
+                          mkt_chg, mkt_dd, C.REQUIRED_RETURN, min_mcap=0)
+        if v:
+            pool.append(v)
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        subs = list(ex.map(lambda c: load_submissions(fetcher, c["cik"]), pool))
+    for c, sub in zip(pool, subs):
+        c["sector"], c["sic_desc"], c["sic"], c["earnings_dates"] = sector_for(sub["sic"]), sub["sic_desc"], sub["sic"], sub["earnings_dates"]
+    for c in list(pool) + [dict(c, why_not=[]) for c in fin_quality]:
+        why = list(c.get("why_not", []))
+        if c["mcap"] < C.MIN_MARKET_CAP_USD:
+            why.append("market_cap")
+        if is_financial(c.get("sic")):
+            why.insert(0, "financial")
+        c["why_not"] = why
+        c.update(price_flags(c))
+        since = min([c["chg_start_date"]] + ([c["high_1m_date"]] if c["flag_drawdown"] else []))
+        hits = sorted(d for d in c.get("earnings_dates", []) if d >= since)
+        c["earnings_in_window"] = hits[-1] if hits else None
+        c.update({"insider_buyers": [], "insider_value": 0.0, "flag_cluster": False, "flag_gap": gap_flag(c["gap"], c["implied_g"]),
+                  "price_trigger": c["flag_drop"] or c["flag_drawdown"], "score": 0.0})
+        c["triggered"] = c["price_trigger"]
+        out.append(c)
+    return out
 
 
 def write_step_summary(meta, shortlist):
@@ -269,13 +306,13 @@ def reference_growth(co):
     return min(min(cands), C.TRACK_CAP)
 
 
-def value_company(co, ps, mkt_chg, mkt_dd, base_r):
+def value_company(co, ps, mkt_chg, mkt_dd, base_r, min_mcap=None):
     """Market cap, risk-adjusted required return, implied growth and the gap to reference growth.
     Shared by the daily scan and the backtest so both apply identical rules. None if unpriced or too small."""
     if not ps or not co.get("shares"):
         return None
     mcap = ps["last"] * co["shares"]
-    if mcap < C.MIN_MARKET_CAP_USD:
+    if mcap < (C.MIN_MARKET_CAP_USD if min_mcap is None else min_mcap):
         return None
     prem, why = risk_premium(co)
     r = base_r + prem
@@ -295,7 +332,7 @@ def value_company(co, ps, mkt_chg, mkt_dd, base_r):
     ok = lambda x: x is not None and math.isfinite(x)
     gap = (g - ref) if (ok(g) and ref is not None) else None
     return {**co, **ps, "rel_chg": ps["chg"] - mkt_chg, "rel_dd": ps["off_1m_high"] - mkt_dd, "mcap": mcap,
-            "p_fcf": mcap / co["fcf"], "fcf_yield": fcf_base / mcap, "fcf_base": fcf_base, "base_kind": base_kind, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
+            "p_fcf": mcap / co["fcf"] if co["fcf"] > 0 else None, "fcf_yield": fcf_base / mcap, "fcf_base": fcf_base, "base_kind": base_kind, "implied_g": g, "implied_g_ttm": g_ttm, "ref_g": ref, "gap": gap,
             "gap_ttm": (g_ttm - ref) if (ok(g_ttm) and ref is not None) else None,
             "risk_premium": prem, "risk_why": why, "required_return": r}
 
@@ -386,7 +423,13 @@ def _row(c):
         "fy_fcf_bn": round(c["fy_fcf"] / 1e9, 3), "fcf_avg3_bn": round(c["fcf_avg3"] / 1e9, 3), "volatile": c["volatile"],
         "peak_margin": bool(c.get("peak_margin")), "margin_avg": fin(c.get("margin_avg")), "margin_years": c.get("margin_years", 0),
         "fcf_norm_bn": round(c["fcf_normalized"] / 1e9, 3) if c.get("fcf_normalized") else None,
-        "p_fcf": round(c["p_fcf"], 1), "net_cash_bn": round(c["net_cash"] / 1e9, 2),
+        "p_fcf": round(c["p_fcf"], 1) if c.get("p_fcf") else None,
+        "pe": round(c["mcap"] / c["net_income"], 1) if c.get("net_income") and c["net_income"] > 0 else None,
+        "ni_bn": round(c["net_income"] / 1e9, 3) if c.get("net_income") is not None else None, "ni_end": c.get("ni_end"),
+        "hi52": round(c["hi52"], 2) if c.get("hi52") else None, "hi52_date": c.get("hi52_date"),
+        "fcf_q": [{"end": q["end"], "fcf_bn": round(q["fcf"] / 1e9, 3), "rev_bn": round(q["rev"] / 1e9, 3) if q.get("rev") else None}
+                  for q in c.get("fcf_q", [])],
+        "why_not": c.get("why_not"), "fcf_margin_raw": fin(c.get("fcf_margin")), "net_cash_bn": round(c["net_cash"] / 1e9, 2),
         "fcf_margin": fin(c["fcf_margin"]), "cash_roc": fin(c["cash_roc"]),
         "fcf_cagr": fin(c["fcf_cagr"]), "rev_cagr": fin(c["rev_cagr"]),
         "fcf_ps_cagr": fin(c["fcf_ps_cagr"]), "rev_ps_cagr": fin(c["rev_ps_cagr"]), "share_cagr": fin(c["share_cagr"]),
@@ -404,12 +447,13 @@ def _row(c):
     }
 
 
-def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders=()):
+def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders=(), lookup_rows=()):
     data = {"meta": meta, "yield_leaders": [_row(c) for c in leaders],
             "shortlist": [_row(c) for c in shortlist],
             "triggered_only": [_row(c) for c in triggered_only[:25]],
             "gap_only": [_row(c) for c in gap_only[:25]],
             "all_quality": [_row(c) for c in priced]}
+    lookup = [_row(c) for c in lookup_rows]
     (out_dir / "results.json").write_text(json.dumps(data, indent=1))
     cols = ["ticker", "name", "price", "chg_5d", "mcap_bn", "fcf_bn", "p_fcf", "fcf_margin", "cash_roc",
             "fcf_cagr", "rev_cagr", "fcf_ps_cagr", "rev_ps_cagr", "share_cagr", "sbc_bn", "required_return", "ref_g", "implied_g", "gap", "flag_drop", "flag_cluster", "flag_gap", "score"]
@@ -419,7 +463,7 @@ def write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, le
         for r in sorted(data["all_quality"], key=lambda r: -r["score"]):
             w.writerow(r)
     from .site import write_site
-    write_site(out_dir, data, explorer_company)
+    write_site(out_dir, data, explorer_company, lookup)
 
 
 def explorer_company(r, group):
@@ -484,12 +528,13 @@ def main(argv=None):
     ap.add_argument("--limit", type=int, help="only scan the first N companies (testing)")
     ap.add_argument("--tickers", nargs="*", help="only scan these tickers")
     ap.add_argument("--ledger", type=Path, help="track-record file to read and update (e.g. track/ledger.json)")
+    ap.add_argument("--no-lookup", action="store_true", help="skip valuing the companies that aren't on the list")
     a = ap.parse_args(argv)
     if a.fixtures:
         fetcher, cache = FixtureFetcher(a.fixtures), None
     else:
         fetcher, cache = LiveFetcher(env_user_agent(), C.SEC_RATE_LIMIT_PER_SEC), a.cache
-    run(fetcher, a.asof, a.out, cache, a.limit, a.tickers, a.ledger)
+    run(fetcher, a.asof, a.out, cache, a.limit, a.tickers, a.ledger, lookup=not a.no_lookup)
 
 
 if __name__ == "__main__":

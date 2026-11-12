@@ -55,7 +55,7 @@ def _shift_year(d: str, years: int) -> date:
         return x.replace(year=x.year + years, day=28)
 
 
-def ttm_value(facts: dict, concepts: list[str], parts: dict | None = None):
+def ttm_value(facts: dict, concepts: list[str], parts: dict | None = None, end_max: str | None = None):
     """Trailing twelve months from 10-Q year-to-date facts:
     TTM = last fiscal year + this year's YTD - last year's matching YTD.
     Returns (value, period_end, fiscal_year_end_used) or (None, None, None)."""
@@ -65,6 +65,8 @@ def ttm_value(facts: dict, concepts: list[str], parts: dict | None = None):
             continue
         ytd = [f for f in _usd(facts, "us-gaap", c)
                if f.get("form", "").startswith("10-Q") and "start" in f and 60 <= _days(f["start"], f["end"]) <= 300]
+        if end_max:
+            ytd = [f for f in ytd if f["end"] <= end_max]
         if not ytd:
             continue
         latest = max(ytd, key=lambda f: (f["end"], f.get("filed", "")))
@@ -178,8 +180,11 @@ def fundamentals(facts: dict) -> dict | None:
         "rows": [{k: r.get(k) for k in ("fy_end", "ocf", "capex", "sbc", "revenue", "fcf", "diluted")} for r in rows],
         "fcf_avg3": avg3, "margin_avg": margin_avg, "margin_years": len(margins),
     }
+    ni, ni_end = net_income_ttm(f, cur["end"])
     return {
         "math": math,
+        "net_income": ni, "ni_end": ni_end,
+        "fcf_q": fcf_by_quarter(f),
         "history": history,
         "fy_end": last["fy_end"],
         "fcf_basis": cur["basis"],
@@ -208,6 +213,48 @@ def fundamentals(facts: dict) -> dict | None:
         "shares_asof": shares_asof,
         "capex_missing": last["capex_missing"],
     }
+
+
+NET_INCOME = ["NetIncomeLoss"]
+
+
+def ttm_or_fy(f, concepts, end):
+    """A 12-month figure ending exactly at `end`: the annual report if `end` is a fiscal year end,
+    otherwise built from quarterly year-to-date figures."""
+    annual = annual_series(f, concepts)
+    if end in annual:
+        return annual[end]
+    v, e, _ = ttm_value(f, concepts, end_max=end)
+    return v if e == end else None
+
+
+def fcf_by_quarter(f, n: int = 6) -> list[dict]:
+    """Free cash flow over the 12 months ending at each of the last few reported quarters, so a page can
+    show whether the cash itself changed (news) or only the price did (mood)."""
+    ends = set(annual_series(f, OCF))
+    for c in OCF:
+        ends |= {x["end"] for x in _usd(f, "us-gaap", c) if x.get("form", "").startswith("10-Q") and "start" in x}
+    out = []
+    for e in sorted(ends)[-n:]:
+        o, cx = ttm_or_fy(f, OCF, e), ttm_or_fy(f, CAPEX, e)
+        if o is None or cx is None:
+            continue
+        sb = ttm_or_fy(f, SBC, e) or 0.0
+        rv = ttm_or_fy(f, REVENUE, e)
+        out.append({"end": e, "fcf": o - cx - sb, "rev": rv})
+    return out
+
+
+def net_income_ttm(f, cur_end: str):
+    """Net income for the same 12 months as the cash figures, for a trailing P/E."""
+    v = ttm_or_fy(f, NET_INCOME, cur_end)
+    if v is not None:
+        return v, cur_end
+    annual = annual_series(f, NET_INCOME)
+    if annual:
+        e = max(annual)
+        return annual[e], e
+    return None, None
 
 
 def shares_outstanding(f, ref_end: str | None = None, max_age_days: int = 400, with_source: bool = False):
@@ -306,6 +353,7 @@ def price_stats(closes: list[tuple[str, float]], lookback: int, month: int = 21)
         "off_1m_high": last / hi_1m - 1,
         "high_1m_date": hi_date,
         "off_high": last / hi52 - 1,
+        "hi52": hi52, "hi52_date": max(closes, key=lambda dc: dc[1])[0],
         "spark": [round(c, 4) for _, c in closes[-90:]],
     }
 

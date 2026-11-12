@@ -60,10 +60,45 @@ border:1px solid currentColor;font-size:10px;font-weight:700;font-style:normal;l
 .info:focus-visible{outline:2px solid #1F4FD1;outline-offset:2px}
 #cc-tip{position:fixed;z-index:50;max-width:280px;background:var(--ink,#111214);color:var(--bg,#fff);font-size:13px;line-height:1.45;
 font-weight:400;text-transform:none;letter-spacing:0;padding:9px 11px;border-radius:8px;pointer-events:none;display:none;box-shadow:0 6px 18px rgba(0,0,0,.18)}
-@media (max-width:820px){.cc-nav .in{padding:8px 16px}.cc-nav .asof{display:none}}
+.cc-find{position:relative}
+.cc-find input{height:34px;width:220px;padding:0 10px 0 30px;border:1px solid var(--border,#E6E6E1);border-radius:8px;background:var(--bg,#F7F7F5);color:var(--ink,#111214);font:inherit;font-size:13.5px}
+.cc-find input:focus{outline:2px solid #1F4FD1;outline-offset:0;background:var(--card,#fff)}
+.cc-find svg{position:absolute;left:9px;top:10px;color:var(--faint,#8A8C92)}
+.cc-find ul{position:absolute;left:0;top:40px;z-index:60;width:min(340px,calc(100vw - 32px));max-height:360px;overflow:auto;margin:0;padding:4px;list-style:none;
+background:var(--card,#fff);border:1px solid var(--border,#E6E6E1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.cc-find li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13.5px;color:var(--ink,#111214)}
+.cc-find li b{min-width:54px}.cc-find li span{flex:1;color:var(--muted,#6B6D73);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-find li em{font-style:normal;font-size:11px;font-weight:600;color:var(--faint,#8A8C92)}.cc-find li em.on{color:#1F4FD1}
+.cc-find li[aria-selected=true]{background:var(--hover,#F4F6FB)}
+@media (max-width:820px){.cc-nav .in{padding:8px 16px}.cc-nav .asof{display:none}.cc-find input{width:150px}}
 """
 
 PAGES = [("learn.html", "Start here"), ("index.html", "Today"), ("backtest/", "Backtest"), ("track.html", "Track record"), ("method.html", "Method")]
+
+
+SEARCH_HTML = r"""<div class="cc-find" role="search"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+<input type="search" id="cc-q" placeholder="Look up any company" aria-label="Look up a company by ticker or name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cc-res">
+<ul id="cc-res" role="listbox" hidden></ul></div>
+<script>(function(){
+const P='__PREFIX__';let idx=null,sel=0,hits=[];
+const q=document.getElementById('cc-q'),ul=document.getElementById('cc-res');
+const load=()=>idx?Promise.resolve(idx):fetch(P+'c/index.json').then(r=>r.json()).then(j=>idx=j).catch(()=>idx=[]);
+const go=t=>{location.href=P+'company.html#'+encodeURIComponent(t);if(location.pathname.endsWith('company.html'))q.blur();};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function draw(){const v=q.value.trim().toUpperCase();if(!v){ul.hidden=true;q.setAttribute('aria-expanded','false');return;}
+const ex=[],pre=[],nm=[];for(const c of idx){const t=c[0],n=c[1].toUpperCase();if(t===v)ex.push(c);else if(t.startsWith(v))pre.push(c);else if(n.includes(v))nm.push(c);}
+pre.sort((a,b)=>a[0].length-b[0].length);hits=ex.concat(pre,nm).slice(0,12);sel=0;
+ul.innerHTML=hits.length?hits.map((c,k)=>`<li role="option" id="cc-o${k}" aria-selected="${k===sel}" data-t="${esc(c[0])}"><b>${esc(c[0])}</b><span>${esc(c[1])}</span><em class="${c[2]?'on':''}">${c[2]?'on the list':'look up'}</em></li>`).join('')
+:'<li style="cursor:default"><span>No match. We cover US companies filing with the SEC that have at least $500M of sales.</span></li>';
+ul.hidden=false;q.setAttribute('aria-expanded','true');}
+function mark(){ul.querySelectorAll('li[data-t]').forEach((li,k)=>li.setAttribute('aria-selected',k===sel));if(hits[sel])q.setAttribute('aria-activedescendant','cc-o'+sel);}
+q.addEventListener('focus',load);q.addEventListener('input',()=>load().then(draw));
+q.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){sel=Math.min(sel+1,hits.length-1);mark();e.preventDefault();}
+else if(e.key==='ArrowUp'){sel=Math.max(sel-1,0);mark();e.preventDefault();}
+else if(e.key==='Enter'&&hits[sel]){go(hits[sel][0]);ul.hidden=true;}else if(e.key==='Escape'){ul.hidden=true;}});
+ul.addEventListener('mousedown',e=>{const li=e.target.closest('li[data-t]');if(li){e.preventDefault();go(li.dataset.t);ul.hidden=true;q.value='';}});
+q.addEventListener('blur',()=>setTimeout(()=>ul.hidden=true,150));
+})();</script>"""
 
 
 def nav(active: str, asof_text: str, prefix: str = "", toggle: bool = False) -> str:
@@ -74,6 +109,7 @@ def nav(active: str, asof_text: str, prefix: str = "", toggle: bool = False) -> 
             '<span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12 L6 7 L9 9.5 L14 3" '
             'fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Cash Compounders</a>'
             f'<nav aria-label="Main">{links}</nav><div class="right">'
+            + SEARCH_HTML.replace("__PREFIX__", prefix)
             + ('<div class="cc-mode" role="group" aria-label="Wording"><button type="button" data-mode="plain">Plain English</button>'
                '<button type="button" data-mode="pro">Pro</button></div>' if toggle else '')
             + f'<div class="asof">{asof_text}</div></div></div></header>')
@@ -200,6 +236,9 @@ def company_payload(r: dict, ec: dict, rank: int) -> dict:
         "notes": [b["t"] for b in ec["badges"] if b["k"] != "link"],
         "m": r.get("math"), "mcapRaw": r.get("mcap"), "baseKind": r.get("base_kind", "latest"), "fcfBase": r.get("fcf_base_bn"),
         "req": r.get("required_return"),
+        "pe": r.get("pe"), "ni": r.get("ni_bn"), "niEnd": r.get("ni_end"), "hi52": r.get("hi52"), "hi52Date": r.get("hi52_date"),
+        "offHigh": r.get("off_52w_high"), "fcfQ": r.get("fcf_q") or [], "earn": r.get("earnings_in_window"),
+        "onList": True, "why": [], "posYears": sum(1 for h in (r.get("fcf_history") or [])[-3:] if h["fcf_bn"] > 0),
     }
 
 
@@ -233,8 +272,36 @@ def _fill(name: str, active: str, cos, meta, prefix: str = "", toggle: bool = Fa
                .replace("__COMPANIES__", js(cos)).replace("__META__", js(meta)))
 
 
-def write_site(out_dir: Path, data: dict, explorer_company) -> None:
+def lookup_payloads(rows, explorer_company) -> list:
+    out = []
+    for r in rows:
+        p = company_payload(r, explorer_company(r, "all"), None)
+        p.update({"onList": False, "why": r.get("why_not") or []})
+        out.append(p)
+    return out
+
+
+SAFE_T = re.compile(r"^[A-Z0-9.\-]{1,10}$")
+
+
+def write_site(out_dir: Path, data: dict, explorer_company, lookup=()) -> None:
     cos, meta = build(data, explorer_company)
+    # Every company we can value gets a small file, plus one index for the search box
+    cdir = out_dir / "c"
+    cdir.mkdir(exist_ok=True)
+    js = lambda x: json.dumps(x, separators=(",", ":"), allow_nan=False)
+    index = [[c["t"], c["name"], 1] for c in cos]
+    seen = {c["t"] for c in cos}
+    for p in lookup_payloads(lookup, explorer_company):
+        if p["t"] in seen or not SAFE_T.match(p["t"]):
+            continue
+        seen.add(p["t"])
+        try:
+            (cdir / f"{p['t']}.json").write_text(js(p))
+        except ValueError:   # a stray NaN: skip this one company rather than the whole site
+            continue
+        index.append([p["t"], p["name"], 0])
+    (cdir / "index.json").write_text(js(index))
     (out_dir / "index.html").write_text(_fill("home.html", "Today", cos, meta, toggle=True))
     (out_dir / "company.html").write_text(_fill("company.html", "Today", cos, meta, toggle=True))
     (out_dir / "learn.html").write_text(_fill("learn.html", "Start here", [], meta))

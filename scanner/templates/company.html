@@ -57,6 +57,32 @@ table.dcf{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
 table.dcf th{font-size:12px;font-weight:600;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)}
 table.dcf td{text-align:right;padding:5px 8px;border-top:1px solid var(--line)}table.dcf th:first-child,table.dcf td:first-child{text-align:left}
 table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
+.why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
+.why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
+.why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
+.hb{display:flex;flex-direction:column;gap:8px}
+.hbr{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:10px;font-size:13px}
+.hbr .hbn{grid-column:2/4;margin-top:-6px;font-size:11.5px;color:var(--faint)}
+.hbl{color:var(--muted)}.hbr b{text-align:right}
+.hbt{height:14px;background:var(--line);border-radius:4px;overflow:hidden}.hbt i{display:block;height:100%;border-radius:0 4px 4px 0}
+.hbt .b0{background:var(--ink2)}.hbt .b1{background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}.hbt .b2{background:var(--accent)}.hbt .b3{background:var(--faint)}.hbt .b4{background:var(--border)}
+.ladder{position:relative;height:150px;margin:6px 64px 0}
+.ladder .ln{position:absolute;left:0;right:0;top:56px;height:2px;background:var(--border)}
+.lp{position:absolute;transform:translateX(-50%);text-align:center;width:128px}
+.lp i{display:block;width:14px;height:14px;border-radius:50%;margin:0 auto;border:3px solid var(--card)}
+.lp i.acc{background:var(--accent)}.lp i.b1{background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}.lp i.b3{background:var(--faint)}
+.lp b{display:block;font-size:15px}.lp span{display:block;font-size:11.5px;line-height:1.3;color:var(--muted)}
+.lp.up{bottom:87px}.lp.up b{color:var(--accent)}.lp.dn{top:50px}.lp.dn.low{padding-top:40px}.lp.dn.low i{margin-bottom:0}
+.lp.dn.low::before{content:"";position:absolute;left:50%;top:8px;height:40px;border-left:1px dashed var(--faint)}
+.lp.dn.low i{position:absolute;left:50%;top:0;transform:translateX(-50%)}
+.dv{display:grid;grid-template-columns:150px 1fr 56px;align-items:center;gap:10px;font-size:13px;margin-top:6px}
+.dvl{color:var(--muted)}.dv b{text-align:right}
+.dvt{position:relative;height:14px;background:var(--line);border-radius:4px}
+.dvt .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--faint)}
+.dvt i{position:absolute;top:0;bottom:0}.dvt i.neg{background:var(--down);border-radius:4px 0 0 4px}.dvt i.pos{background:var(--up);border-radius:0 4px 4px 0}
+table.pe{width:100%;border-collapse:collapse;font-size:14px}table.pe td{padding:5px 0;border-top:1px solid var(--line)}table.pe td:last-child{text-align:right}
+table.pe tr:first-child td{border-top:0}
+@media (max-width:600px){.hbr,.dv{grid-template-columns:110px 1fr 60px}.ladder{margin:6px 52px 0}}
 @media (max-width:820px){.cue{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px}
 .cue.cheap{background:var(--accent-bg);color:var(--accent-ink)}.cue.mid{background:var(--chip);color:var(--ink2)}.cue.pricey{background:var(--warn-bg);color:var(--warn-ink)}
 </style>
@@ -87,7 +113,8 @@ function implied(f0, target, r, gt) {
 function cue(c) { const N = COS.length; return c.rank <= N / 3 ? ['cheap', 'Cheap'] : c.rank <= 2 * N / 3 ? ['mid', 'Middle'] : ['pricey', 'Pricey']; }
 function plainSummary(c) {
   const R = META.rates || {}, rf = R.rf, out = [];
-  if (c.yld != null) {
+  if (c.yld != null && c.yld <= 0) out.push(`${esc(c.name)} isn’t producing spare cash right now: on our measure it used about <b>${Math.abs(pc(c.yld))}¢ more cash than it made</b> for every $1 you’d pay for the company. Its price is a bet on the future, not on today’s cash.`);
+  else if (c.yld != null) {
     const mult = rf ? c.yld / rf : null;
     out.push(`For every $1 you’d pay for ${esc(c.name)}, the business produces about <b>${pc(c.yld)}¢ of spare cash a year</b>` +
       (mult ? (mult >= 1.15 ? `, about ${mult.toFixed(1)}× what a safe government bond pays (${(rf * 100).toFixed(1)}%).` : mult >= 0.85 ? `, about the same as a safe government bond (${(rf * 100).toFixed(1)}%).` : `, less than a safe government bond pays (${(rf * 100).toFixed(1)}%), so investors must be expecting growth.`) : '.'));
@@ -110,15 +137,43 @@ function plainSummary(c) {
   return out.join(' ');
 }
 
+const EXTRA = {};
 function show() {
   const t = decodeURIComponent(location.hash.slice(1)).toUpperCase();
   const i = COS.findIndex(c => c.t === t);
   const page = document.getElementById('page');
-  if (i < 0) { document.title = 'Cash Compounders · Company'; page.innerHTML = `<p class="muted">${t ? esc(t) + ' isn’t in today’s quality universe.' : 'No company selected.'} <a href="index.html">Back to today’s ranking</a></p>`; return; }
-  const c = COS[i], prev = COS[i - 1], next = COS[i + 1];
+  if (i >= 0) return render(COS[i], COS[i - 1], COS[i + 1]);
+  if (!t) { page.innerHTML = '<p class="muted">No company selected. Use “Look up any company” above, or <a href="index.html">see today’s ranking</a>.</p>'; return; }
+  if (EXTRA[t]) return render(EXTRA[t]);
+  if (!/^[A-Z0-9.\-]{1,10}$/.test(t)) { notFound(t); return; }
+  page.innerHTML = `<p class="muted">Loading ${esc(t)}…</p>`;
+  fetch('c/' + encodeURIComponent(t) + '.json').then(r => { if (!r.ok) throw 0; return r.json(); })
+    .then(c => { EXTRA[t] = c; if (decodeURIComponent(location.hash.slice(1)).toUpperCase() === t) render(c); })
+    .catch(() => notFound(t));
+}
+function notFound(t) {
+  document.title = 'Cash Compounders · Company';
+  document.getElementById('page').innerHTML = `<p class="muted">We don’t have ${esc(t)}. We cover US companies that file with the SEC and have at least $500M of yearly sales and a recent share price. <a href="index.html">Back to today’s ranking</a></p>`;
+}
+function wouldRank(c) { return c.rank || (c.yld == null ? COS.length + 1 : 1 + COS.filter(x => x.yld > c.yld).length); }
+const WHY = {
+  financial: c => 'It’s a bank, lender, broker or insurer. Their cash flow mixes in customers’ money, so “spare cash” doesn’t mean the same thing. Treat the numbers below with extra caution.',
+  fcf_margin: c => c.margin == null ? 'We couldn’t measure how much of each $1 of sales it keeps as spare cash.' : c.margin <= 0 ? `It didn’t make spare cash over the last 12 months (${pc(c.margin)}¢ per $1 of sales). The list needs at least 15¢.` : `It keeps about ${pc(c.margin)}¢ of each $1 of sales as spare cash (latest 12 months). The list needs at least 15¢.`,
+  fcf_consistency: c => 'It didn’t make spare cash in every one of its last three years and the latest 12 months. The list needs all of them.',
+  return_on_capital: c => c.roc == null ? 'We couldn’t measure how much cash it earns on the money invested in it.' : `It earns about ${pl(c.roc, 0)} a year in cash on the money invested in it. The list needs at least 10%.`,
+  implausible_fcf_margin: c => 'Its cash per $1 of sales looks implausibly high (over 90¢), usually a sign its filings mix in something unusual.',
+  market_cap: c => `The whole company is worth ${money(c.mcap)}. The list needs at least $2B.`,
+};
+function whyBanner(c) {
+  if (c.onList !== false) return '';
+  const items = (c.why || []).map(k => WHY[k] ? `<li>${WHY[k](c)}</li>` : '').join('');
+  return `<section class="card why"><h2>Why it’s not on the list</h2><ul>${items || '<li>It doesn’t pass the list’s cash tests.</li>'}</ul>
+    <p class="muted">Everything below is worked out the same way as for the companies on the list, so you can still see what its price is betting on. The tests exist because these numbers are less reliable for businesses that don’t make steady spare cash.</p></section>`;
+}
+function render(c, prev, next) {
   if (cur !== c.t) st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 };
   const sameCo = cur === c.t; cur = c.t;
-  const plain = CC.mode === 'plain', L = CC.L, I = CC.info, N = COS.length, cq = cue(c);
+  const plain = CC.mode === 'plain', L = CC.L, I = CC.info, N = COS.length, WR = wouldRank(c), cq = cue({ rank: WR });
   const R0 = META.rates || {};
   document.title = `${c.t} · ${c.name} · Cash Compounders`;
   const tags = c.tags.map(([x, k]) => `<span class="tag ${k}" tabindex="0" data-tip="${CC.def(x).replace(/"/g, '&quot;')}">${L(x)}</span>`).join(' ');
@@ -131,7 +186,7 @@ function show() {
       <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
         <h1 class="h1" style="margin:0;font-size:34px">${c.t}</h1>
         <span style="font-size:18px;color:var(--ink2)">${esc(c.name)}</span>
-        <span class="pill" style="padding:3px 10px">#${c.rank} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>
+        ${c.onList === false ? `<span class="tag warn" style="font-size:12.5px;padding:3px 10px">Not on the list</span>${c.yld != null ? `<span class="faint" style="font-size:13px">would rank #${WR} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>` : ''}` : `<span class="pill" style="padding:3px 10px">#${c.rank} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>`}
         <span class="cue ${cq[0]}" data-tip="Compared with the other ${N} strong cash businesses: cheap = top third on cash back per $1, pricey = bottom third." tabindex="0">${cq[1]}</span>
       </div>
       <div class="muted" style="font-size:14px;margin-top:6px">${esc(c.sector)}${c.sic ? ' · ' + esc(c.sic) : ''} ${tags ? ' &nbsp;' + tags : ''}</div>
@@ -141,10 +196,11 @@ function show() {
       <div class="muted" style="font-size:14px"><span class="${c.m1 <= -0.10 ? 'down' : ''}" style="font-weight:600">${pct(c.m1)}</span> from 1-month high · market cap ${money(c.mcap)}</div>
     </div>
   </div>
+  ${whyBanner(c)}
   <section class="card plain"><h2>In plain English</h2><p>${plainSummary(c)}</p></section>
   <section class="tiles" aria-label="Key numbers" id="tiles">
-    <div class="card tile"><div class="k">${L('yld')}${I('yld')}</div><div class="v">${plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld)}</div><div class="d">${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.round((N - c.rank) / Math.max(1, N - 1) * 100)}% of the list</div><div class="d" style="display:none">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
-    <div class="card tile"><div class="k">${L('pfcf')}${I('pfcf')}</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'}</div><div class="d">${money(c.fcf)} ${plain ? 'of cash a year' : 'free cash flow'}</div></div>
+    <div class="card tile"><div class="k">${L('yld')}${I('yld')}</div><div class="v">${plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld)}</div><div class="d">${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.max(0, Math.round((N + 1 - WR) / N * 100))}% of the list</div><div class="d" style="display:none">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
+    <div class="card tile"><div class="k">${L('pfcf')}${I('pfcf')}</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'}</div><div class="d">${c.fcf > 0 ? money(c.fcf) + (plain ? ' of cash a year' : ' free cash flow') : (plain ? 'never, at today’s cash' : 'negative free cash flow')}</div></div>
     <div class="card tile"><div class="k">${L('margin')}${I('margin')}</div><div class="v">${plain && c.margin != null ? pc(c.margin) + '¢' : pl(c.margin)}</div><div class="d">${plain ? 'of every $1 of sales' : 'after stock comp' + (c.sbc ? ' (' + pl(c.sbc) + ' of revenue)' : '')}</div></div>
     <div class="card tile"><div class="k">${L('roc')}${I('roc')}</div><div class="v">${pl(c.roc, 0)}</div><div class="d">${plain ? 'a year, on what’s been put in' : 'FCF ÷ (equity + debt)'}</div></div>
     <div class="card tile"><div class="k">${L('shares')}${I('shares')}</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? (plain ? ': buying back its own shares' : ', from buybacks') : c.shares > 0.01 ? (plain ? ': issuing new shares' : ', dilution') : ''}</div></div>
@@ -164,6 +220,9 @@ function show() {
         </div>
         <p class="faint" style="margin:12px 0 0;font-size:12.5px">${plain ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>
       </section>
+      <section class="card sec" id="needsec"><h2>${plain ? 'What would need to be true' : 'What the price requires'}</h2><div id="need"></div></section>
+      <section class="card sec" id="mossec"><h2>${plain ? 'What price leaves room for error?' : 'Margin of safety'}</h2><div id="mos"></div></section>
+      <section class="card sec"><h2>${plain ? 'The drop: news or mood?' : 'Price move vs. cash move'}</h2><div id="drop"></div></section>
       <section class="card sec">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>${plain ? 'Spare cash each year' : 'Free cash flow'}</h2><span class="muted" style="font-size:13px">$ billions · ${plain ? 'after paying for everything, including stock pay' : 'after stock-based comp'}</span></div>
         <div class="bars" id="bars"></div>
@@ -175,6 +234,7 @@ function show() {
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px"><h2>${plain ? 'Share price lately' : 'Price trend'}</h2><span class="muted" style="font-size:13px" id="sparkcap"></span></div>
         <svg viewBox="0 0 300 90" width="100%" role="img" id="spark"></svg>
       </section>
+      <section class="card sec"><h2 style="margin-bottom:10px">${plain ? 'Profit vs. cash' : 'P/E vs. P/FCF'}</h2><div id="pe"></div></section>
       <section class="card sec">
         <h2 style="margin-bottom:4px">${plain ? 'Try your own assumptions' : 'Assumptions'}</h2>
         ${plain ? '<p class="muted" style="margin:0 0 12px;font-size:12.5px">Move these and watch the blue “price’s bet” change.</p>' : '<div style="height:8px"></div>'}
@@ -232,6 +292,8 @@ function show() {
   rr.oninput = () => { st.r = +rr.value / 100; update(c); };
   gt.oninput = () => { st.gt = +gt.value / 100; update(c); };
   document.getElementById('reset').onclick = () => { st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 }; base.value = st.base; rr.value = (st.r * 100).toFixed(2); gt.value = (st.gt * 100).toFixed(1); update(c); };
+  document.getElementById('pe').innerHTML = peHTML(c);
+  document.getElementById('drop').innerHTML = dropHTML(c);
   update(c);
   if (!sameCo) window.scrollTo(0, 0);
 }
@@ -252,7 +314,10 @@ function update(c) {
   else if (rec != null && g < rec - 0.05) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, ${((rec - g) * 100).toFixed(1)} points below the ${pct(rec)} the business has delivered per share. The market expects a real slowdown.`;
   else if (rec != null && g > rec + 0.03) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, faster than the ${pct(rec)} the business has delivered per share. The price already counts on acceleration.`;
   else v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, roughly in line with the ${pct(rec)} the business has delivered per share. The price looks fair if that record holds.`;
+  if (!(f0 > 0)) v = `This company’s starting cash flow is zero or negative, so no growth rate from it can explain the price. The price is a bet that it becomes a steady cash maker. Try another starting point if there is one.`;
   document.getElementById('verdict').innerHTML = v;
+  document.getElementById('need').innerHTML = needHTML(c, f0, g, rTot, st.gt);
+  document.getElementById('mos').innerHTML = mosHTML(c, f0, g, rTot, st.gt);
   document.getElementById('rtext').textContent = pl(st.r, 2) + (c.premium ? ' + ' + pl(c.premium, 1) : '');
   const R = META.rates || {};
   document.getElementById('rnote').textContent = R.rf != null ? `Default: 10-yr Treasury ${pl(R.rf, 2)} + ${pl(R.premium, 1)} premium` + (c.premium ? `, plus ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')}` : '') : '';
@@ -260,6 +325,95 @@ function update(c) {
   const rs = [-0.01, 0, 0.01].map(d => st.r + d), gs = [0.02, 0.03, 0.04];
   document.getElementById('sens').innerHTML = `<thead><tr><th scope="col" style="text-align:left;font-size:12px">Required ↓ · later growth →</th>${gs.map(x => `<th scope="col">${pl(x, 0)}</th>`).join('')}</tr></thead><tbody>`
     + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
+}
+// ---------- Extra judgement aids ----------
+const YR = +META.asof.slice(0, 4);
+const hbar = (rows, mx) => `<div class="hb">${rows.map(([lab, v, cls, note]) => `<div class="hbr"><span class="hbl">${lab}</span>
+  <span class="hbt"><i class="${cls}" style="width:${Math.max(0.6, Math.min(100, v / mx * 100)).toFixed(1)}%"></i></span><b>${money(v)}</b>${note ? `<span class="hbn">${note}</span>` : ''}</div>`).join('')}</div>`;
+function needHTML(c, f0, g, r, gt) {
+  const plain = CC.mode === 'plain';
+  if (!(f0 > 0)) return '<p class="muted">With no spare cash to start from, there’s nothing to grow. Come back to this once the company makes cash.</p>';
+  if (!isFinite(g)) return `<p class="muted">${g > 0 ? 'The price needs more growth than any sensible rate, so there’s no clear picture to draw.' : 'The price is below the value of today’s cash even if it shrinks fast.'}</p>`;
+  const c5 = f0 * Math.pow(1 + g, 5), c10 = f0 * Math.pow(1 + g, 10), mult = c10 / f0;
+  const past = c.rec != null ? f0 * Math.pow(1 + c.rec, 10) : null;
+  const big = COS.filter(x => x.t !== c.t && x.fcf > 0).sort((a, b) => b.fcf - a.fcf)[0];
+  const rev = c.m && c.m.revenue ? c.m.revenue / 1e9 : null, rev10 = rev ? rev * Math.pow(1 + g, 10) : null;
+  const rows = [[plain ? 'Today' : `Base (${c.baseKind === 'latest' ? 'latest' : c.baseKind === 'avg3' ? '3-yr avg' : 'normalized'})`, f0, 'b0'],
+    [`${YR + 5}, needed`, c5, 'b1'], [`${YR + 10}, needed`, c10, 'b2']];
+  if (past != null) rows.push([`${YR + 10} at its past pace`, past, 'b3', `${pct(c.rec, 0)}/yr`]);
+  if (big) rows.push([`Biggest on the list today`, big.fcf, 'b4', esc(big.t)]);
+  const mx = Math.max(...rows.map(x => x[1]));
+  let txt = g <= 0 ? `Today’s price only needs ${esc(c.name)}’s spare cash to <b>${g < 0 ? 'shrink about ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. If it simply keeps making ${money(f0)} a year, the price looks low.`
+    : `For today’s price to make sense, ${esc(c.name)}’s spare cash has to grow from ${money(f0)} to about <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.`
+      + (rev10 ? ` If it keeps the same share of each sales dollar, sales would have to reach about <b>${money(rev10)} a year</b>, up from ${money(rev)}.` : '')
+      + (big && c10 > big.fcf * 1.05 ? ` For scale, the biggest cash maker on our list (${esc(big.name)}) makes ${money(big.fcf)} a year today.` : '');
+  if (past != null && g > 0) txt += past >= c10 ? ` If it kept growing like its recent past, it would get there.` : ` Even at its recent pace (${pct(c.rec, 0)} a year, which few companies keep up for a decade), it would reach about ${money(past)}, short of what the price needs.`;
+  return `<p style="margin:6px 0 14px;font-size:14.5px;line-height:1.6">${txt}</p>${hbar(rows, mx)}
+    <p class="faint" style="margin:10px 0 0;font-size:12.5px">Uses the starting cash, return and long-run growth from “${plain ? 'Try your own assumptions' : 'Assumptions'}”, so it changes when you move them. $ billions a year.</p>`;
+}
+function mosHTML(c, f0, g, r, gt) {
+  const plain = CC.mode === 'plain', sh = c.mcapRaw / c.price, net = c.net * 1e9;
+  if (!(f0 > 0)) return '<p class="muted">There’s no spare cash to value yet, so we can’t work out a price from it.</p>';
+  const at = x => (pv(f0, x, r, gt) * 1e9 + net) / sh;   // f0 is in $ billions
+  const pts = [['Today’s price', c.price, 'acc']];
+  if (c.rec != null) pts.push([`If it grows like its past (${pct(c.rec, 0)}/yr)`, at(c.rec), 'b3']);
+  pts.push([`If its cash never grows`, at(0), 'b1']);
+  const vals = pts.map(p => p[1]).filter(v => isFinite(v)), mn = Math.min(0, ...vals), mx = Math.max(...vals) * 1.08;
+  const pos = v => ((v - mn) / (mx - mn) * 100).toFixed(1);
+  const d = (v) => { const x = v / c.price - 1; return `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(0)}%`; };
+  const pPast = c.rec != null ? at(c.rec) : null;
+  let txt = '';
+  if (pPast != null) txt = pPast >= c.price
+    ? `If ${esc(c.name)} keeps growing like its past, the cash is worth about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. today. That gap is your cushion: you’d still do fine if things go somewhat worse than its past.`
+    : `To leave room for error you’d want to pay less than what the cash is worth. Even assuming it keeps growing like its past, we get about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. today. So at today’s price there’s no cushion: you need it to beat its own record.`;
+  txt += ` If its cash never grew again, it would be worth about $${at(0).toFixed(2)}.`;
+  return `<p class="muted" style="margin:0 0 6px;font-size:13.5px">${plain ? 'Investors like to buy for less than they think something is worth, so they’re OK even if they’re a bit wrong. That gap is called a “margin of safety”.' : 'Value per share from today’s cash at a given growth rate, discounted at your required return.'}</p>
+    <div class="ladder"><div class="ln"></div>${pts.map(([lab, v, cls], k) => {
+      const low = k === 2 && pts.length === 3 && Math.abs(pos(v) - pos(pts[1][1])) < 24;
+      return k === 0 ? `<div class="lp up" style="left:${pos(v)}%"><b>$${v.toFixed(2)}</b><span>${lab}</span><i class="${cls}"></i></div>`
+        : `<div class="lp dn${low ? ' low' : ''}" style="left:${pos(v)}%"><i class="${cls}"></i><b>$${v.toFixed(0)}</b><span>${lab}</span></div>`; }).join('')}</div>
+    <p style="margin:8px 0 0;font-size:14.5px;line-height:1.6">${txt}</p>
+    <p class="faint" style="margin:10px 0 0;font-size:12.5px">“Its past” is the ${CC.L('rec').toLowerCase()} above, measured over only about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years and capped at 20%, so treat it as generous for fast growers.</p>`;
+}
+function dropHTML(c) {
+  const plain = CC.mode === 'plain', Q = c.fcfQ || [];
+  if (c.hi52 == null || c.offHigh == null) return '<p class="muted">Not enough price history.</p>';
+  const lag = d => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - 40); return x.toISOString().slice(0, 10); };
+  const then = Q.filter(q => q.end <= lag(c.hi52Date)).pop(), now = Q[Q.length - 1];
+  const sh = c.mcapRaw / c.price, f0 = c.bases[c.defaultBase || 0].fcf, r = BASE_R + (c.premium || 0);
+  const gHi = implied(f0, c.hi52 * sh / 1e9 - c.net, r, GT0), gNow = implied(f0, c.mcap - c.net, r, GT0);
+  const pc1 = c.offHigh, cc1 = then && now && then.fcf_bn > 0 && then.end !== now.end ? now.fcf_bn / then.fcf_bn - 1 : null;
+  const bar = (lab, x) => x == null ? '' : `<div class="dv"><span class="dvl">${lab}</span><span class="dvt"><span class="z"></span><i class="${x < 0 ? 'neg' : 'pos'}" style="${x < 0 ? 'right:50%' : 'left:50%'};width:${Math.min(50, Math.abs(x) * 100 / 2).toFixed(1)}%"></i></span><b class="${x < 0 ? 'down' : 'up'}">${pct(x, 0)}</b></div>`;
+  let txt;
+  if (pc1 > -0.10) txt = `${esc(c.name)} is within 10% of its 52-week high ($${c.hi52.toFixed(2)} on ${fmtD(c.hi52Date)}), so there’s no big drop to explain.`;
+  else {
+    txt = `Since its 52-week high of $${c.hi52.toFixed(2)} on ${fmtD(c.hi52Date)}, the price is <b>down ${Math.abs(pc(pc1))}%</b>. `;
+    if (cc1 == null && then && now && then.end === now.end) txt += `It hasn’t reported new results since then (latest 12 months to ${fmtD(now.end)}: ${money(now.fcf_bn)}), so the cash figures haven’t changed: the drop reflects investors’ mood, interest rates or expectations, not new numbers from the business.`;
+    else if (cc1 == null) txt += 'We can’t line up its quarterly cash figures to compare.';
+    else if (cc1 >= 0) txt += `Over the same stretch, the 12-month cash it reported <b>${cc1 > 0.02 ? 'grew ' + pc(cc1) + '%' : 'held steady'}</b> (${money(then.fcf_bn)} → ${money(now.fcf_bn)}). So the business didn’t get worse; the price fell because investors’ mood, interest rates or expectations changed.`;
+    else txt += `The 12-month cash it reported also <b>fell ${Math.abs(pc(cc1))}%</b> (${money(then.fcf_bn)} → ${money(now.fcf_bn)}), so at least part of the drop reflects real news about the business.`;
+    if (c.earn) txt += ` It reported earnings on ${fmtD(c.earn)}, inside the recent drop.`;
+    if (isFinite(gHi) && isFinite(gNow)) txt += ` The drop matters only if it makes the bet reasonable: at the high, the price needed about <b>${pct(gHi, 0)} a year</b>; now it needs <b>${pct(gNow, 0)}</b>${c.rec != null ? `, against a past pace of ${pct(c.rec, 0)}` : ''}.`
+      + (c.rec != null && gNow > c.rec + 0.03 ? ' A lower price isn’t the same as a cheap one.' : c.rec != null && gNow < c.rec - 0.05 ? ' Now the price asks for less than its record.' : '');
+  }
+  return `<p style="margin:6px 0 12px;font-size:14.5px;line-height:1.6">${txt}</p>${bar(plain ? 'Share price' : 'Price vs. 52-wk high', pc1)}${cc1 != null ? bar(plain ? 'Its yearly cash' : 'TTM FCF, same stretch', cc1) : ''}
+    ${Q.length > 1 ? `<p class="faint" style="margin:10px 0 0;font-size:12.5px">12-month cash at each report: ${Q.map(q => `${fmtD(q.end, true)} ${money(q.fcf_bn)}`).join(' · ')}. “Before the high” = the latest period ending at least 40 days before it, roughly when its results would have been out.</p>` : ''}`;
+}
+function peHTML(c) {
+  const plain = CC.mode === 'plain';
+  if (c.ni == null) return '<p class="muted" style="margin:0;font-size:13.5px">No net income figure in its filings.</p>';
+  if (c.ni <= 0) return `<p style="margin:0;font-size:14px;line-height:1.55">It <b>lost money</b> (${money(c.ni)}) over the 12 months to ${fmtD(c.niEnd)}, so there’s no P/E. ${c.pfcf ? `On spare cash it costs ${c.pfcf.toFixed(1)}× a year’s cash.` : ''}</p>`;
+  const rows = [[plain ? 'Price ÷ profit (P/E)' : 'P/E (trailing)', c.pe], [plain ? 'Price ÷ spare cash' : 'P/FCF', c.pfcf]];
+  const gap = c.pfcf ? c.pfcf / c.pe : null;
+  let why = '';
+  if (gap != null && gap > 1.15) why = `Spare cash is lower than profit. Profit doesn’t subtract stock pay or count all the money spent on buildings and equipment up front, and cash does, so we lean on cash.`;
+  else if (gap != null && gap < 0.87) why = `Spare cash is higher than profit, often because profit subtracts large non-cash charges (like wear-and-tear on equipment) that don’t use cash this year.`;
+  else if (gap != null) why = 'Profit and spare cash tell a similar story here.';
+  else why = 'It has profit but no spare cash: the profit is being spent (or tied up) before it reaches owners.';
+  return `<table class="pe">${rows.map(([k, v]) => `<tr><td>${k}</td><td><b>${v != null ? v.toFixed(1) + '×' : '–'}</b></td></tr>`).join('')}
+    <tr><td class="faint">${plain ? 'Profit, last 12 months' : 'Net income (TTM)'}</td><td class="faint">${money(c.ni)}</td></tr></table>
+    <p style="margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2)">${why}</p>
+    <p class="faint" style="margin:8px 0 0;font-size:12px">Both are “years to earn back the price” if nothing changes. Lower is cheaper. Neither says anything about growth; that’s what the price’s bet is for.</p>`;
 }
 // ---------- Show the math ----------
 let mathKey = null;

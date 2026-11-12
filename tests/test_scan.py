@@ -120,6 +120,24 @@ class TestEndToEnd(unittest.TestCase):
         self.assertTrue((self.tmp / "out/track/track_record.csv").exists())
         self.assertIn('"track"', (self.tmp / "out/index.html").read_text())
 
+    def test_lookup_covers_companies_off_the_list(self):
+        idx = json.loads((self.tmp / "out/c/index.json").read_text())
+        on = {t: flag for t, _, flag in idx}
+        self.assertEqual(on.get("SMPB"), 1)
+        self.assertEqual(on.get("SMPE"), 0)   # 4% margin: not on the list, but can be looked up
+        e = json.loads((self.tmp / "out/c/SMPE.json").read_text())
+        self.assertFalse(e["onList"])
+        self.assertIn("fcf_margin", e["why"])
+        self.assertNotIn("SMPE", self.tickers("all_quality"))
+
+    def test_quarterly_cash_history_ends_at_ttm(self):
+        rows = {r["ticker"]: r for r in self.data["all_quality"]}
+        q = rows["SMPA"]["fcf_q"]
+        self.assertGreaterEqual(len(q), 2)
+        self.assertEqual(q[-1]["end"], "2026-09-30")
+        self.assertAlmostEqual(q[-1]["fcf_bn"], rows["SMPA"]["fcf_bn"], places=3)
+        self.assertEqual(sorted(x["end"] for x in q), [x["end"] for x in q])
+
     def test_annual_filter_ignores_quarterly(self):
         rows = {r["ticker"]: r for r in self.data["all_quality"]}
         self.assertLess(rows["SMPA"]["fy_fcf_bn"], 100)  # the planted stale 10-Q value is $9.99T
