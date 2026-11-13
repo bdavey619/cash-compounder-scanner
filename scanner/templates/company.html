@@ -9,7 +9,11 @@
 <style>
 __CSS__
 .crumbs{font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:20px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:10px}
+.tn{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.tn .h1{margin:0;font-size:32px;line-height:1.1}.tn .nm{font-size:17px;color:var(--ink2)}
+.ts{font-size:13.5px;color:var(--muted);margin-top:4px}.tr{text-align:right;flex:none}.px{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.tpills{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:18px}.tpills:empty{display:none}
+@media (max-width:600px){.tn .h1{font-size:26px}.tn .nm{font-size:15px;width:100%}.px{font-size:24px}.ts{font-size:12.5px}}
 .tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .tile{padding:14px 16px}.tile .k{font-size:12px;font-weight:500;color:var(--muted)}.tile .v{font-size:23px;font-weight:700;margin-top:2px}.tile .d{font-size:12px;color:var(--faint)}
 .cols{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
@@ -67,10 +71,16 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
 .wib{position:sticky;top:8px;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;border-radius:12px;
 background:var(--accent-bg);color:var(--accent-ink);font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
-.wib .muted{color:var(--accent-ink);opacity:.8}.wis{display:none}
+.wib[hidden]{display:none}.wib .muted{color:var(--accent-ink);opacity:.8}.wis{display:none}
 @media (max-width:600px){.wib{flex-wrap:nowrap;padding:8px 12px;font-size:13.5px;top:6px}.wil{display:none}.wis{display:inline}.wib .zbtn{padding:3px 10px;flex:none}}.wib b{color:var(--accent-ink)}
 .wid{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
 .wit{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--accent-bg);color:var(--accent-ink);font-size:11.5px;font-weight:700;vertical-align:2px;letter-spacing:0}
+.tile{position:relative}.tile .k [tabindex],.tile .k button{position:relative;z-index:2}
+.tilebtn{position:absolute!important;inset:0;margin:0!important;border-radius:12px;z-index:1}
+.tile:hover{box-shadow:inset 0 0 0 1px var(--accent)}.tilebtn:focus-visible{outline:2px solid var(--accent)!important;outline-offset:-2px}
+.tilebtn[aria-expanded=true]{box-shadow:inset 0 0 0 2px var(--accent)}
+.tilehint{margin:-12px 0 18px;font-size:12.5px;color:var(--faint)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tile.wi{box-shadow:inset 0 0 0 2px var(--accent-bg)}.tile.wi .v{color:var(--accent)}
 .zones{margin-bottom:20px}.zones h2{margin-bottom:6px}
 .zs{display:flex;align-items:center;gap:12px;margin:8px 0 6px;font-size:13.5px;color:var(--muted)}.zs input{flex:1;accent-color:var(--accent)}
@@ -92,7 +102,7 @@ background:var(--accent-bg);color:var(--accent-ink);font-size:14px;box-shadow:0 
 .whyb::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);margin-left:4px;transition:transform .15s}
 .whyb[aria-expanded=true]::after{transform:rotate(-135deg) translateY(-1px)}
 .whyd{margin-top:8px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;line-height:1.6;color:var(--ink2)}
-.whyd p{margin:0 0 10px}.whyd p.faint{font-size:12.5px;color:var(--faint)}
+.whyd p{margin:0 0 10px}.whyd ul.notes{margin:0 0 10px;padding-left:18px}.whyd p.faint{font-size:12.5px;color:var(--faint)}
 .plain .lem{margin-top:12px}
 .lem{margin:8px 0 12px;padding:8px 12px;border-radius:10px;background:#FFF8DC;border-left:4px solid #E3B800;font-size:14px;line-height:1.55;color:var(--ink)}
 .lem .lemh{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8A6D00;margin-right:4px}
@@ -238,19 +248,18 @@ function render(c, prev, next) {
   <div class="crumbs"><span><a href="index.html">Today</a> <span aria-hidden="true">›</span> ${esc(c.name)}</span>
     <span>${prev ? `<a href="#${prev.t}">‹ ${prev.t}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="#${next.t}">${next.t} ›</a>` : ''} <span class="faint">by ${plain ? 'cash per $1' : 'FCF yield'}</span></span></div>
   <div class="top">
-    <div>
-      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
-        <h1 class="h1" style="margin:0;font-size:34px">${c.t}</h1>
-        <span style="font-size:18px;color:var(--ink2)">${esc(c.name)}</span>
-        ${c.onList === false ? `<span class="tag warn" style="font-size:12.5px;padding:3px 10px">Not on the list</span>${c.yld != null ? `<span class="faint" style="font-size:13px">would rank #${WR} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>` : ''}` : `<span class="pill" style="padding:3px 10px">#${c.rank} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>`}
-        <span class="cue ${cq[0]}" data-tip="Compared with the other ${N} strong cash businesses: cheap = top third on cash back per $1, pricey = bottom third." tabindex="0">${plain ? 'vs. the list: ' : 'Relative: '}${cq[1]}</span><span class="cue" id="abscue" tabindex="0" data-tip="On its own: cheap = the price is fair even if its cash never grows; fair = it needs less growth than its record; pricey = it needs to beat its record."></span>
-      </div>
-      <div class="muted" style="font-size:14px;margin-top:6px">${esc(c.sector)}${c.sic ? ' · ' + esc(c.sic) : ''} ${tags ? ' &nbsp;' + tags : ''}</div>
+    <div class="tl">
+      <div class="tn"><h1 class="h1">${c.t}</h1><span class="nm">${esc(c.name)}</span></div>
+      <div class="ts">${esc(c.sector)} · ${plain ? 'worth' : 'market cap'} ${money(c.mcap)}</div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:30px;font-weight:700;letter-spacing:-.02em">$${c.price.toFixed(2)}</div>
-      <div class="muted" style="font-size:14px"><span class="${c.m1 <= -0.10 ? 'down' : ''}" style="font-weight:600">${pct(c.m1)}</span> from 1-month high · market cap ${money(c.mcap)}</div>
-    </div>
+    <div class="tr"><div class="px">$${c.price.toFixed(2)}</div>
+      <div class="ts"><span class="${c.m1 <= -0.10 ? 'down' : ''}" style="font-weight:600">${pct(c.m1)}</span> from 1-month high</div></div>
+  </div>
+  <div class="tpills">
+    ${c.onList === false ? `<span class="tag warn">Not on the list</span>` : ''}
+    ${c.yld != null && c.yld > 0 ? `<span class="cue ${cq[0]}" tabindex="0" data-tip="Against the other ${N} strong cash businesses on cash back per $1: cheap = top third, pricey = bottom third.">${cq[1]} ${plain ? 'vs. the list' : 'relative'} · #${WR} of ${N}</span>` : ''}
+    <span class="cue" id="abscue" tabindex="0" data-tip="On its own: cheap = the price is fair even if its cash never grows; fair = it needs less growth than its record; pricey = it needs to beat its record."></span>
+    ${tags}
   </div>
   ${whyBanner(c)}
   <div class="wib" id="wib" hidden></div>
@@ -265,6 +274,7 @@ function render(c, prev, next) {
     <div class="card tile"><div class="k">${L('shares')}${I('shares')}</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? (plain ? ': buying back its own shares' : ', from buybacks') : c.shares > 0.01 ? (plain ? ': issuing new shares' : ', dilution') : ''}</div></div>
     <div class="card tile"><div class="k">${c.net < 0 ? (plain ? 'Debt minus cash' : 'Net debt') : (plain ? 'Cash minus debt' : 'Net cash')}${I('net')}</div><div class="v">${money(Math.abs(c.net))}</div><div class="d">${plain && c.net < 0 && c.fcf > 0 ? `about ${(-c.net / c.fcf).toFixed(1)} years of cash` : netNote}</div></div>
   </section>
+  <p class="tilehint">${plain ? 'Tap any number to see how it’s worked out.' : 'Click a tile for the calculation.'}</p>
   <section class="card sec zones" aria-labelledby="zh"><h2 id="zh">${plain ? `What price would make ${esc(c.name.split(/[ ,]/)[0])} cheap?` : 'Price zones'}</h2><div id="zones"></div></section>
   <div class="cols">
     <div class="main">
@@ -286,7 +296,7 @@ function render(c, prev, next) {
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>${plain ? 'Spare cash each year' : 'Free cash flow'}</h2><span class="muted" style="font-size:13px">${plain ? 'after paying for everything, including stock pay' : 'after stock-based comp'}</span></div>
         <div class="bars" id="bars"></div>
       </section>
-      ${c.notes.length ? `<section class="card sec"><h2>Worth knowing</h2><ul class="notes" style="margin:10px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)">${c.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>` : ''}
+
     </div>
     <aside class="side">
       <section class="card sec">
@@ -305,11 +315,7 @@ function render(c, prev, next) {
         <label class="sl" for="gt"><span>${L('gt')}${I('gt')}</span><b id="gttext"></b></label>
         <input id="gt" type="range" min="1" max="4" step="0.5">
         <button class="btn" id="reset" style="margin-top:12px;height:32px;font-size:13px">Reset</button>
-      </section>
-      <section class="card sec">
-        <h2 data-wi>How sensitive is it?</h2>
-        <p class="muted" style="margin:0 0 10px;font-size:12.5px">${plain ? 'The price’s bet if you demanded a different return (rows) or expected different long-run growth (columns)' : 'Growth the price implies under other assumptions'}</p>
-        <table class="sens" id="sens"></table>
+        <div id="senswrap"></div>
       </section>
       <section class="card sec" style="font-size:14px">
         <h2 style="margin-bottom:10px">${plain ? 'Read the source' : 'Filings'}</h2>
@@ -324,7 +330,7 @@ function render(c, prev, next) {
   <footer class="foot"><span>Educational research, not investment advice. Figures from the company’s SEC filings and the ${new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} close.</span><a href="method.html">How these numbers are calculated</a></footer>`;
 
   const tileKeys = ['yld', 'pfcf', 'margin', 'roc', 'shares', 'net'];
-  document.querySelectorAll('#tiles .tile').forEach((t, k) => { if (tileKeys[k]) t.insertAdjacentHTML('beforeend', `<button class="mathlink" data-k="${tileKeys[k]}">Show the math</button>`); });
+  document.querySelectorAll('#tiles .tile').forEach((t, k) => { if (tileKeys[k]) t.insertAdjacentHTML('beforeend', `<button class="mathlink tilebtn" data-k="${tileKeys[k]}"><span class="sr-only">Show the math for ${CC.L(tileKeys[k])}</span></button>`); });
   mathKey = null;
   document.querySelectorAll('.mathlink').forEach(b => { b.setAttribute('aria-expanded', 'false'); b.onclick = () => toggleMath(c, b); });
 
@@ -407,6 +413,7 @@ function update(c0, fromZone) {
   document.getElementById('rnote').textContent = R.rf != null ? `Default: 10-yr Treasury ${pl(R.rf, 2)} + ${pl(R.premium, 1)} premium` + (c.premium ? `, plus ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')}` : '') : '';
   document.getElementById('gttext').textContent = pl(st.gt, 1);
   const rs = [-0.01, 0, 0.01].map(d => st.r + d), gs = [0.02, 0.03, 0.04];
+  document.getElementById('senswrap').innerHTML = why('sens', `<p class="faint" style="margin:0 0 8px">${wi ? `<span class="wit" style="margin:0 6px 0 0">at ${$p(c.price)}</span>` : ''}${CC.mode === 'plain' ? 'The price’s bet if you demanded a different return (rows) or expected different long-run growth (columns).' : 'Growth the price implies under other assumptions.'}</p><table class="sens" id="sens"></table>`, 'How sensitive is it?');
   document.getElementById('sens').innerHTML = `<thead><tr><th scope="col" style="text-align:left;font-size:12px">Required ↓ · later growth →</th>${gs.map(x => `<th scope="col">${pl(x, 0)}</th>`).join('')}</tr></thead><tbody>`
     + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
 }
@@ -422,11 +429,11 @@ function L$(x) {
 const lemon = h => CC.mode === 'plain' && h ? `<div class="lem"><span class="lemh">Lemonade stand</span> ${h}</div>` : '';
 // ---------- "Why?" toggles: each section shows its answer; the explanation is one tap away ----------
 const OPEN = new Set();
-const why = (id, html) => !html ? '' : `<button type="button" class="whyb" data-why="${id}" aria-expanded="${OPEN.has(id)}" aria-controls="why-${id}">${OPEN.has(id) ? 'Less' : (CC.mode === 'plain' ? 'Why?' : 'Details')}</button><div class="whyd" id="why-${id}"${OPEN.has(id) ? '' : ' hidden'}>${html}</div>`;
+const why = (id, html, lab) => !html ? '' : `<button type="button" class="whyb" data-why="${id}"${lab ? ` data-lab="${lab}"` : ''} aria-expanded="${OPEN.has(id)}" aria-controls="why-${id}">${OPEN.has(id) ? 'Less' : lab || (CC.mode === 'plain' ? 'Why?' : 'Details')}</button><div class="whyd" id="why-${id}"${OPEN.has(id) ? '' : ' hidden'}>${html}</div>`;
 document.addEventListener('click', e => {
   const b = e.target.closest('.whyb'); if (!b) return;
   const id = b.dataset.why, d = document.getElementById('why-' + id), o = d.hidden;
-  d.hidden = !o; b.setAttribute('aria-expanded', o); b.textContent = o ? 'Less' : (CC.mode === 'plain' ? 'Why?' : 'Details');
+  d.hidden = !o; b.setAttribute('aria-expanded', o); b.textContent = o ? 'Less' : b.dataset.lab || (CC.mode === 'plain' ? 'Why?' : 'Details');
   o ? OPEN.add(id) : OPEN.delete(id);
 });
 // ---------- Price zones: which price would change each label ----------
@@ -478,18 +485,18 @@ function zonesRender(c, f0, r, gt) {
     return `<div class="ztk">${h}</div>`;
   };
   const rows = [];
-  if (m.rel) rows.push(`<div class="zl"><span>${plain ? 'Against the list' : 'Relative'} <span class="muted">· cash back per $1 vs. the other companies</span></span><b id="zrl"></b></div>${bar(m.rel.cheap, m.rel.mid, ['Cheap', 'Middle', 'Pricey'])}${tk([m.rel.cheap, m.rel.mid], ['middle', 'pricey'], ['cheap', 'middle'])}`);
-  if (m.abs) rows.push(`<div class="zl"><span>${plain ? 'On its own' : 'Absolute'} <span class="muted">· growth the price needs vs. ${c.rec != null ? 'its record' : '0%'}</span></span><b id="zal"></b></div>${bar(m.abs.cheap, m.abs.fair != null ? m.abs.fair : m.abs.cheap, ['Cheap', c.rec != null ? 'Fair' : '', c.rec != null ? 'Pricey' : 'Needs growth'])}${tk([m.abs.cheap, m.abs.fair], [c.rec == null ? 'needs growth' : c.rec > 0 ? 'fair' : 'pricey', c.rec == null ? 'needs growth' : 'pricey'], ['cheap', c.rec != null && c.rec > 0 ? 'fair' : 'cheap'])}`);
+  if (m.rel) rows.push(`<div class="zl"><span>${plain ? 'Against the list' : 'Relative'} <span class="muted">· cash per $1</span></span><b id="zrl"></b></div>${bar(m.rel.cheap, m.rel.mid, ['Cheap', 'Middle', 'Pricey'])}${tk([m.rel.cheap, m.rel.mid], ['middle', 'pricey'], ['cheap', 'middle'])}`);
+  if (m.abs) rows.push(`<div class="zl"><span>${plain ? 'On its own' : 'Absolute'} <span class="muted">· growth needed</span></span><b id="zal"></b></div>${bar(m.abs.cheap, m.abs.fair != null ? m.abs.fair : m.abs.cheap, ['Cheap', c.rec != null ? 'Fair' : '', c.rec != null ? 'Pricey' : 'Needs growth'])}${tk([m.abs.cheap, m.abs.fair], [c.rec == null ? 'needs growth' : c.rec > 0 ? 'fair' : 'pricey', c.rec == null ? 'needs growth' : 'pricey'], ['cheap', c.rec != null && c.rec > 0 ? 'fair' : 'cheap'])}`);
   const step = m.hi - m.lo > 200 ? 1 : m.hi - m.lo > 20 ? 0.5 : 0.05;
   const p0 = ZP != null ? Math.min(m.hi, Math.max(m.lo, ZP)) : m.P;
   box.innerHTML = `<div class="zs"><label for="zp">${plain ? 'If the price were' : 'Price'}</label><input type="range" id="zp" min="${m.lo.toFixed(2)}" max="${m.hi.toFixed(2)}" step="${step}" value="${p0.toFixed(2)}"><b id="zpv"></b><button type="button" id="zreset" class="zbtn">Today</button></div>
-    ${rows.join('')}<p class="lead" id="zt" style="margin:12px 0 0"></p>
-    <p class="caveat">${m.abs ? `“On its own” uses the return you’d demand (${pl(r, 1)}) and ${c.rec != null ? `a record that covers about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years, capped at 20%` : 'no growth record'}; it moves with “${plain ? 'Try your own assumptions' : 'Assumptions'}”.` : ''} “Against the list” moves as other prices move.</p>`;
+    ${rows.join('')}<p id="zt" hidden></p>
+    ${why('zones', `<p class="faint">${m.abs ? `“On its own” uses the return you’d demand (${pl(r, 1)}) and ${c.rec != null ? `a record that covers about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years, capped at 20%` : 'no growth record'}; it moves with “${plain ? 'Try your own assumptions' : 'Assumptions'}”.` : ''} “Against the list” moves as other prices move.</p>`)}`;
   const zp = document.getElementById('zp');
   zp.oninput = () => { ZP = +zp.value; update(window.__cc, true); };
   document.getElementById('zreset').onclick = () => { ZP = null; zp.value = m.P; update(window.__cc, true); };
   zonesSet(p0);
-  if (ac && m.abs) { const [a] = zLabelAbs(m, m.P); ac.className = 'cue ' + a[0]; ac.textContent = (plain ? 'on its own: ' : 'Absolute: ') + a[1]; ac.style.display = ''; } else if (ac) ac.style.display = 'none';
+  if (ac && m.abs) { const [a] = zLabelAbs(m, m.P); ac.className = 'cue ' + a[0]; ac.textContent = a[1] + (plain ? ' on its own' : ' absolute'); ac.style.display = ''; } else if (ac) ac.style.display = 'none';
 }
 function whatIfChrome(c0, c, g) {
   const wi = !!c.whatIf, plain = CC.mode === 'plain', bar = document.getElementById('wib');
@@ -677,7 +684,7 @@ function dropHTML(c) {
   }
   const ls = !k || pc1 > -0.10 ? '' : `Same stand, new price: ${L$(c.mcap * k / (1 + pc1))} → <b>${L$(c.mcap * k)}</b>` + (cc1 == null ? ', same lemonade.' : cc1 > 0.02 ? ', selling more lemonade.' : cc1 >= 0 ? ', same lemonade.' : ', selling less lemonade.');
   return `<p class="lead">${head}</p>${lemon(ls)}${bar(plain ? 'Share price' : 'Price vs. 52-wk high', pc1)}${cc1 != null ? bar(plain ? 'Its yearly cash' : 'TTM FCF, same stretch', cc1) : ''}
-    ${pc1 <= -0.10 || Q.length > 1 ? why('drop', `${pc1 <= -0.10 ? `<p>${txt}</p>${lemon(lm)}` : ''}${Q.length > 1 ? `<p class="faint">12-month cash at each report: ${Q.map(q => `${fmtD(q.end, true)} ${money(q.fcf_bn)}`).join(' · ')}. “Before the high” = the latest period ending at least 40 days before it, roughly when its results would have been out.</p>` : ''}`) : ''}`;
+    ${pc1 <= -0.10 || Q.length > 1 || c.notes.length ? why('drop', `${pc1 <= -0.10 ? `<p>${txt}</p>${lemon(lm)}` : ''}${c.notes.length ? `<ul class="notes">${c.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${Q.length > 1 ? `<p class="faint">12-month cash at each report: ${Q.map(q => `${fmtD(q.end, true)} ${money(q.fcf_bn)}`).join(' · ')}. “Before the high” = the latest period ending at least 40 days before it, roughly when its results would have been out.</p>` : ''}`) : ''}`;
 }
 function peHTML(c) {
   const plain = CC.mode === 'plain';
