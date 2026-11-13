@@ -1,7 +1,7 @@
 {
  "meta": {
-  "asof": "2026-11-12",
-  "generated": "2026-11-13 00:13 UTC",
+  "asof": "2026-11-13",
+  "generated": "2026-11-13 00:27 UTC",
   "config": {
    "COMMODITY_SIC": [
     [
@@ -89,7 +89,7 @@
   },
   "track": {
    "started": "2026-11-09",
-   "asof": "2026-11-12",
+   "asof": "2026-11-13",
    "n": 199,
    "groups": [
     {
@@ -223,63 +223,18 @@
    }
   },
   "changes": {
-   "prev_date": "2026-11-11",
+   "prev_date": "2026-11-12",
    "new": {
-    "yield": [
-     "AGX",
-     "BLKB",
-     "CARG",
-     "CVX",
-     "EQT",
-     "EXPE",
-     "NEM",
-     "SJM",
-     "ST",
-     "TMUS"
-    ],
-    "shortlist": [
-     "GMED",
-     "HRB",
-     "QLYS"
-    ],
-    "watchlist": [
-     "CARG",
-     "CRUS",
-     "FICO"
-    ],
-    "triggered": [
-     "DGII",
-     "SHOP",
-     "SYK"
-    ]
+    "yield": [],
+    "shortlist": [],
+    "watchlist": [],
+    "triggered": []
    },
    "dropped": {
-    "yield": [
-     "ALSN",
-     "AYI",
-     "BMY",
-     "CVSA",
-     "FCFS",
-     "HALO",
-     "HRMY",
-     "MO",
-     "TRLV",
-     "ZBH"
-    ],
+    "yield": [],
     "shortlist": [],
-    "watchlist": [
-     "HRB",
-     "HRMY"
-    ],
-    "triggered": [
-     "GEV",
-     "GMED",
-     "KEYS",
-     "NTNX",
-     "PLTR",
-     "POWL",
-     "QLYS"
-    ]
+    "watchlist": [],
+    "triggered": []
    }
   },
   "regime": {
@@ -3753,9 +3708,7 @@
    "ticker": "AGX",
    "name": "ARGAN INC",
    "cik": 100591,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1213,
    "fcf_base_bn": 0.2372,
    "base_kind": "normalized",
@@ -4083,9 +4036,7 @@
    "ticker": "HRB",
    "name": "H&R BLOCK INC",
    "cik": 12659,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1148,
    "fcf_base_bn": 0.7177,
    "base_kind": "latest",
@@ -4413,9 +4364,7 @@
    "ticker": "EQT",
    "name": "EQT Corp",
    "cik": 33213,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1135,
    "fcf_base_bn": 1.4339,
    "base_kind": "avg3",
@@ -5064,9 +5013,7 @@
    "ticker": "SJM",
    "name": "J M SMUCKER Co",
    "cik": 91419,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.111,
    "fcf_base_bn": 0.9352,
    "base_kind": "normalized",
@@ -5724,9 +5671,7 @@
    "ticker": "ST",
    "name": "Sensata Technologies Holding plc",
    "cik": 1477294,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1067,
    "fcf_base_bn": 0.3768,
    "base_kind": "normalized",
@@ -6384,9 +6329,7 @@
    "ticker": "EXPE",
    "name": "Expedia Group, Inc.",
    "cik": 1324424,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1027,
    "fcf_base_bn": 0.0462,
    "base_kind": "normalized",
@@ -6714,9 +6657,7 @@
    "ticker": "BLKB",
    "name": "BLACKBAUD INC",
    "cik": 1280058,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1006,
    "fcf_base_bn": 0.1091,
    "base_kind": "normalized",
@@ -7375,9 +7316,7 @@
    "ticker": "TMUS",
    "name": "T-Mobile US, Inc.",
    "cik": 1283699,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0983,
    "fcf_base_bn": 7.044,
    "base_kind": "normalized",
@@ -9993,10 +9932,7 @@
    "ticker": "CARG",
    "name": "CarGurus, Inc.",
    "cik": 1494259,
-   "new_in": [
-    "yield",
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0867,
    "fcf_base_bn": 0.1353,
    "base_kind": "normalized",
@@ -10652,9 +10588,7 @@
    "ticker": "NEM",
    "name": "NEWMONT Corp /DE/",
    "cik": 1164727,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0852,
    "fcf_base_bn": 3.363,
    "base_kind": "avg3",
@@ -11941,9 +11875,7 @@
    "ticker": "CVX",
    "name": "CHEVRON CORP",
    "cik": 93410,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0801,
    "fcf_base_bn": 21.8683,
    "base_kind": "normalized",
@@ -13500,9 +13432,7 @@
    "ticker": "HRB",
    "name": "H&R BLOCK INC",
    "cik": 12659,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1148,
    "fcf_base_bn": 0.7177,
    "base_kind": "latest",
@@ -13830,9 +13760,7 @@
    "ticker": "GMED",
    "name": "GLOBUS MEDICAL INC",
    "cik": 1237831,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0739,
    "fcf_base_bn": 0.4178,
    "base_kind": "normalized",
@@ -14160,9 +14088,7 @@
    "ticker": "QLYS",
    "name": "QUALYS, INC.",
    "cik": 1107843,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0406,
    "fcf_base_bn": 0.2454,
    "base_kind": "latest",
@@ -14820,9 +14746,7 @@
    "ticker": "SYK",
    "name": "STRYKER CORP",
    "cik": 310764,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0363,
    "fcf_base_bn": 4.317,
    "base_kind": "latest",
@@ -15150,9 +15074,7 @@
    "ticker": "DGII",
    "name": "DIGI INTERNATIONAL INC",
    "cik": 854775,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0535,
    "fcf_base_bn": 0.0615,
    "base_kind": "normalized",
@@ -15480,9 +15402,7 @@
    "ticker": "EXPE",
    "name": "Expedia Group, Inc.",
    "cik": 1324424,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1027,
    "fcf_base_bn": 0.0462,
    "base_kind": "normalized",
@@ -16138,9 +16058,7 @@
    "ticker": "SHOP",
    "name": "SHOPIFY INC.",
    "cik": 1594805,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0112,
    "fcf_base_bn": 0.6236,
    "base_kind": "normalized",
@@ -18438,9 +18356,7 @@
    "ticker": "AGX",
    "name": "ARGAN INC",
    "cik": 100591,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1213,
    "fcf_base_bn": 0.2372,
    "base_kind": "normalized",
@@ -19406,10 +19322,7 @@
    "ticker": "CARG",
    "name": "CarGurus, Inc.",
    "cik": 1494259,
-   "new_in": [
-    "yield",
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0867,
    "fcf_base_bn": 0.1353,
    "base_kind": "normalized",
@@ -21652,9 +21565,7 @@
    "ticker": "FICO",
    "name": "FAIR ISAAC CORP",
    "cik": 814547,
-   "new_in": [
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0577,
    "fcf_base_bn": 0.8845,
    "base_kind": "latest",
@@ -21814,7 +21725,7 @@
    "implied_g_ttm": 0.0927,
    "gap": -0.1073,
    "insider_buyers": [],
-   "insider_value": 20461,
+   "insider_value": 0,
    "flag_drop": false,
    "flag_cluster": false,
    "flag_gap": true,
@@ -28348,9 +28259,7 @@
    "ticker": "CVX",
    "name": "CHEVRON CORP",
    "cik": 93410,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0801,
    "fcf_base_bn": 21.8683,
    "base_kind": "normalized",
@@ -33439,9 +33348,7 @@
    "ticker": "SHOP",
    "name": "SHOPIFY INC.",
    "cik": 1594805,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0112,
    "fcf_base_bn": 0.6236,
    "base_kind": "normalized",
@@ -34097,9 +34004,7 @@
    "ticker": "TMUS",
    "name": "T-Mobile US, Inc.",
    "cik": 1283699,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0983,
    "fcf_base_bn": 7.044,
    "base_kind": "normalized",
@@ -36251,9 +36156,7 @@
    "ticker": "NEM",
    "name": "NEWMONT Corp /DE/",
    "cik": 1164727,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0852,
    "fcf_base_bn": 3.363,
    "base_kind": "avg3",
@@ -37223,9 +37126,7 @@
    "ticker": "SYK",
    "name": "STRYKER CORP",
    "cik": 310764,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0363,
    "fcf_base_bn": 4.317,
    "base_kind": "latest",
@@ -51342,9 +51243,7 @@
    "ticker": "EQT",
    "name": "EQT Corp",
    "cik": 33213,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1135,
    "fcf_base_bn": 1.4339,
    "base_kind": "avg3",
@@ -51993,9 +51892,7 @@
    "ticker": "EXPE",
    "name": "Expedia Group, Inc.",
    "cik": 1324424,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1027,
    "fcf_base_bn": 0.0462,
    "base_kind": "normalized",
@@ -63042,9 +62939,7 @@
    "ticker": "FICO",
    "name": "FAIR ISAAC CORP",
    "cik": 814547,
-   "new_in": [
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0577,
    "fcf_base_bn": 0.8845,
    "base_kind": "latest",
@@ -63204,7 +63099,7 @@
    "implied_g_ttm": 0.0927,
    "gap": -0.1073,
    "insider_buyers": [],
-   "insider_value": 20461,
+   "insider_value": 0,
    "flag_drop": false,
    "flag_cluster": false,
    "flag_gap": true,
@@ -63984,9 +63879,7 @@
    "ticker": "SJM",
    "name": "J M SMUCKER Co",
    "cik": 91419,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.111,
    "fcf_base_bn": 0.9352,
    "base_kind": "normalized",
@@ -69402,9 +69295,7 @@
    "ticker": "GMED",
    "name": "GLOBUS MEDICAL INC",
    "cik": 1237831,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0739,
    "fcf_base_bn": 0.4178,
    "base_kind": "normalized",
@@ -72898,9 +72789,7 @@
    "ticker": "QLYS",
    "name": "QUALYS, INC.",
    "cik": 1107843,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0406,
    "fcf_base_bn": 0.2454,
    "base_kind": "latest",
@@ -73556,9 +73445,7 @@
    "ticker": "HRB",
    "name": "H&R BLOCK INC",
    "cik": 12659,
-   "new_in": [
-    "shortlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1148,
    "fcf_base_bn": 0.7177,
    "base_kind": "latest",
@@ -75202,9 +75089,7 @@
    "ticker": "CRUS",
    "name": "CIRRUS LOGIC, INC.",
    "cik": 772406,
-   "new_in": [
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0737,
    "fcf_base_bn": 0.3264,
    "base_kind": "normalized",
@@ -75532,9 +75417,7 @@
    "ticker": "ST",
    "name": "Sensata Technologies Holding plc",
    "cik": 1477294,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1067,
    "fcf_base_bn": 0.3768,
    "base_kind": "normalized",
@@ -77806,9 +77689,7 @@
    "ticker": "AGX",
    "name": "ARGAN INC",
    "cik": 100591,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1213,
    "fcf_base_bn": 0.2372,
    "base_kind": "normalized",
@@ -82645,10 +82526,7 @@
    "ticker": "CARG",
    "name": "CarGurus, Inc.",
    "cik": 1494259,
-   "new_in": [
-    "yield",
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0867,
    "fcf_base_bn": 0.1353,
    "base_kind": "normalized",
@@ -83951,9 +83829,7 @@
    "ticker": "DGII",
    "name": "DIGI INTERNATIONAL INC",
    "cik": 854775,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0535,
    "fcf_base_bn": 0.0615,
    "base_kind": "normalized",
@@ -84281,9 +84157,7 @@
    "ticker": "BLKB",
    "name": "BLACKBAUD INC",
    "cik": 1280058,
-   "new_in": [
-    "yield"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1006,
    "fcf_base_bn": 0.1091,
    "base_kind": "normalized",
