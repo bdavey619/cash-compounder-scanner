@@ -283,13 +283,13 @@ function render(c, prev, next) {
         <div class="scale" id="scale"></div>
         <div class="ticks" id="ticks"></div>
         <div class="verdict" id="verdict"></div>
+        <div id="need"></div>
         <div id="betwhy"></div>
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px" id="betlinks">
           <button class="mathlink" data-k="impl">Show the math: ${L('impl')}</button>
           <button class="mathlink" data-k="rec">Show the math: ${L('rec')}</button>
         </div>
       </section>
-      <section class="card sec" id="needsec"><h2 data-wi>${plain ? 'What would need to be true' : 'What the price requires'}</h2><div id="need"></div></section>
       <section class="card sec" id="mossec"><h2 data-wi>${plain ? 'What price leaves room for error?' : 'Margin of safety'}</h2><div id="mos"></div></section>
       <section class="card sec"><h2>${plain ? 'The drop: news or mood?' : 'Price move vs. cash move'}</h2><div id="drop"></div></section>
       <section class="card sec">
@@ -403,7 +403,10 @@ function update(c0, fromZone) {
   document.getElementById('verdict').innerHTML = short;
   document.getElementById('betwhy').innerHTML = why('bet', `<p>${CC.mode === 'plain' ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew per share over the last few years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p><p>${v}</p>
     <p class="faint">${CC.mode === 'plain' ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>`);
-  document.getElementById('need').innerHTML = needHTML(c, f0, g, rTot, st.gt);
+  const nh = needHTML(c, f0, g, rTot, st.gt), nm = typeof nh === 'string' ? { main: nh, why: '' } : nh;
+  document.getElementById('need').innerHTML = nm.main;
+  const bw = document.querySelector('#betwhy .whyd');
+  if (bw && nm.why) bw.insertAdjacentHTML('beforeend', nm.why);
   document.getElementById('pe').innerHTML = peHTML(c);
   if (fromZone) zonesSet(ZP != null ? ZP : c0.price); else zonesRender(c0, c0.bases[st.base].fcf, rTot, st.gt);
   whatIfChrome(c0, c, g);
@@ -562,11 +565,11 @@ function needHTML(c, f0, g, r, gt) {
         : `For that price to be fair, it needs to make about <b>${L$(c10 * k)} a year by ${YR + 10}</b>, ${c10 / f0 >= 1.8 ? `like running about ${Math.round(c10 / f0)} stands instead of one` : `about ${Math.round((c10 / f0 - 1) * 100)}% more than it makes in a normal year now`}.`
           + (past != null ? ` Growing like it has lately, it would make about ${L$(past * k)}.` : ''));
   }
-  const head = g <= 0 ? `Needs its cash to <b>${g < 0 ? 'shrink ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. A low bar.`
-    : `Needs <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.` + (past != null ? (past >= c10 ? ' At its past pace, it gets there.' : ` At its past pace, it reaches ${money(past)}.`) : '');
+  const head = g <= 0 ? `In dollars, its cash only has to <b>${g < 0 ? 'shrink ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. A low bar.`
+    : `In dollars: <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.` + (past != null ? (past >= c10 ? ' At its past pace, it gets there.' : ` At its past pace, it reaches ${money(past)}.`) : '');
   const ls = !k ? '' : g <= 0 ? `A ${L$(c.mcap * k)} stand only has to keep selling the same lemonade.` : `A ${L$(c.mcap * k)} stand would need to make <b>${L$(c10 * k)} a year</b> by ${YR + 10}.`;
-  return `<p class="lead">${head}</p>${lemon(ls)}${needChart(c, f0, g, past != null ? c.rec : null, c10 > (big ? big.fcf : 0) * 1.05 ? big : peer)}
-    ${why('need', `<p>${txt}</p>${lemon(lm)}${needCaption(c, f0)}`)}`;
+  return { main: `<p class="lead" style="margin-top:16px">${head}</p>${lemon(ls)}${needChart(c, f0, g, past != null ? c.rec : null, c10 > (big ? big.fcf : 0) * 1.05 ? big : peer)}`,
+    why: `<p>${txt}</p>${lemon(lm)}${needCaption(c, f0)}` };
 }
 function needCaption(c, f0) {
   return `<p class="faint">Bars: spare cash so far. Dot: the starting point${c.bases[st.base] ? ` (${esc(c.bases[st.base].label.split(':')[0].replace(/ \(.*\)/, ''))}, ${money(f0)})` : ''}. Lines change with “${CC.mode === 'plain' ? 'Try your own assumptions' : 'Assumptions'}”. Hover for each year.</p>`;
@@ -589,7 +592,7 @@ function needChart(c, f0, g, gp, big) {
   const bw = Math.min(18, step * 0.6);
   const bars = H.map((h, k) => `<rect x="${X(k) - bw / 2}" y="${Y(h[1])}" width="${bw}" height="${Math.max(1, Y(0) - Y(h[1]))}" rx="3" class="hb0"/>`).join('');
   const path = arr => arr.map((v, t) => `${t ? 'L' : 'M'}${X(nowK + t).toFixed(1)},${Y(v).toFixed(1)}`).join('');
-  const xl = H.map((h, k) => (step < 30 && k !== 0 && k !== H.length - 1) ? '' : `<text x="${X(k)}" y="${Ht - 8}" text-anchor="middle" class="ax">${h[0]}</text>`).join('')
+  const xl = H.map((h, k) => (step < 40 && k !== 0 && k !== H.length - 1) ? '' : `<text x="${X(k)}" y="${Ht - 8}" text-anchor="middle" class="ax">${h[0]}</text>`).join('')
     + [5, 10].map(t => `<text x="${X(nowK + t)}" y="${Ht - 8}" text-anchor="middle" class="ax">${YR + t}</text>`).join('');
   // end labels, nudged apart if they'd collide
   const floorY = Y(0) - 16;   // keep end labels clear of the year labels
