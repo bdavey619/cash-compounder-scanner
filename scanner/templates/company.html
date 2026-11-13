@@ -65,6 +65,13 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
 .why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
+.wib{position:sticky;top:8px;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;border-radius:12px;
+background:var(--accent-bg);color:var(--accent-ink);font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.wib .muted{color:var(--accent-ink);opacity:.8}.wis{display:none}
+@media (max-width:600px){.wib{flex-wrap:nowrap;padding:8px 12px;font-size:13.5px;top:6px}.wil{display:none}.wis{display:inline}.wib .zbtn{padding:3px 10px;flex:none}}.wib b{color:var(--accent-ink)}
+.wid{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
+.wit{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--accent-bg);color:var(--accent-ink);font-size:11.5px;font-weight:700;vertical-align:2px;letter-spacing:0}
+.tile.wi{box-shadow:inset 0 0 0 2px var(--accent-bg)}.tile.wi .v{color:var(--accent)}
 .zones{margin-bottom:20px}.zones h2{margin-bottom:6px}
 .zs{display:flex;align-items:center;gap:12px;margin:8px 0 6px;font-size:13.5px;color:var(--muted)}.zs input{flex:1;accent-color:var(--accent)}
 .zs b{font-size:var(--fs-callout);color:var(--ink);min-width:64px;text-align:right}
@@ -154,7 +161,9 @@ function shortSummary(c) {
   if (c.yld != null && c.yld <= 0) out.push(`<b>No spare cash</b> right now: its price is a bet on the future.`);
   else if (c.yld != null) out.push(`<b>${pc(c.yld)}¢ back per $1</b> a year` + (rf ? (c.yld / rf >= 1.15 ? `, ${(c.yld / rf).toFixed(1)}× a safe bond’s ${(rf * 100).toFixed(1)}¢.` : c.yld / rf >= 0.85 ? `, about the same as a safe bond (${(rf * 100).toFixed(1)}¢).` : `, less than a safe bond’s ${(rf * 100).toFixed(1)}¢.`) : '.'));
   if (g != null && isFinite(g) && c.rec != null)
-    out.push(`The price bets on <b>${pct(g, 0)} a year</b>; it has grown <b>${pct(c.rec, 0)}</b> lately. ` + (g < c.rec - 0.05 ? 'The market expects a slowdown.' : g > c.rec + 0.03 ? 'It needs things to go well.' : 'Fair if it keeps that up.'));
+    out.push(c.whatIf
+      ? `At ${$p(c.price)}, the price would bet on <b>${pct(g, 0)} a year</b>; it has grown <b>${pct(c.rec, 0)}</b> lately. ` + (g < c.rec - 0.05 ? 'That price assumes a slowdown.' : g > c.rec + 0.03 ? 'It would need things to go well.' : 'Fair if it keeps that up.')
+      : `The price bets on <b>${pct(g, 0)} a year</b>; it has grown <b>${pct(c.rec, 0)}</b> lately. ` + (g < c.rec - 0.05 ? 'The market expects a slowdown.' : g > c.rec + 0.03 ? 'It needs things to go well.' : 'Fair if it keeps that up.'));
   return out.join('<br>');
 }
 function plainSummary(c) {
@@ -244,12 +253,13 @@ function render(c, prev, next) {
     </div>
   </div>
   ${whyBanner(c)}
-  <section class="card plain"><h2>In plain English</h2><p>${shortSummary(c)}</p>
-    ${lk(c) && c.mcap ? lemon(`A stand that made $100 last year would cost <b>${L$(c.mcap * lk(c))}</b>. The <a href="learn.html">example stand</a> cost $1,000.`) : ''}
+  <div class="wib" id="wib" hidden></div>
+  <section class="card plain"><h2 data-wi>In plain English</h2><p id="sump">${shortSummary(c)}</p>
+    <div id="sumlem">${lk(c) && c.mcap ? lemon(`A stand that made $100 last year would cost <b>${L$(c.mcap * lk(c))}</b>. The <a href="learn.html">example stand</a> cost $1,000.`) : ''}</div>
     ${why('sum', `<p>${plainSummary(c)}</p>`)}</section>
   <section class="tiles" aria-label="Key numbers" id="tiles">
-    <div class="card tile"><div class="k">${L('yld')}${I('yld')}</div><div class="v">${plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld)}</div><div class="d">${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.max(0, Math.round((N + 1 - WR) / N * 100))}% of the list</div><div class="d" style="display:none">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
-    <div class="card tile"><div class="k">${L('pfcf')}${I('pfcf')}</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'}</div><div class="d">${c.fcf > 0 ? money(c.fcf) + (plain ? ' of cash a year' : ' free cash flow') : (plain ? 'never, at today’s cash' : 'negative free cash flow')}</div></div>
+    <div class="card tile" id="t-yld"><div class="k">${L('yld')}${I('yld')}</div><div class="v">${plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld)}</div><div class="d">${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.max(0, Math.round((N + 1 - WR) / N * 100))}% of the list</div><div class="d" style="display:none">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
+    <div class="card tile" id="t-pfcf"><div class="k">${L('pfcf')}${I('pfcf')}</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'}</div><div class="d">${c.fcf > 0 ? money(c.fcf) + (plain ? ' of cash a year' : ' free cash flow') : (plain ? 'never, at today’s cash' : 'negative free cash flow')}</div></div>
     <div class="card tile"><div class="k">${L('margin')}${I('margin')}</div><div class="v">${plain && c.margin != null ? pc(c.margin) + '¢' : pl(c.margin)}</div><div class="d">${plain ? 'of every $1 of sales' : 'after stock comp' + (c.sbc ? ' (' + pl(c.sbc) + ' of revenue)' : '')}</div></div>
     <div class="card tile"><div class="k">${L('roc')}${I('roc')}</div><div class="v">${pl(c.roc, 0)}</div><div class="d">${plain ? 'a year, on what’s been put in' : 'FCF ÷ (equity + debt)'}</div></div>
     <div class="card tile"><div class="k">${L('shares')}${I('shares')}</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? (plain ? ': buying back its own shares' : ', from buybacks') : c.shares > 0.01 ? (plain ? ': issuing new shares' : ', dilution') : ''}</div></div>
@@ -259,7 +269,7 @@ function render(c, prev, next) {
   <div class="cols">
     <div class="main">
       <section class="card sec">
-        <h2>${plain ? 'What is the price betting on?' : 'What is the price assuming?'}</h2>
+        <h2 data-wi>${plain ? 'What is the price betting on?' : 'What is the price assuming?'}</h2>
         <div class="scale" id="scale"></div>
         <div class="ticks" id="ticks"></div>
         <div class="verdict" id="verdict"></div>
@@ -269,8 +279,8 @@ function render(c, prev, next) {
           <button class="mathlink" data-k="rec">Show the math: ${L('rec')}</button>
         </div>
       </section>
-      <section class="card sec" id="needsec"><h2>${plain ? 'What would need to be true' : 'What the price requires'}</h2><div id="need"></div></section>
-      <section class="card sec" id="mossec"><h2>${plain ? 'What price leaves room for error?' : 'Margin of safety'}</h2><div id="mos"></div></section>
+      <section class="card sec" id="needsec"><h2 data-wi>${plain ? 'What would need to be true' : 'What the price requires'}</h2><div id="need"></div></section>
+      <section class="card sec" id="mossec"><h2 data-wi>${plain ? 'What price leaves room for error?' : 'Margin of safety'}</h2><div id="mos"></div></section>
       <section class="card sec"><h2>${plain ? 'The drop: news or mood?' : 'Price move vs. cash move'}</h2><div id="drop"></div></section>
       <section class="card sec">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>${plain ? 'Spare cash each year' : 'Free cash flow'}</h2><span class="muted" style="font-size:13px">${plain ? 'after paying for everything, including stock pay' : 'after stock-based comp'}</span></div>
@@ -283,7 +293,7 @@ function render(c, prev, next) {
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px"><h2>${plain ? 'Share price lately' : 'Price trend'}</h2><span class="muted" style="font-size:13px" id="sparkcap"></span></div>
         <svg viewBox="0 0 300 90" width="100%" role="img" id="spark"></svg>
       </section>
-      <section class="card sec"><h2 style="margin-bottom:10px">${plain ? 'Profit vs. cash' : 'P/E vs. P/FCF'}</h2><div id="pe"></div></section>
+      <section class="card sec"><h2 style="margin-bottom:10px" data-wi>${plain ? 'Profit vs. cash' : 'P/E vs. P/FCF'}</h2><div id="pe"></div></section>
       <section class="card sec">
         <h2 style="margin-bottom:4px">${plain ? 'Try your own assumptions' : 'Assumptions'}</h2>
         ${plain ? '<p class="muted" style="margin:0 0 12px;font-size:12.5px">Move these and watch the blue “price’s bet” change.</p>' : '<div style="height:8px"></div>'}
@@ -297,7 +307,7 @@ function render(c, prev, next) {
         <button class="btn" id="reset" style="margin-top:12px;height:32px;font-size:13px">Reset</button>
       </section>
       <section class="card sec">
-        <h2>How sensitive is it?</h2>
+        <h2 data-wi>How sensitive is it?</h2>
         <p class="muted" style="margin:0 0 10px;font-size:12.5px">${plain ? 'The price’s bet if you demanded a different return (rows) or expected different long-run growth (columns)' : 'Growth the price implies under other assumptions'}</p>
         <table class="sens" id="sens"></table>
       </section>
@@ -341,7 +351,6 @@ function render(c, prev, next) {
   rr.oninput = () => { st.r = +rr.value / 100; update(c); };
   gt.oninput = () => { st.gt = +gt.value / 100; update(c); };
   document.getElementById('reset').onclick = () => { st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 }; base.value = st.base; rr.value = (st.r * 100).toFixed(2); gt.value = (st.gt * 100).toFixed(1); update(c); };
-  document.getElementById('pe').innerHTML = peHTML(c);
   document.getElementById('drop').innerHTML = dropHTML(c);
   update(c);
   if (!sameCo) window.scrollTo(0, 0);
@@ -349,8 +358,10 @@ function render(c, prev, next) {
 
 let resizeT;
 window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (window.__cc) update(window.__cc); }, 150); });
-function update(c) {
-  window.__cc = c;
+function update(c0, fromZone) {
+  window.__cc = c0;
+  const c = withPrice(c0), wi = !!c.whatIf;
+  PRW = wi ? `a ${$p(c.price)} price` : 'today’s price'; PRWc = wi ? `At ${$p(c.price)}, the price` : 'Today’s price';
   const f0 = c.bases[st.base].fcf, ev = c.mcap - c.net, rTot = st.r + (c.premium || 0);
   const g = implied(f0, ev, rTot, st.gt), rec = c.rec;
   // the scale runs from −10% to +30% unless this company's numbers fall outside it
@@ -375,19 +386,21 @@ function update(c) {
   const at = `At a ${pl(rTot, 2)} ${CC.mode === 'plain' ? 'return you’d demand' : 'required return'}${c.premium ? ` (including ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')})` : ''}`;
   let v;
   if (!isFinite(g)) v = `${at}, the price can’t be explained by any plausible growth rate from this starting cash flow. Try another starting point.`;
-  else if (g < 0) v = `${at}, today’s price assumes free cash flow <b>shrinks about ${Math.abs(g * 100).toFixed(1)}% a year</b> for a decade. The business has grown it ${pct(rec)} a year per share. The question for your research: is that slowdown likely, or is the market too pessimistic?`;
-  else if (rec != null && g < rec - 0.05) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, ${((rec - g) * 100).toFixed(1)} points below the ${pct(rec)} the business has delivered per share. The market expects a real slowdown.`;
-  else if (rec != null && g > rec + 0.03) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, faster than the ${pct(rec)} the business has delivered per share. The price already counts on acceleration.`;
-  else v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, roughly in line with the ${pct(rec)} the business has delivered per share. The price looks fair if that record holds.`;
+  else if (g < 0) v = `${at}, ${PRW} assumes free cash flow <b>shrinks about ${Math.abs(g * 100).toFixed(1)}% a year</b> for a decade. The business has grown it ${pct(rec)} a year per share. The question for your research: is that slowdown likely, or is the market too pessimistic?`;
+  else if (rec != null && g < rec - 0.05) v = `${at}, ${PRW} assumes <b>${pct(g)} a year</b>, ${((rec - g) * 100).toFixed(1)} points below the ${pct(rec)} the business has delivered per share. The market expects a real slowdown.`;
+  else if (rec != null && g > rec + 0.03) v = `${at}, ${PRW} assumes <b>${pct(g)} a year</b>, faster than the ${pct(rec)} the business has delivered per share. The price already counts on acceleration.`;
+  else v = `${at}, ${PRW} assumes <b>${pct(g)} a year</b>, roughly in line with the ${pct(rec)} the business has delivered per share. The price looks fair if that record holds.`;
   if (!(f0 > 0)) v = `This company’s starting cash flow is zero or negative, so no growth rate from it can explain the price. The price is a bet that it becomes a steady cash maker. Try another starting point if there is one.`;
   const short = !(f0 > 0) ? 'No spare cash to start from, so no growth rate explains the price.'
     : !isFinite(g) ? 'No sensible growth rate explains this price.'
-    : `Price bets on <b>${pct(g)} a year</b>` + (rec != null ? `; it has grown <b>${pct(rec)}</b>. ` + (g < rec - 0.05 ? 'The market expects a slowdown.' : g > rec + 0.03 ? 'It counts on faster growth.' : 'Fair if that holds.') : '.');
+    : `${wi ? `At ${$p(c.price)}, the price would bet on` : 'Price bets on'} <b>${pct(g)} a year</b>` + (rec != null ? `; it has grown <b>${pct(rec)}</b>. ` + (g < rec - 0.05 ? (wi ? 'That price assumes a slowdown.' : 'The market expects a slowdown.') : g > rec + 0.03 ? 'It counts on faster growth.' : 'Fair if that holds.') : '.');
   document.getElementById('verdict').innerHTML = short;
   document.getElementById('betwhy').innerHTML = why('bet', `<p>${CC.mode === 'plain' ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew per share over the last few years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p><p>${v}</p>
     <p class="faint">${CC.mode === 'plain' ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>`);
   document.getElementById('need').innerHTML = needHTML(c, f0, g, rTot, st.gt);
-  zonesRender(c, f0, rTot, st.gt);
+  document.getElementById('pe').innerHTML = peHTML(c);
+  if (fromZone) zonesSet(ZP != null ? ZP : c0.price); else zonesRender(c0, c0.bases[st.base].fcf, rTot, st.gt);
+  whatIfChrome(c0, c, g);
   document.getElementById('mos').innerHTML = mosHTML(c, f0, g, rTot, st.gt);
   document.getElementById('rtext').textContent = pl(st.r, 2) + (c.premium ? ' + ' + pl(c.premium, 1) : '');
   const R = META.rates || {};
@@ -420,6 +433,16 @@ document.addEventListener('click', e => {
 // Against the list: cash back per $1 at a given price vs the list's top-third and bottom-third cut-offs.
 // On its own: the growth a given price needs (reverse DCF on the current assumptions) vs 0% and its record.
 let ZP = null, ZC = null;
+// What-if price: when the slider is off today's price, every price-based section is worked out at that price
+const isWI = c => ZP != null && Math.abs(ZP / c.price - 1) > 0.002;
+function withPrice(c) {
+  if (!isWI(c)) return c;
+  const k = ZP / c.price;
+  return { ...c, price: ZP, mcap: c.mcap * k, mcapRaw: c.mcapRaw * k, yld: c.yld != null ? c.yld / k : null,
+    pfcf: c.pfcf != null ? c.pfcf * k : null, pe: c.pe != null ? c.pe * k : null, whatIf: true, realPrice: c.price };
+}
+const $p = p => '$' + (p >= 100 ? Math.round(p).toLocaleString('en-US') : p.toFixed(2));
+let PRW = 'today’s price', PRWc = 'Today’s price';
 function zoneModel(c, f0, r, gt) {
   const ys = COS.map(x => x.yld).filter(x => x != null).sort((a, b) => b - a), N = ys.length;
   const c1 = ys[Math.floor(N / 3) - 1], c2 = ys[Math.floor(2 * N / 3) - 1], P = c.price, sh = c.mcapRaw / c.price;
@@ -463,10 +486,34 @@ function zonesRender(c, f0, r, gt) {
     ${rows.join('')}<p class="lead" id="zt" style="margin:12px 0 0"></p>
     <p class="caveat">${m.abs ? `“On its own” uses the return you’d demand (${pl(r, 1)}) and ${c.rec != null ? `a record that covers about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years, capped at 20%` : 'no growth record'}; it moves with “${plain ? 'Try your own assumptions' : 'Assumptions'}”.` : ''} “Against the list” moves as other prices move.</p>`;
   const zp = document.getElementById('zp');
-  zp.oninput = () => { ZP = +zp.value; zonesSet(+zp.value); };
-  document.getElementById('zreset').onclick = () => { ZP = null; zp.value = m.P; zonesSet(m.P); };
+  zp.oninput = () => { ZP = +zp.value; update(window.__cc, true); };
+  document.getElementById('zreset').onclick = () => { ZP = null; zp.value = m.P; update(window.__cc, true); };
   zonesSet(p0);
   if (ac && m.abs) { const [a] = zLabelAbs(m, m.P); ac.className = 'cue ' + a[0]; ac.textContent = (plain ? 'on its own: ' : 'Absolute: ') + a[1]; ac.style.display = ''; } else if (ac) ac.style.display = 'none';
+}
+function whatIfChrome(c0, c, g) {
+  const wi = !!c.whatIf, plain = CC.mode === 'plain', bar = document.getElementById('wib');
+  if (bar) {
+    bar.hidden = !wi;
+    if (wi) {
+      const d = (c.price / c0.price - 1) * 100;
+      bar.innerHTML = `<span><span class="wid"></span><span class="wil">Showing this page at</span><span class="wis">What-if:</span> <b>${$p(c.price)}</b> <span class="muted">(${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%<span class="wil"> from today’s ${$p(c0.price)}</span>)</span></span><button type="button" class="zbtn" id="wiback"><span class="wil">Back to today</span><span class="wis">Today</span></button>`;
+      document.getElementById('wiback').onclick = () => { ZP = null; const z = document.getElementById('zp'); if (z) z.value = c0.price; update(c0, true); };
+    }
+  }
+  document.querySelectorAll('[data-wi]').forEach(h => {
+    let t = h.querySelector('.wit');
+    if (wi) { if (!t) { t = document.createElement('span'); t.className = 'wit'; h.appendChild(t); } t.textContent = 'at ' + $p(c.price); }
+    else if (t) t.remove();
+  });
+  const N = COS.length, R0 = META.rates || {}, WR = c0.onList !== false && !wi ? c0.rank : 1 + COS.filter(x => x.t !== c0.t && x.yld > c.yld).length;
+  const ty = document.getElementById('t-yld'), tp = document.getElementById('t-pfcf');
+  if (ty) { ty.classList.toggle('wi', wi); ty.querySelector('.v').textContent = plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld);
+    ty.querySelector('.d').textContent = `${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.max(0, Math.round((N + 1 - WR) / N * 100))}% of the list`; }
+  if (tp) { tp.classList.toggle('wi', wi); tp.querySelector('.v').textContent = c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'; }
+  const sp = document.getElementById('sump'); if (sp) sp.innerHTML = shortSummary(wi ? { ...c, impl: g } : c0);
+  const sl = document.getElementById('sumlem'); if (sl) sl.innerHTML = lk(c) && c.mcap ? lemon(`A stand that made $100 last year would cost <b>${L$(c.mcap * lk(c))}</b>. The <a href="learn.html">example stand</a> cost $1,000.`) : '';
+  const mb = document.getElementById('math'); if (mb && mathKey) fillMath(mb, c, mathKey);
 }
 function zonesSet(p) {
   const m = ZC, plain = CC.mode === 'plain'; if (!m) return;
@@ -493,8 +540,8 @@ function needHTML(c, f0, g, r, gt) {
   const near = others.length ? others.reduce((a, b) => Math.abs(Math.log(b.fcf / c10)) < Math.abs(Math.log(a.fcf / c10)) ? b : a) : null;
   const peer = near && Math.abs(Math.log(near.fcf / c10)) < Math.log(1.5) ? near : null;
   const rev = c.m && c.m.revenue ? c.m.revenue / 1e9 : null, rev10 = rev ? rev * Math.pow(1 + g, 10) : null;
-  let txt = g <= 0 ? `Today’s price only needs ${esc(c.name)}’s spare cash to <b>${g < 0 ? 'shrink about ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. If it simply keeps making ${money(f0)} a year, the price looks low.`
-    : `For today’s price to make sense, ${esc(c.name)}’s spare cash has to grow from ${money(f0)} to about <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.`
+  let txt = g <= 0 ? `${PRWc} only needs ${esc(c.name)}’s spare cash to <b>${g < 0 ? 'shrink about ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. If it simply keeps making ${money(f0)} a year, the price looks low.`
+    : `For ${PRW} to make sense, ${esc(c.name)}’s spare cash has to grow from ${money(f0)} to about <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.`
       + (rev10 ? ` If it keeps the same share of each sales dollar, sales would have to reach about <b>${money(rev10)} a year</b>, up from ${money(rev)}.` : '')
       + (big && c10 > big.fcf * 1.05 ? ` For scale, that’s more than the biggest cash maker on our list (${esc(big.name)}) makes today: ${money(big.fcf)}.`
          : peer && g > 0 ? ` For scale, that’s about what ${esc(peer.name)} makes today (${money(peer.fcf)}).` : '');
@@ -561,7 +608,7 @@ function mosHTML(c, f0, g, r, gt) {
   const plain = CC.mode === 'plain', sh = c.mcapRaw / c.price, net = c.net * 1e9;
   if (!(f0 > 0)) return '<p class="muted">There’s no spare cash to value yet, so we can’t work out a price from it.</p>';
   const at = x => (pv(f0, x, r, gt) * 1e9 + net) / sh;   // f0 is in $ billions
-  const pts = [['Today’s price', c.price, 'acc']];
+  const pts = [[c.whatIf ? 'Your price' : 'Today’s price', c.price, 'acc']];
   if (c.rec != null) pts.push([`If it grows like its past (${pct(c.rec, 0)}/yr)`, at(c.rec), 'b3']);
   pts.push([`If its cash never grows`, at(0), 'b1']);
   const vals = pts.map(p => p[1]).filter(v => isFinite(v)), mn = Math.min(0, ...vals), mx = Math.max(...vals) * 1.08;
@@ -571,14 +618,14 @@ function mosHTML(c, f0, g, r, gt) {
   let txt = '';
   if (pPast != null) txt = pPast >= c.price
     ? `If ${esc(c.name)} keeps growing like its past, the cash is worth about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. today. That gap is your cushion: you’d still do fine if things go somewhat worse than its past.`
-    : `To leave room for error you’d want to pay less than what the cash is worth. Even assuming it keeps growing like its past, we get about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. today. So at today’s price there’s no cushion: you need it to beat its own record.`;
+    : `To leave room for error you’d want to pay less than what the cash is worth. Even assuming it keeps growing like its past, we get about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. ${c.whatIf ? 'that price' : 'today'}. So at ${PRW} there’s no cushion: you need it to beat its own record.`;
   txt += ` If its cash never grew again, it would be worth about $${at(0).toFixed(2)}.`;
   const k = lk(c), worth = x => (pv(f0, x, r, gt) + c.net) * k;
   const lm = !k ? '' : (c.rec != null ? `If the stand keeps growing like it has, all the cash it will ever make is worth about <b>${L$(worth(c.rec))}</b> to you today. You’d be paying ${L$(c.mcap * k)}. `
       + (worth(c.rec) >= c.mcap ? 'You’d get more than you pay for, a cushion in case things go a bit worse.' : 'You’d be paying more than that, so you’re counting on it doing even better than before.') : '')
     + ` If it never grew, the stand would be worth about ${L$(worth(0))}.`;
   const head = pPast == null ? `Worth about <b>$${at(0).toFixed(2)}</b> a share if its cash never grows.`
-    : `Worth about <b>$${pPast.toFixed(2)}</b> at its past pace, ` + (pPast >= c.price ? `<b>${d(pPast).replace('+', '')} above</b> today’s $${c.price.toFixed(2)}.` : `<b>${d(pPast).replace('−', '')} below</b> today’s $${c.price.toFixed(2)}: no cushion.`);
+    : `Worth about <b>$${pPast.toFixed(2)}</b> at its past pace, ` + (pPast >= c.price ? `<b>${d(pPast).replace('+', '')} above</b> ${c.whatIf ? 'a' : 'today’s'} $${c.price.toFixed(2)}${c.whatIf ? ' price' : ''}.` : `<b>${d(pPast).replace('−', '')} below</b> ${c.whatIf ? 'a' : 'today’s'} $${c.price.toFixed(2)}${c.whatIf ? ' price' : ''}: no cushion.`);
   const ls = !k || c.rec == null ? '' : `Pay ${L$(c.mcap * k)} for a stand worth about <b>${L$(worth(c.rec))}</b> if it keeps growing.`;
   return `<p class="lead">${head}</p>${lemon(ls)}
     <div class="ladder"><div class="ln"></div>${pts.map(([lab, v, cls], k) => {
@@ -757,7 +804,7 @@ function mathHTML(c, k) {
       rows += `<tr><td>Year ${t}</td><td>${Bs(cash)}</td><td>${df.toFixed(3)}</td><td>${Bs(pv)}</td></tr>`; }
     const term = cash * (1 + gt) / (r - gt), tdf = 1 / Math.pow(1 + r, 10), tpv = term * tdf; tot += tpv;
     const tryG = x => { let v = 0, f = base; for (let t = 1; t <= 10; t++) { f *= 1 + x; v += f / Math.pow(1 + r, t); } return v + f * (1 + gt) / (r - gt) / Math.pow(1 + r, 10); };
-    return `<div class="formula">${L('impl')} <span class="eq">=</span> the yearly growth rate that makes the value of all future cash equal today’s price</div><ol class="steps">
+    return `<div class="formula">${L('impl')} <span class="eq">=</span> the yearly growth rate that makes the value of all future cash equal ${c.whatIf ? 'the price' : 'today’s price'}</div><ol class="steps">
     <li><b>What the price has to justify:</b> company value ${nc >= 0 ? 'minus its spare cash (cash minus debt), which you’d get with it' : 'plus its net debt, which a buyer takes on too'}.
       <div class="calc">${Bs(c.mcapRaw)} ${nc >= 0 ? '−' : '+'} ${Bs(Math.abs(nc))} = <b>${Bs(target)}</b></div></li>
     ${baseStep(c)}<li><b>Start from this year’s cash</b> (${Bs(base)}${c.baseKind !== 'latest' ? ', the adjusted figure above' : ''}) and grow it at a guessed rate for 10 years, then ${P(gt, 0)} a year forever.</li>
@@ -767,9 +814,15 @@ function mathHTML(c, k) {
       <table class="dcf"><thead><tr><th>Year</th><th>Cash that year</th><th>× discount</th><th>= worth today</th></tr></thead><tbody>${rows}
       <tr><td>After year 10 (forever)</td><td>${Bs(term)}</td><td>${tdf.toFixed(3)}</td><td>${Bs(tpv)}</td></tr>
       <tr class="tot"><td>Total</td><td></td><td></td><td>${Bs(tot)}</td></tr></tbody></table>
-      So today’s price makes sense only if cash grows about <b>${SP(g)} a year</b>. Compare that with its ${L('rec').toLowerCase()} of ${SP(c.rec)}.</li></ol>
+      So ${c.whatIf ? `a ${$p(c.price)} price` : 'today’s price'} makes sense only if cash grows about <b>${SP(g)} a year</b>. Compare that with its ${L('rec').toLowerCase()} of ${SP(c.rec)}.</li></ol>
       <p class="faint" style="font-size:12.5px;margin:0 0 12px">The “forever” value uses the growing-perpetuity formula: cash in year 11 ÷ (return − long-run growth). Spreadsheets can do the guess-and-check for you with Goal Seek.</p>`; }
   return '';
+}
+function fillMath(box, c, k) {
+  box.innerHTML = `<div class="mhead"><div><h2 style="margin:0 0 2px">How “${CC.L(k)}” is calculated${c.whatIf ? ` <span class="wit">at ${$p(c.price)}</span>` : ''}</h2>
+      <p class="muted" style="margin:0;font-size:13px">Using ${esc(c.name)}’s own figures from its annual (10-K) and quarterly (10-Q) reports${c.whatIf ? `, at a what-if price of ${$p(c.price)}` : ''}.</p></div>
+      <button class="mclose" aria-label="Close">×</button></div>${mathHTML(c, k)}`;
+  if (box.__btn) box.querySelector('.mclose').onclick = () => toggleMath(window.__cc, box.__btn);
 }
 function toggleMath(c, btn) {
   const k = btn.dataset.k;
@@ -780,13 +833,12 @@ function toggleMath(c, btn) {
   mathKey = k;
   box = document.createElement('section');
   box.id = 'math'; box.className = 'card'; box.setAttribute('aria-label', 'How ' + CC.L(k) + ' is calculated');
-  box.innerHTML = `<div class="mhead"><div><h2 style="margin:0 0 2px">How “${CC.L(k)}” is calculated</h2>
-      <p class="muted" style="margin:0;font-size:13px">Using ${esc(c.name)}’s own figures from its annual (10-K) and quarterly (10-Q) reports.</p></div>
-      <button class="mclose" aria-label="Close">×</button></div>${mathHTML(c, k)}`;
+  fillMath(box, withPrice(c), k);
   // open it right where the link was clicked: under the row of numbers, or inside the price chart card
   const inBet = btn.closest('#betlinks');
   if (inBet) inBet.insertAdjacentElement('afterend', box); else document.getElementById('tiles').insertAdjacentElement('afterend', box);
   btn.setAttribute('aria-expanded', 'true');
+  box.__btn = btn;
   box.querySelector('.mclose').onclick = () => toggleMath(c, btn);
   const r = box.getBoundingClientRect();
   if (r.top < 0 || r.top > innerHeight * 0.6) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
