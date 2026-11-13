@@ -36,6 +36,17 @@ table.rank td:nth-child(3){max-width:150px;overflow:hidden;text-overflow:ellipsi
 .isnt div{padding:14px 18px;font-size:14px;line-height:1.5;color:var(--ink2)}.isnt div+div{border-left:1px solid var(--line)}
 .isnt b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
 @media (max-width:820px){.isnt{grid-template-columns:1fr}.isnt div+div{border-left:0;border-top:1px solid var(--line)}}
+.mkt{padding:18px 22px}.mkt .mh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.mkt h2{margin:0;font-size:16px}
+.mkt .ml{margin:8px 0 12px;font-size:15px;line-height:1.55}
+.mtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.mt{background:var(--bg);border-radius:10px;padding:10px 14px}.mt .k{font-size:12px;color:var(--muted)}.mt .v{font-size:22px;font-weight:600;margin:2px 0}.mt .d{font-size:12px;color:var(--muted)}
+.mkc{display:block;overflow:visible}.mkc .gl{stroke:var(--line)}.mkc .ax{font-size:12px;fill:var(--faint)}
+.mkc .my{fill:none;stroke:var(--accent);stroke-width:2}.mkc .rf{fill:none;stroke:var(--faint);stroke-width:1.5;stroke-dasharray:4 3}
+.mkc .now{fill:var(--accent);stroke:var(--card);stroke-width:2}.mkc .el{font-size:12px;font-weight:600}.mkc .el.acc{fill:var(--accent)}.mkc .el.mut{fill:var(--muted);font-weight:400}
+.mcap{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+@media (max-width:600px){.mkt{padding:16px}.mtiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mt{padding:8px 10px}.mt .k{font-size:11.5px;line-height:1.3}.mt .v{font-size:18px}.mt .d{font-size:11.5px}}
+.cue{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px}
+.cue.cheap{background:var(--accent-bg);color:var(--accent-ink)}.cue.mid{background:var(--chip);color:var(--ink2)}.cue.pricey{background:var(--warn-bg);color:var(--warn-ink)}
 </style>
 <script>__MODEJS__</script>
 </head>
@@ -53,6 +64,7 @@ __NAV__
   <section class="kpis" aria-label="Key numbers" id="kpis"></section>
   <div class="card isnt" id="isnt"></div>
   <div class="card note" id="regime" style="margin-top:12px"></div>
+  <section class="card mkt" id="market" style="margin-top:12px" aria-labelledby="mkt-h"></section>
 
   <div class="bar">
     <div class="l" role="group" aria-label="Lists" id="chips"></div>
@@ -136,6 +148,49 @@ document.getElementById('lede').textContent = plain
 }
 }
 
+// market check: is the whole list expensive, against bonds and against its own history?
+function drawMarket() {
+  const M = META.market, box = document.getElementById('market');
+  if (!M) { box.style.display = 'none'; return; }
+  const plain = CC.mode === 'plain', H = M.hist, my = M.median_yield, rf = M.rf;
+  const c = x => (x * 100).toFixed(1) + '¢', P = x => Math.round(x * 100) + '%';
+  let tag = '', line = '';
+  if (H) {
+    const p = H.pct_cheaper_than;
+    tag = p < 0.25 ? ['pricey', 'Expensive vs. its history'] : p > 0.75 ? ['cheap', 'Cheap vs. its history'] : ['mid', 'About normal vs. its history'];
+    line = p < 0.5 ? `Pricier than in <b>${P(1 - p)}</b> of months since ${H.dates[0].slice(0, 4)}` : `Cheaper than in <b>${P(p)}</b> of months since ${H.dates[0].slice(0, 4)}`;
+  }
+  const vsBond = rf == null ? '' : my < rf * 0.95 ? `less than a safe bond’s ${c(rf)}` : my > rf * 1.05 ? `more than a safe bond’s ${c(rf)}` : `about the same as a safe bond (${c(rf)})`;
+  const tile = (k, v, d) => `<div class="mt"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+  box.innerHTML = `<div class="mh"><h2 id="mkt-h">${plain ? 'Is the whole market expensive?' : 'Market check'}</h2>${tag ? `<span class="cue ${tag[0]}">${tag[1]}</span>` : ''}</div>
+    <p class="ml">${plain ? 'The typical company on the list pays' : 'Median FCF yield of the list:'} <b>${c(my)} per $1</b>${vsBond ? ', ' + vsBond : ''}.${line ? ' ' + line + '.' : ''}</p>
+    <div class="mtiles">${tile(plain ? 'Typical cash back per $1' : 'Median FCF yield', c(my), rf != null ? `safe bond ${c(rf)}` : '')}
+      ${H ? tile(plain ? `Typical since ${H.dates[0].slice(0, 4)}` : `Median since ${H.dates[0].slice(0, 4)}`, c(H.typical), `range ${c(H.low)}–${c(H.high)}`) : ''}
+      ${M.above_record != null ? tile(plain ? 'Priced for more than their record' : 'Bet above growth record', P(M.above_record), H && H.above_record ? `typically ${P(median(H.above_record.filter(x => x != null)))}` : `of ${M.n} companies`) : ''}</div>
+    ${H ? `<div id="mchart"></div><p class="mcap">${plain ? 'Blue: the typical company’s cash back per $1 each month. Grey: what a safe 10-year government bond paid. Lower blue = stocks cost more for the same cash.' : 'Median FCF yield of the point-in-time quality universe each month vs. the 10-year Treasury yield.'} Same companies-and-rules as the list, from the <a href="backtest/">backtest</a>; it can’t say what happens next.</p>` : ''}`;
+  if (H) chartMarket(H, my, rf);
+}
+const median = a => { const s = a.slice().sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
+function chartMarket(H, my, rf) {
+  const el = document.getElementById('mchart'), W = Math.max(300, Math.min(900, el.clientWidth || 600)), Ht = W < 520 ? 170 : 190;
+  const L = 38, R = 64, T = 10, B = 24, ds = H.dates.concat([META.asof]), ys = H.median_yield.concat([my]), rs = (H.rf || []).concat([rf]);
+  const top = Math.ceil(Math.max(...ys, ...rs.filter(x => x != null)) * 100 + 0.5) / 100, n = ds.length;
+  const X = i => L + i / (n - 1) * (W - L - R), Y = v => T + (1 - v / top) * (Ht - T - B);
+  const path = arr => arr.map((v, i) => v == null ? '' : `${i && arr[i - 1] != null ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  let g = '';
+  for (let v = 0; v <= top + 1e-9; v += 0.02) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" class="gl"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" class="ax">${Math.round(v * 100)}¢</text>`;
+  const yrs = [...new Set(ds.map(d => d.slice(0, 4)))], every = W < 520 ? 4 : 2;
+  yrs.forEach((y, k) => { if (k % every) return; const i = ds.findIndex(d => d.startsWith(y)); g += `<text x="${X(i)}" y="${Ht - 6}" text-anchor="middle" class="ax">${y}</text>`; });
+  const tip = ds.map((d, i) => `<rect x="${X(i) - (W - L - R) / n / 2}" y="${T}" width="${(W - L - R) / n}" height="${Ht - T - B}" fill="transparent" data-tip="${d.slice(0, 7)}: typical ${(ys[i] * 100).toFixed(1)}¢${rs[i] != null ? ', bond ' + (rs[i] * 100).toFixed(1) + '¢' : ''}"/>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" width="100%" class="mkc" role="img" aria-label="Typical cash back per dollar each month since ${ds[0].slice(0, 4)} against the safe bond yield; today ${(my * 100).toFixed(1)} cents.">
+    ${g}<path d="${path(rs)}" class="rf"/><path d="${path(ys)}" class="my"/>
+    <circle cx="${X(n - 1)}" cy="${Y(my)}" r="4.5" class="now"/>
+    <text x="${W - R + 8}" y="${Y(my) + 4}" class="el acc">${(my * 100).toFixed(1)}¢ today</text>
+    ${rf != null ? `<text x="${W - R + 8}" y="${Y(rf) + (Math.abs(Y(rf) - Y(my)) < 16 ? (Y(rf) > Y(my) ? 16 : -8) : 4)}" class="el mut">bond ${(rf * 100).toFixed(1)}¢</text>` : ''}${tip}</svg>`;
+}
+drawMarket();
+let mt; window.addEventListener('resize', () => { clearTimeout(mt); mt = setTimeout(drawMarket, 150); });
+
 const LISTS = [['leaders', c => c.lists.leaders], ['all', c => true], ['drop', c => c.lists.drop], ['gap', c => c.lists.gap], ['insiders', c => c.lists.insiders]];
 const COLS = [['rank', c => c.rank, 1], ['t', c => c.t, 1], ['sector', c => c.sector, 1], ['yld', c => c.yld, -1], ['pfcf', c => c.pfcf, 1],
   ['margin', c => c.margin, -1], ['rec', c => c.rec, -1], ['impl', c => c.impl, 1], ['mcap', c => c.mcap, -1], ['m1', c => c.m1, 1], ['notes', null, 0]];
@@ -205,7 +260,7 @@ function render() {
 }
 renderTop();
 render();
-CC.on(() => { renderTop(); render(); });
+CC.on(() => { renderTop(); render(); drawMarket(); });
 </script>
 </body>
 </html>

@@ -14,6 +14,7 @@ import csv
 import json
 import os
 import math
+import statistics
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -194,6 +195,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
     leaders = sorted(priced, key=lambda c: -c["fcf_yield"])[:max(1, len(priced) // 5)] if priced else []
     funnel["yield_leaders"] = len(leaders)
     regime = load_regime(rates["rf"])
+    market = market_check(priced, rates["rf"])
 
     # 7. Track record: log today's flags, then measure every open entry against the S&P 500
     ledger = T.load_ledger(ledger_path)
@@ -221,7 +223,7 @@ def run(fetcher, asof: date, out_dir: Path, cache_dir: Path | None, limit: int |
 
     meta = {"asof": asof.isoformat(), "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "config": {k: getattr(C, k) for k in dir(C) if k.isupper()}, "funnel": funnel, "market": meta_market,
-            "rates": rates, "track": track, "changes": changes, "regime": regime}
+            "rates": rates, "track": track, "changes": changes, "regime": regime, "market": market}
     write_outputs(out_dir, meta, shortlist, triggered_only, gap_only, priced, leaders, lookup_rows)
     (out_dir / "track").mkdir(exist_ok=True)
     T.write_csv(out_dir / "track" / "track_record.csv", ledger)
@@ -387,6 +389,29 @@ def load_regime(rf, path: Path = Path("backtest/results.json")) -> dict | None:
             "hi_years": hi_years, "start": b["rates"]["dates"][0][:4],
             "drop_only_median": pick("trigger_only", "median"), "drop_only_beat": pick("trigger_only", "beat"),
             "gap_drop_median": pick("gap_trigger", "median"), "gap_drop_mean": pick("gap_trigger", "mean")}
+
+
+def market_check(priced, rf, path: Path = Path("backtest/results.json")) -> dict | None:
+    """Is the whole list expensive? Today's typical cash back per $1 and the share of companies priced for
+    more growth than their record, next to the same figures for every month since the backtest starts."""
+    ys = sorted(c["fcf_yield"] for c in priced if c.get("fcf_yield") is not None)
+    if len(ys) < 20:
+        return None
+    both = [c for c in priced if c.get("implied_g") is not None and c.get("ref_g") is not None and math.isfinite(c["implied_g"])]
+    out = {"median_yield": round(statistics.median(ys), 4), "rf": rf, "n": len(ys),
+           "above_record": round(sum(c["implied_g"] > c["ref_g"] for c in both) / len(both), 3) if both else None}
+    try:
+        h = json.loads(path.read_text()).get("market") or {}
+    except (OSError, ValueError):
+        h = {}
+    my = [x for x in h.get("median_yield", []) if x is not None]
+    if len(my) >= 24:
+        srt = sorted(my)
+        out["hist"] = {"dates": h["dates"], "median_yield": h["median_yield"], "rf": h.get("rf"), "above_record": h.get("above_record"),
+                       "typical": round(statistics.median(my), 4), "low": min(my), "high": max(my),
+                       # share of past months when the typical company paid LESS cash per $1 than today (lower = pricier)
+                       "pct_cheaper_than": round(sum(x < out["median_yield"] for x in srt) / len(srt), 3)}
+    return out
 
 
 def quality_fail_reasons(fu) -> list[str]:

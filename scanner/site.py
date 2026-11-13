@@ -266,7 +266,7 @@ def build(data: dict, explorer_company) -> tuple[list, dict]:
         p["lists"]["leaders"] = r["ticker"] in leaders
         cos.append(p)
     m = data["meta"]
-    meta = {"asof": m["asof"], "funnel": m["funnel"], "rates": m.get("rates", {}), "regime": m.get("regime"),
+    meta = {"asof": m["asof"], "funnel": m["funnel"], "rates": m.get("rates", {}), "regime": m.get("regime"), "market": m.get("market"),
             "track": m.get("track", {}), "changes": m.get("changes", {}),
             "rules": {k: m["config"][k] for k in ("MIN_FCF_MARGIN", "MIN_MARKET_CAP_USD", "MIN_REVENUE_USD", "MIN_CASH_RETURN_ON_CAPITAL",
                                                   "MIN_POSITIVE_FCF_YEARS", "DROP_THRESHOLD", "DRAWDOWN_THRESHOLD", "MIN_CLUSTER_BUYERS",

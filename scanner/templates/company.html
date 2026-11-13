@@ -65,6 +65,20 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
 .why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
+.zones{margin-bottom:20px}.zones h2{margin-bottom:6px}
+.zs{display:flex;align-items:center;gap:12px;margin:8px 0 6px;font-size:13.5px;color:var(--muted)}.zs input{flex:1;accent-color:var(--accent)}
+.zs b{font-size:var(--fs-callout);color:var(--ink);min-width:64px;text-align:right}
+@media (max-width:600px){.zs{flex-wrap:wrap}.zs input{order:3;flex-basis:100%}.zs b{margin-left:auto}}
+.zbtn{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:4px 10px;font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.zl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px;margin:14px 0 6px}.zl b{font-weight:600;white-space:nowrap}
+.zr{position:relative;display:flex;height:28px;border-radius:8px;overflow:visible}
+.zr .z{display:flex;align-items:center;justify-content:center;font-size:var(--fs-label);font-weight:600;overflow:hidden;white-space:nowrap}
+.zr .z:first-child{border-radius:8px 0 0 8px}.zr .z:nth-child(3){border-radius:0 8px 8px 0}
+.z.cheap{background:var(--accent-bg);color:var(--accent-ink)}.z.mid{background:var(--chip);color:var(--ink2)}.z.pricey{background:var(--warn-bg);color:var(--warn-ink)}
+.zr .zm{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1.5px;background:var(--ink);border-radius:2px}
+.ztk{position:relative;height:16px;margin-top:3px;font-size:var(--fs-label);color:var(--muted)}.ztk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.ztk .edge{transform:none;color:var(--faint)}.ztk .edge.r{right:0}.ztk .edge.l{left:0}
+.zc{font-weight:700}.zc.cheap{color:var(--accent-ink)}.zc.mid{color:var(--ink2)}.zc.pricey{color:var(--warn-ink)}
 .lead{margin:6px 0 10px;font-size:15px;line-height:1.55;color:var(--ink)}
 .caveat{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
 .whyb{display:inline-flex;align-items:center;gap:4px;margin-top:12px;padding:0;border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;color:var(--accent);cursor:pointer}
@@ -107,7 +121,7 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 table.pe{width:100%;border-collapse:collapse;font-size:14px}table.pe td{padding:5px 0;border-top:1px solid var(--line)}table.pe td:last-child{text-align:right}
 table.pe tr:first-child td{border-top:0}
 @media (max-width:600px){.hbr,.dv{grid-template-columns:96px 1fr 52px}.lp{width:110px}}
-@media (max-width:820px){.cue{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px}
+.cue{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px}
 .cue.cheap{background:var(--accent-bg);color:var(--accent-ink)}.cue.mid{background:var(--chip);color:var(--ink2)}.cue.pricey{background:var(--warn-bg);color:var(--warn-ink)}
 </style>
 <script>__MODEJS__</script>
@@ -205,7 +219,7 @@ function whyBanner(c) {
 function render(c, prev, next) {
   if (cur !== c.t) st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 };
   const sameCo = cur === c.t; cur = c.t;
-  if (!sameCo) OPEN.clear();
+  if (!sameCo) { OPEN.clear(); ZP = null; }
   const plain = CC.mode === 'plain', L = CC.L, I = CC.info, N = COS.length, WR = wouldRank(c), cq = cue({ rank: WR });
   const R0 = META.rates || {};
   document.title = `${c.t} · ${c.name} · Cash Compounders`;
@@ -220,7 +234,7 @@ function render(c, prev, next) {
         <h1 class="h1" style="margin:0;font-size:34px">${c.t}</h1>
         <span style="font-size:18px;color:var(--ink2)">${esc(c.name)}</span>
         ${c.onList === false ? `<span class="tag warn" style="font-size:12.5px;padding:3px 10px">Not on the list</span>${c.yld != null ? `<span class="faint" style="font-size:13px">would rank #${WR} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>` : ''}` : `<span class="pill" style="padding:3px 10px">#${c.rank} of ${N} on ${plain ? 'cash per $1' : 'FCF yield'}</span>`}
-        <span class="cue ${cq[0]}" data-tip="Compared with the other ${N} strong cash businesses: cheap = top third on cash back per $1, pricey = bottom third." tabindex="0">${cq[1]}</span>
+        <span class="cue ${cq[0]}" data-tip="Compared with the other ${N} strong cash businesses: cheap = top third on cash back per $1, pricey = bottom third." tabindex="0">${plain ? 'vs. the list: ' : 'Relative: '}${cq[1]}</span><span class="cue" id="abscue" tabindex="0" data-tip="On its own: cheap = the price is fair even if its cash never grows; fair = it needs less growth than its record; pricey = it needs to beat its record."></span>
       </div>
       <div class="muted" style="font-size:14px;margin-top:6px">${esc(c.sector)}${c.sic ? ' · ' + esc(c.sic) : ''} ${tags ? ' &nbsp;' + tags : ''}</div>
     </div>
@@ -241,6 +255,7 @@ function render(c, prev, next) {
     <div class="card tile"><div class="k">${L('shares')}${I('shares')}</div><div class="v">${pct(c.shares)}</div><div class="d">a year${c.shares < 0 ? (plain ? ': buying back its own shares' : ', from buybacks') : c.shares > 0.01 ? (plain ? ': issuing new shares' : ', dilution') : ''}</div></div>
     <div class="card tile"><div class="k">${c.net < 0 ? (plain ? 'Debt minus cash' : 'Net debt') : (plain ? 'Cash minus debt' : 'Net cash')}${I('net')}</div><div class="v">${money(Math.abs(c.net))}</div><div class="d">${plain && c.net < 0 && c.fcf > 0 ? `about ${(-c.net / c.fcf).toFixed(1)} years of cash` : netNote}</div></div>
   </section>
+  <section class="card sec zones" aria-labelledby="zh"><h2 id="zh">${plain ? `What price would make ${esc(c.name.split(/[ ,]/)[0])} cheap?` : 'Price zones'}</h2><div id="zones"></div></section>
   <div class="cols">
     <div class="main">
       <section class="card sec">
@@ -372,6 +387,7 @@ function update(c) {
   document.getElementById('betwhy').innerHTML = why('bet', `<p>${CC.mode === 'plain' ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew per share over the last few years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p><p>${v}</p>
     <p class="faint">${CC.mode === 'plain' ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>`);
   document.getElementById('need').innerHTML = needHTML(c, f0, g, rTot, st.gt);
+  zonesRender(c, f0, rTot, st.gt);
   document.getElementById('mos').innerHTML = mosHTML(c, f0, g, rTot, st.gt);
   document.getElementById('rtext').textContent = pl(st.r, 2) + (c.premium ? ' + ' + pl(c.premium, 1) : '');
   const R = META.rates || {};
@@ -400,6 +416,69 @@ document.addEventListener('click', e => {
   d.hidden = !o; b.setAttribute('aria-expanded', o); b.textContent = o ? 'Less' : (CC.mode === 'plain' ? 'Why?' : 'Details');
   o ? OPEN.add(id) : OPEN.delete(id);
 });
+// ---------- Price zones: which price would change each label ----------
+// Against the list: cash back per $1 at a given price vs the list's top-third and bottom-third cut-offs.
+// On its own: the growth a given price needs (reverse DCF on the current assumptions) vs 0% and its record.
+let ZP = null, ZC = null;
+function zoneModel(c, f0, r, gt) {
+  const ys = COS.map(x => x.yld).filter(x => x != null).sort((a, b) => b - a), N = ys.length;
+  const c1 = ys[Math.floor(N / 3) - 1], c2 = ys[Math.floor(2 * N / 3) - 1], P = c.price, sh = c.mcapRaw / c.price;
+  const rel = c.yld > 0 ? { cheap: P * c.yld / c1, mid: P * c.yld / c2 } : null;
+  const at = g => (pv(f0, g, r, gt) + c.net) * 1e9 / sh;
+  const abs = f0 > 0 ? { cheap: at(0), fair: c.rec != null ? at(Math.max(0, c.rec)) : null } : null;
+  return { c, f0, r, gt, sh, c1, c2, rel, abs, P };
+}
+function zLabelRel(m, p) { const y = m.c.yld * m.P / p; return y >= m.c1 ? ['cheap', 'Cheap'] : y >= m.c2 ? ['mid', 'Middle'] : ['pricey', 'Pricey']; }
+function zLabelAbs(m, p) {
+  const g = implied(m.f0, p * m.sh / 1e9 - m.c.net, m.r, m.gt);
+  return [g <= 0 ? ['cheap', 'Cheap'] : m.c.rec == null ? ['mid', 'Needs growth'] : g <= Math.max(0, m.c.rec) ? ['mid', 'Fair'] : ['pricey', 'Pricey'], g];
+}
+function zonesRender(c, f0, r, gt) {
+  const m = ZC = zoneModel(c, f0, r, gt), box = document.getElementById('zones'), plain = CC.mode === 'plain';
+  const ac = document.getElementById('abscue');
+  if (!m.abs && !m.rel) { box.innerHTML = '<p class="muted">It isn’t producing spare cash, so no price is cheap on today’s cash.</p>'; if (ac) ac.style.display = 'none'; return; }
+  const pts = [m.P, ...(m.rel ? [m.rel.cheap, m.rel.mid] : []), ...(m.abs ? [m.abs.cheap, m.abs.fair].filter(x => x != null && x > 0) : [])];
+  m.lo = Math.max(0, Math.min(...pts) * 0.8, m.P / 4); m.hi = Math.min(m.P * 3, Math.max(...pts) * 1.12);
+  if (m.hi <= m.P) m.hi = m.P * 1.2;
+  const X = v => Math.max(0, Math.min(100, (v - m.lo) / (m.hi - m.lo) * 100));
+  const bw = box.clientWidth || 600, fit = (w, t) => w / 100 * bw >= t.length * 7 + 10 ? t : '';   // hide a label its zone is too narrow for
+  const bar = (a, b, labs) => `<div class="zr"><div class="z cheap" style="width:${X(a)}%">${fit(X(a), labs[0])}</div><div class="z mid" style="width:${Math.max(0, X(b) - X(a))}%">${fit(X(b) - X(a), labs[1])}</div><div class="z pricey" style="flex:1">${fit(100 - X(b), labs[2])}</div><i class="zm"></i></div>`;
+  const $f = v => '$' + (v >= 100 ? Math.round(v).toLocaleString('en-US') : v.toFixed(v >= 10 ? 0 : 2));
+  // threshold prices under each bar; close ones splay apart, ones off the slider show as an edge note
+  const tk = (arr, names, below) => {
+    const inn = arr.map((v, k) => [v, names[k]]).filter(([v]) => v != null && v > m.lo && v < m.hi).sort((a, b) => a[0] - b[0]);
+    let h = inn.map(([v], k) => { const close = inn.length === 2 && (X(inn[1][0]) - X(inn[0][0])) / 100 * bw < 56;
+      return `<span style="left:${X(v)}%${close ? (k ? ';transform:translateX(-2px)' : ';transform:translateX(calc(-100% + 2px))') : ''}">${$f(v)}</span>`; }).join('');
+    const hiN = arr.map((v, k) => [v, names[k]]).filter(([v]) => v != null && v >= m.hi), loN = arr.map((v, k) => [v, names[k]]).filter(([v]) => v != null && v > 0 && v <= m.lo);
+    if (hiN.length) h += `<span class="edge r">${hiN[0][1]} above ${$f(hiN[0][0])} →</span>`;
+    if (loN.length) { const k = arr.indexOf(loN[loN.length - 1][0]); h += `<span class="edge l">← ${below[k]} below ${$f(loN[loN.length - 1][0])}</span>`; }
+    return `<div class="ztk">${h}</div>`;
+  };
+  const rows = [];
+  if (m.rel) rows.push(`<div class="zl"><span>${plain ? 'Against the list' : 'Relative'} <span class="muted">· cash back per $1 vs. the other companies</span></span><b id="zrl"></b></div>${bar(m.rel.cheap, m.rel.mid, ['Cheap', 'Middle', 'Pricey'])}${tk([m.rel.cheap, m.rel.mid], ['middle', 'pricey'], ['cheap', 'middle'])}`);
+  if (m.abs) rows.push(`<div class="zl"><span>${plain ? 'On its own' : 'Absolute'} <span class="muted">· growth the price needs vs. ${c.rec != null ? 'its record' : '0%'}</span></span><b id="zal"></b></div>${bar(m.abs.cheap, m.abs.fair != null ? m.abs.fair : m.abs.cheap, ['Cheap', c.rec != null ? 'Fair' : '', c.rec != null ? 'Pricey' : 'Needs growth'])}${tk([m.abs.cheap, m.abs.fair], [c.rec == null ? 'needs growth' : c.rec > 0 ? 'fair' : 'pricey', c.rec == null ? 'needs growth' : 'pricey'], ['cheap', c.rec != null && c.rec > 0 ? 'fair' : 'cheap'])}`);
+  const step = m.hi - m.lo > 200 ? 1 : m.hi - m.lo > 20 ? 0.5 : 0.05;
+  const p0 = ZP != null ? Math.min(m.hi, Math.max(m.lo, ZP)) : m.P;
+  box.innerHTML = `<div class="zs"><label for="zp">${plain ? 'If the price were' : 'Price'}</label><input type="range" id="zp" min="${m.lo.toFixed(2)}" max="${m.hi.toFixed(2)}" step="${step}" value="${p0.toFixed(2)}"><b id="zpv"></b><button type="button" id="zreset" class="zbtn">Today</button></div>
+    ${rows.join('')}<p class="lead" id="zt" style="margin:12px 0 0"></p>
+    <p class="caveat">${m.abs ? `“On its own” uses the return you’d demand (${pl(r, 1)}) and ${c.rec != null ? `a record that covers about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years, capped at 20%` : 'no growth record'}; it moves with “${plain ? 'Try your own assumptions' : 'Assumptions'}”.` : ''} “Against the list” moves as other prices move.</p>`;
+  const zp = document.getElementById('zp');
+  zp.oninput = () => { ZP = +zp.value; zonesSet(+zp.value); };
+  document.getElementById('zreset').onclick = () => { ZP = null; zp.value = m.P; zonesSet(m.P); };
+  zonesSet(p0);
+  if (ac && m.abs) { const [a] = zLabelAbs(m, m.P); ac.className = 'cue ' + a[0]; ac.textContent = (plain ? 'on its own: ' : 'Absolute: ') + a[1]; ac.style.display = ''; } else if (ac) ac.style.display = 'none';
+}
+function zonesSet(p) {
+  const m = ZC, plain = CC.mode === 'plain'; if (!m) return;
+  const X = v => Math.max(0, Math.min(100, (v - m.lo) / (m.hi - m.lo) * 100));
+  document.querySelectorAll('#zones .zm').forEach(i => i.style.left = X(p) + '%');
+  document.getElementById('zpv').textContent = '$' + (p >= 100 ? p.toFixed(0) : p.toFixed(2));
+  const col = k => `<span class="zc ${k[0]}">${k[1]}</span>`, parts = [];
+  if (m.rel) { const k = zLabelRel(m, p), y = m.c.yld * m.P / p; document.getElementById('zrl').innerHTML = `${col(k)} ${pc(y)}¢`; parts.push(`${pc(y)}¢ back per $1 (${k[1].toLowerCase()} against the list)`); }
+  if (m.abs) { const [k, g] = zLabelAbs(m, p); document.getElementById('zal').innerHTML = `${col(k)} needs ${isFinite(g) ? pct(g, 0) : '–'}/yr`; parts.push(`the price would need ${isFinite(g) ? pct(g, 0) : '–'} a year of growth${m.c.rec != null ? ` vs. a record of ${pct(m.c.rec, 0)}` : ''} (${k[1].toLowerCase()} on its own)`); }
+  const same = Math.abs(p - m.P) / m.P < 0.005;
+  document.getElementById('zt').innerHTML = `${same ? 'At today’s' : 'At a'} price of <b>$${p >= 100 ? p.toFixed(0) : p.toFixed(2)}</b>${same ? '' : ` (${p > m.P ? '+' : '−'}${Math.abs((p / m.P - 1) * 100).toFixed(0)}%)`}: ${parts.join('; ')}.`;
+}
 // ---------- Extra judgement aids ----------
 const YR = +META.asof.slice(0, 4);
 const hbar = (rows, mx) => `<div class="hb">${rows.map(([lab, v, cls, note]) => `<div class="hbr"><span class="hbl">${lab}</span>

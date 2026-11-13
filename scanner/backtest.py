@@ -280,6 +280,28 @@ def walk(pit: dict[str, dict[str, dict]], meta: dict[str, dict], prices: dict[st
     return {"rows": rows, "rf": rates}
 
 
+def market_history(rows, months, rf) -> dict:
+    """Each month: the typical (median) cash back per $1 across the list, the safe-bond yield, and the share
+    of companies whose price needed more growth than their record. Lets the Today page say whether the
+    market is expensive compared with its own past, not just which companies are cheaper than others."""
+    by = {}
+    for r in rows:
+        by.setdefault(r["d"], []).append(r)
+    out = {"dates": [], "median_yield": [], "rf": [], "above_record": [], "n": []}
+    for d in months:
+        rs = by.get(d) or []
+        ys = sorted(r["fcf_yield"] for r in rs if r.get("fcf_yield") is not None)
+        if len(ys) < 20:
+            continue
+        both = [r for r in rs if r.get("implied_g") is not None and r.get("ref_g") is not None and math.isfinite(r["implied_g"])]
+        out["dates"].append(d)
+        out["median_yield"].append(round(statistics.median(ys), 4))
+        out["rf"].append(round(rf[d], 4) if rf.get(d) is not None else None)
+        out["above_record"].append(round(sum(r["implied_g"] > r["ref_g"] for r in both) / len(both), 3) if both else None)
+        out["n"].append(len(ys))
+    return out
+
+
 def monthly_returns(s: Series, months: list[str]) -> dict[str, float]:
     """Total return from each month-end to the next."""
     out = {}
@@ -363,6 +385,7 @@ def summarize(walked: dict, prices: dict[str, Series], spy: Series, months: list
     cases.sort(key=lambda c: c["excess"])
     flag_counts = {g: [sum(1 for r in rows if r["d"] == d and g in r["groups"]) for d in months] for g, _, _ in GROUPS}
     return {"table": table, "growth": growth, "years": year_rows, "baskets": baskets(rows, months, walked.get("rf")),
+            "market": market_history(rows, months, walked.get("rf") or {}),
             "cases": {"best": cases[-8:][::-1], "worst": cases[:8], "n": len(cases)},
             "counts": {"dates": months, **flag_counts}}
 
