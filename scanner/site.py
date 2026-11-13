@@ -42,15 +42,23 @@ footer.foot{margin-top:28px;display:flex;justify-content:space-between;gap:16px;
 """
 
 NAV_CSS = """
-.cc-nav{background:var(--card,#fff);border-bottom:1px solid var(--border,#E6E6E1);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.cc-nav .in{max-width:1280px;margin:0 auto;padding:0 32px;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cc-nav{background:var(--card,#fff);border-bottom:1px solid var(--border,#E6E6E1);font:14px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.cc-nav *{box-sizing:border-box}
+.cc-nav,.cc-modebar{--card:#FFFFFF;--bg:#F7F7F5;--border:#E6E6E1;--ink:#111214;--muted:#6B6D73;--faint:#8A8C92;--accent-soft:#EEF1F8;--hover:#F4F6FB}
+@media (prefers-color-scheme:dark){.cc-nav,.cc-modebar{--card:#1A1B1E;--bg:#111214;--border:#2C2D31;--ink:#F2F2F0;--muted:#A0A2A8;--faint:#8A8C92;--accent-soft:#1C2233;--hover:#1F2126}}
+.cc-nav .asof{margin:0}.cc-nav nav a:hover{text-decoration:none;color:var(--ink)}
+.cc-nav .in{max-width:1280px;margin:0 auto;padding:0 32px;height:60px;display:grid;grid-template-columns:200px 1fr 430px;align-items:center;gap:16px}
+.cc-nav .right{justify-content:flex-end}
+.cc-nav nav{justify-self:center}
 .cc-nav .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:-.01em;color:var(--ink,#111214);text-decoration:none}
 .cc-nav .mark{width:26px;height:26px;border-radius:6px;background:#1F4FD1;display:flex;align-items:center;justify-content:center}
 .cc-nav nav{display:flex;gap:4px;font-size:14px;flex-wrap:wrap}
 .cc-nav nav a{padding:8px 12px;border-radius:8px;color:var(--muted,#55575E);text-decoration:none}
 .cc-nav nav a[aria-current=page]{background:var(--accent-soft,#F0F2F7);color:var(--ink,#111214);font-weight:600}
-.cc-nav .asof{font-size:13px;color:var(--muted,#6B6D73)}
-.cc-nav .right{display:flex;align-items:center;gap:14px}
+.cc-nav .asof{font-size:13px;color:var(--muted,#6B6D73);white-space:nowrap}
+.cc-nav .right{display:flex;align-items:center;gap:16px}
+.cc-modebar{max-width:1280px;margin:0 auto;padding:12px 32px 0;display:flex;justify-content:flex-end;align-items:center;gap:10px;font:12.5px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--faint,#8A8C92)}
+.cc-modebar + .wrap{padding-top:8px}
 .cc-mode{display:inline-flex;border:1px solid var(--border,#E6E6E1);border-radius:999px;padding:2px;background:var(--bg,#F7F7F5)}
 .cc-mode button{all:unset;cursor:pointer;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;color:var(--muted,#6B6D73)}
 .cc-mode button[aria-pressed=true]{background:var(--card,#fff);color:var(--ink,#111214);box-shadow:0 1px 2px rgba(0,0,0,.08)}
@@ -63,14 +71,16 @@ font-weight:400;text-transform:none;letter-spacing:0;padding:9px 11px;border-rad
 .cc-find{position:relative}
 .cc-find input{height:34px;width:220px;padding:0 10px 0 30px;border:1px solid var(--border,#E6E6E1);border-radius:8px;background:var(--bg,#F7F7F5);color:var(--ink,#111214);font:inherit;font-size:13.5px}
 .cc-find input:focus{outline:2px solid #1F4FD1;outline-offset:0;background:var(--card,#fff)}
-.cc-find svg{position:absolute;left:9px;top:10px;color:var(--faint,#8A8C92)}
+.cc-find svg{position:absolute;left:9px;top:10px;width:14px;height:14px;color:var(--faint,#8A8C92)}
+.cc-find input{-webkit-appearance:none;appearance:none;margin:0;box-shadow:none}
 .cc-find ul{position:absolute;left:0;top:40px;z-index:60;width:min(340px,calc(100vw - 32px));max-height:360px;overflow:auto;margin:0;padding:4px;list-style:none;
 background:var(--card,#fff);border:1px solid var(--border,#E6E6E1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
 .cc-find li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13.5px;color:var(--ink,#111214)}
 .cc-find li b{min-width:54px}.cc-find li span{flex:1;color:var(--muted,#6B6D73);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-find li em{font-style:normal;font-size:11px;font-weight:600;color:var(--faint,#8A8C92)}.cc-find li em.on{color:#1F4FD1}
 .cc-find li[aria-selected=true]{background:var(--hover,#F4F6FB)}
-@media (max-width:820px){.cc-nav .in{padding:8px 16px}.cc-nav .asof{display:none}.cc-find input{width:150px}}
+@media (max-width:1060px){.cc-nav .in{height:auto;min-height:60px;padding:8px 24px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px}.cc-nav nav{order:3;width:100%;justify-content:center}}
+@media (max-width:820px){.cc-nav .in{padding:8px 16px}.cc-nav .asof{display:none}.cc-find input{width:150px}.cc-modebar{padding:10px 16px 0}}
 """
 
 PAGES = [("learn.html", "Start here"), ("index.html", "Today"), ("backtest/", "Backtest"), ("track.html", "Track record"), ("method.html", "Method")]
@@ -110,9 +120,9 @@ def nav(active: str, asof_text: str, prefix: str = "", toggle: bool = False) -> 
             'fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Cash Compounders</a>'
             f'<nav aria-label="Main">{links}</nav><div class="right">'
             + SEARCH_HTML.replace("__PREFIX__", prefix)
-            + ('<div class="cc-mode" role="group" aria-label="Wording"><button type="button" data-mode="plain">Plain English</button>'
-               '<button type="button" data-mode="pro">Pro</button></div>' if toggle else '')
-            + f'<div class="asof">{asof_text}</div></div></div></header>')
+            + f'<div class="asof">{asof_text}</div></div></div></header>'
+            + ('<div class="cc-modebar"><span>Wording</span><div class="cc-mode" role="group" aria-label="Wording"><button type="button" data-mode="plain">Plain English</button>'
+               '<button type="button" data-mode="pro">Pro</button></div></div>' if toggle else ''))
 
 
 GLOSSARY = {

@@ -588,13 +588,21 @@ def _pct(x):
     return "   n/a" if x is None else f"{x*100:+6.1f}%"
 
 
+def _nice_date(d: str) -> str:
+    try:
+        x = date.fromisoformat(str(d)[:10])
+        return f"{x.strftime('%b')} {x.day}, {x.year}"
+    except ValueError:
+        return str(d)
+
+
 def write_results(out: Path, res: dict) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / "results.json").write_text(json.dumps(res, separators=(",", ":")))
     tpl = (Path(__file__).parent / "backtest_template.html").read_text()
     from .site import NAV_CSS, nav
     asof = res.get("meta", {}).get("generated", "")[:10]
-    page = tpl.replace("__NAVCSS__", NAV_CSS).replace("__NAV__", nav("Backtest", f"Backtest run {asof}", prefix="../"))
+    page = tpl.replace("__NAVCSS__", NAV_CSS).replace("__NAV__", nav("Backtest", "Backtest run " + _nice_date(asof), prefix="../"))
     (out / "index.html").write_text(page.replace("__DATA__", json.dumps(res, separators=(",", ":")).replace("</", "<\\/")))
 
 
