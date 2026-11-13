@@ -23,6 +23,8 @@ __CSS__
 .scale .pt{position:absolute;top:0;transform:translateX(-50%);text-align:center;white-space:nowrap}
 .scale .pt b{font-size:20px}.scale .pt i{display:block;width:16px;height:16px;border-radius:50%;margin:6px auto 0;border:3px solid var(--card)}
 .scale .pt span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+.scale .pt.pl{transform:translateX(calc(-100% + 8px));text-align:right}.scale .pt.pl i{margin:6px 0 0 auto}
+.scale .pt.pr{transform:translateX(-8px);text-align:left}.scale .pt.pr i{margin:6px auto 0 0}
 .ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin:6px 10px 18px}
 .verdict{background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.55;color:var(--ink)}
 .bars{display:grid;gap:14px;align-items:end;height:190px}
@@ -309,15 +311,22 @@ function render(c, prev, next) {
   if (!sameCo) window.scrollTo(0, 0);
 }
 
+let resizeT;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (window.__cc) update(window.__cc); }, 150); });
 function update(c) {
+  window.__cc = c;
   const f0 = c.bases[st.base].fcf, ev = c.mcap - c.net, rTot = st.r + (c.premium || 0);
   const g = implied(f0, ev, rTot, st.gt), rec = c.rec;
   const pos = x => Math.max(0, Math.min(100, (x + 0.10) / 0.40 * 100));
   const gp = isFinite(g) ? pos(g) : (g > 0 ? 100 : 0), rp = rec == null ? null : pos(rec);
+  const sw = document.getElementById('scale').clientWidth || 600;
+  // when the two dots are close, push each label out to its own side so they don't overlap
+  const split = rp != null && Math.abs(gp - rp) / 100 * sw < 110;
+  const side = (me, other) => !split ? '' : me < other || (me === other && me === gp) ? ' pl' : ' pr';
   document.getElementById('scale').innerHTML = `<div class="axis"></div><div class="zero" style="left:${pos(0)}%"></div>`
     + (rp != null ? `<div class="span" style="left:${Math.min(gp, rp)}%;width:${Math.abs(rp - gp)}%"></div>` : '')
-    + `<div class="pt" style="left:${gp}%"><b class="acc">${pct(g)}</b><i style="background:var(--accent);box-shadow:0 0 0 1px var(--accent)"></i><span>${CC.L('impl')}</span></div>`
-    + (rp != null ? `<div class="pt" style="left:${rp}%"><b class="muted">${pct(rec)}</b><i style="background:var(--faint);box-shadow:0 0 0 1px var(--faint)"></i><span>${CC.L('rec')}</span></div>` : '');
+    + `<div class="pt${side(gp, rp)}" style="left:${gp}%"><b class="acc">${pct(g)}</b><i style="background:var(--accent);box-shadow:0 0 0 1px var(--accent)"></i><span>${CC.L('impl')}</span></div>`
+    + (rp != null ? `<div class="pt${split ? (rp === gp ? ' pr' : side(rp, gp)) : ''}" style="left:${rp}%"><b class="muted">${pct(rec)}</b><i style="background:var(--faint);box-shadow:0 0 0 1px var(--faint)"></i><span>${CC.L('rec')}</span></div>` : '');
   const at = `At a ${pl(rTot, 2)} ${CC.mode === 'plain' ? 'return you’d demand' : 'required return'}${c.premium ? ` (including ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')})` : ''}`;
   let v;
   if (!isFinite(g)) v = `${at}, the price can’t be explained by any plausible growth rate from this starting cash flow. Try another starting point.`;
@@ -380,8 +389,10 @@ function needHTML(c, f0, g, r, gt) {
     `;
 }
 function needChart(c, f0, g, gp, big) {
-  // Past cash (bars) and the two paths ahead: what the price needs, and its own past pace
-  const H = (c.hist || []).filter(h => h[1] != null), n = 10, W = 640, Ht = 230, L = 46, R = 112, T = 14, Bm = 26;
+  // Past cash (bars) and the two paths ahead: what the price needs, and its own past pace.
+  // Drawn at the box's real width so the text stays readable on a phone.
+  const bw0 = (document.getElementById('need') || {}).clientWidth || 640, W = Math.max(300, Math.min(640, bw0)), narrow = W < 520;
+  const H = (c.hist || []).filter(h => h[1] != null), n = 10, Ht = narrow ? 210 : 230, L = narrow ? 40 : 46, R = narrow ? 86 : 112, T = 14, Bm = 26;
   const need = [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + g, t));
   const pace = gp == null ? null : [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + gp, t));
   const top = Math.max(...need, ...(pace || []), ...H.map(h => h[1])) * 1.08;
@@ -395,7 +406,7 @@ function needChart(c, f0, g, gp, big) {
   const bw = Math.min(18, step * 0.6);
   const bars = H.map((h, k) => `<rect x="${X(k) - bw / 2}" y="${Y(h[1])}" width="${bw}" height="${Math.max(1, Y(0) - Y(h[1]))}" rx="3" class="hb0"/>`).join('');
   const path = arr => arr.map((v, t) => `${t ? 'L' : 'M'}${X(nowK + t).toFixed(1)},${Y(v).toFixed(1)}`).join('');
-  const xl = H.map((h, k) => `<text x="${X(k)}" y="${Ht - 8}" text-anchor="middle" class="ax">${h[0]}</text>`).join('')
+  const xl = H.map((h, k) => (step < 30 && k !== 0 && k !== H.length - 1) ? '' : `<text x="${X(k)}" y="${Ht - 8}" text-anchor="middle" class="ax">${h[0]}</text>`).join('')
     + [5, 10].map(t => `<text x="${X(nowK + t)}" y="${Ht - 8}" text-anchor="middle" class="ax">${YR + t}</text>`).join('');
   // end labels, nudged apart if they'd collide
   let yN = Y(need[n]), yP = pace ? Y(pace[n]) : null;
@@ -406,11 +417,11 @@ function needChart(c, f0, g, gp, big) {
     return `<rect x="${X(k) - step / 2}" y="${T}" width="${step}" height="${Ht - T - Bm}" fill="transparent" data-tip="${tip}"/>`; }).join('');
   return `<svg viewBox="0 0 ${W} ${Ht}" width="100%" class="needc" role="img" aria-label="Spare cash so far and the path the price needs: ${money(need[n])} a year by ${YR + 10}${pace ? `, against ${money(pace[n])} at its past pace` : ''}.">
     ${g0}${bars}
-    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${L + 4}" y="${Y(big.fcf) - 5}" class="ax">${esc(big.name)} today: ${money(big.fcf)}</text>` : ''}
+    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${L + 4}" y="${Y(big.fcf) - 5}" class="ax">${esc(narrow ? big.t : big.name)} today: ${money(big.fcf)}</text>` : ''}
     <line x1="${X(nowK)}" x2="${X(nowK)}" y1="${T}" y2="${Y(0)}" class="now"/>
     ${pace ? `<path d="${path(pace)}" class="lp2"/>` : ''}<path d="${path(need)}" class="lp1"/>
     <circle cx="${X(nowK)}" cy="${Y(f0)}" r="4.5" class="st"/>
-    ${lab(yN, need[n], 'price needs', 'acc')}${pace ? lab(yP, pace[n], `past pace ${pct(gp, 0)}/yr`, 'mut') : ''}
+    ${lab(yN, need[n], 'price needs', 'acc')}${pace ? lab(yP, pace[n], narrow ? 'its past pace' : `past pace ${pct(gp, 0)}/yr`, 'mut') : ''}
     ${xl}${hov}</svg>
     <div class="faint" style="font-size:12.5px;margin-top:4px">Bars: spare cash so far. Dot: the starting point${c.bases[st.base] ? ` (${esc(c.bases[st.base].label.split(':')[0].replace(/ \(.*\)/, ''))}, ${money(f0)})` : ''}. Lines change with “${CC.mode === 'plain' ? 'Try your own assumptions' : 'Assumptions'}”. Hover for each year.</div>`;
 }

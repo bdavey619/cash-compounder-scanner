@@ -29,7 +29,9 @@ table.rank td:nth-child(3){max-width:150px;overflow:hidden;text-overflow:ellipsi
 .cards{display:none;flex-direction:column;gap:8px}
 .cardrow{display:flex;align-items:center;gap:12px;padding:10px 12px;color:var(--ink);text-decoration:none}
 .cardrow:hover{text-decoration:none;background:var(--hover)}
-@media (max-width:820px){.tblbox{display:none}.cards{display:flex}.bar .r{width:100%}.bar .r input{flex:1}}
+@media (max-width:820px){.tblbox{display:none}.cards{display:flex}.bar .r{width:100%}.bar .r input{flex:1;min-width:0;width:auto!important}
+.bar .l{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px;padding:2px 16px;width:calc(100% + 32px);scrollbar-width:none}.bar .l::-webkit-scrollbar{display:none}
+.bar .l .chip{flex:none;white-space:nowrap}}
 .isnt{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px}
 .isnt div{padding:14px 18px;font-size:14px;line-height:1.5;color:var(--ink2)}.isnt div+div{border-left:1px solid var(--line)}
 .isnt b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}

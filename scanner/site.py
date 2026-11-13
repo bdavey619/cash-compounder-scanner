@@ -80,7 +80,11 @@ background:var(--card,#fff);border:1px solid var(--border,#E6E6E1);border-radius
 .cc-find li em{font-style:normal;font-size:11px;font-weight:600;color:var(--faint,#8A8C92)}.cc-find li em.on{color:#1F4FD1}
 .cc-find li[aria-selected=true]{background:var(--hover,#F4F6FB)}
 @media (max-width:1060px){.cc-nav .in{height:auto;min-height:60px;padding:8px 24px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px}.cc-nav nav{order:3;width:100%;justify-content:center}}
-@media (max-width:820px){.cc-nav .in{padding:8px 16px}.cc-nav .asof{display:none}.cc-find input{width:150px}.cc-modebar{padding:10px 16px 0}}
+@media (max-width:820px){.cc-nav .in{padding:10px 16px 6px;gap:6px 12px;flex-wrap:wrap}
+.cc-nav .asof{display:none}.cc-nav .right{flex:1;min-width:0}.cc-find{flex:1;min-width:0}.cc-find input{width:100%;font-size:13.5px}
+.cc-nav nav{flex-wrap:nowrap;overflow-x:auto;justify-content:space-between;gap:0;margin:0 -8px;width:calc(100% + 16px);scrollbar-width:none}
+.cc-nav nav::-webkit-scrollbar{display:none}.cc-nav nav a{padding:7px 8px;font-size:13.5px;white-space:nowrap;flex:none}
+.cc-modebar{padding:10px 16px 0}}
 """
 
 PAGES = [("learn.html", "Start here"), ("index.html", "Today"), ("backtest/", "Backtest"), ("track.html", "Track record"), ("method.html", "Method")]
@@ -92,6 +96,7 @@ SEARCH_HTML = r"""<div class="cc-find" role="search"><svg width="14" height="14"
 <script>(function(){
 const P='__PREFIX__';let idx=null,sel=0,hits=[];
 const q=document.getElementById('cc-q'),ul=document.getElementById('cc-res');
+if(matchMedia('(max-width:820px)').matches)q.placeholder='Find a company';
 const load=()=>idx?Promise.resolve(idx):fetch(P+'c/index.json').then(r=>r.json()).then(j=>idx=j).catch(()=>idx=[]);
 const go=t=>{location.href=P+'company.html#'+encodeURIComponent(t);if(location.pathname.endsWith('company.html'))q.blur();};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

@@ -12,6 +12,10 @@ table.trk{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
 table.trk th{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:right;padding:10px 12px;border-bottom:1px solid var(--border)}
 table.trk td{padding:14px 12px;border-top:1px solid var(--line);text-align:right;vertical-align:top}
 table.trk th:first-child,table.trk td:first-child{text-align:left;padding-left:20px}
+@media (max-width:640px){table.trk{min-width:0}table.trk tr:first-child{display:none}table.trk tr{display:block;padding:10px 0;border-top:1px solid var(--line)}
+table.trk tr:nth-child(2){border-top:0}table.trk td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:0;padding:4px 18px;text-align:left}
+table.trk td:first-child{display:block;padding:4px 18px 6px}table.trk td[data-h]::before{content:attr(data-h);color:var(--muted);font-size:13px}
+table.trk td .cv{text-align:right}table.trk td.nil .v{display:none}table.trk td.nil .s{font-size:13px}}
 .v{font-weight:700;font-size:16px}.s{font-size:12px;color:var(--muted)}
 </style>
 </head>
@@ -38,10 +42,10 @@ const H = [['todate', 'To date'], ['1m', '1 month'], ['3m', '3 months'], ['6m', 
 document.getElementById('lede').textContent = T.started
   ? `Is the ranking actually working? Tracking since ${fd(T.started)}: ${(T.n || 0).toLocaleString()} entries so far.` + (T.next ? ` The first ${T.next.h.replace('m', '-month')} results arrive on ${fd(T.next.date)}.` : '')
   : 'Tracking starts with the next daily run.';
-const cell = x => !x || !x.n ? '<td><span class="v faint">–</span><div class="s">not yet</div></td>'
-  : `<td><span class="v ${x.avg > 0 ? 'up' : x.avg < 0 ? 'down' : ''}">${x.avg > 0 ? '+' : x.avg < 0 ? '−' : ''}${Math.abs(x.avg * 100).toFixed(1)} pts</span><div class="s">${x.n} picks · ${Math.round(x.beat * 100)}% beat</div></td>`;
+const cell = (x, h) => !x || !x.n ? `<td class="nil" data-h="${h}"><div class="cv"><span class="v faint">–</span><div class="s">not yet</div></div></td>`
+  : `<td data-h="${h}"><div class="cv"><span class="v ${x.avg > 0 ? 'up' : x.avg < 0 ? 'down' : ''}">${x.avg > 0 ? '+' : x.avg < 0 ? '−' : ''}${Math.abs(x.avg * 100).toFixed(1)} pts</span><div class="s">${x.n} picks · ${Math.round(x.beat * 100)}% beat</div></div></td>`;
 document.getElementById('trk').innerHTML = '<tr><th>List</th>' + H.map(h => `<th>${h[1]}</th>`).join('') + '</tr>' +
-  G.map(g => `<tr><td><b>${(names[g.group] || [g.group])[0]}</b><div class="s">${(names[g.group] || ['', ''])[1]} · ${g.n} logged</div></td>${H.map(h => cell(g.h[h[0]])).join('')}</tr>`).join('');
+  G.map(g => `<tr><td><b>${(names[g.group] || [g.group])[0]}</b><div class="s">${(names[g.group] || ['', ''])[1]} · ${g.n} logged</div></td>${H.map(h => cell(g.h[h[0]], h[1])).join('')}</tr>`).join('');
 </script>
 </body>
 </html>

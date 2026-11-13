@@ -24,6 +24,8 @@
   }
 }
 *{box-sizing:border-box}
+.sbr{display:grid;grid-template-columns:minmax(200px,340px) 1fr;gap:14px;align-items:center;font-size:14px;margin:8px 0}
+@media (max-width:640px){.sbr{grid-template-columns:1fr;gap:4px;margin:12px 0}}
 body{margin:0;background:var(--surface);color:var(--text-primary);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif}
 .wrap{max-width:1080px;margin:0 auto;padding:36px 24px 80px}
 a{color:var(--s-gap_trigger)}
@@ -168,7 +170,7 @@ document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fm
   if (drop) rows.push(['Bought just because the price dropped (typical pick vs market)', drop.median]);
   const mx = Math.max(0.12, ...rows.map(r => Math.abs(r[1])));
   document.getElementById('shortbars').innerHTML = rows.map(([l, v]) => { const w = Math.abs(v) / mx * 50, left = v >= 0 ? 50 : 50 - w;
-    return `<div style="display:grid;grid-template-columns:minmax(200px,340px) 1fr;gap:14px;align-items:center;font-size:14px;margin:8px 0"><span>${l}</span><div style="position:relative;height:26px;background:linear-gradient(var(--grid),var(--grid)) center/2px 100% no-repeat"><div style="position:absolute;top:3px;height:20px;left:${left}%;width:${w}%;border-radius:5px;background:${v >= 0 ? css('--s-gap_trigger') : css('--dn')};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'};padding:0 8px">${(v > 0 ? '+' : '−') + a(v)}</div></div></div>`; }).join('');
+    return `<div class="sbr"><span>${l}</span><div style="position:relative;height:26px;background:linear-gradient(var(--grid),var(--grid)) center/2px 100% no-repeat"><div style="position:absolute;top:3px;height:20px;left:${left}%;width:${w}%;border-radius:5px;background:${v >= 0 ? css('--s-gap_trigger') : css('--dn')};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'};padding:0 8px">${(v > 0 ? '+' : '−') + a(v)}</div></div></div>`; }).join('');
   const btn = document.getElementById('detailsbtn'), det = document.getElementById('details');
   const open = location.hash === '#ratecard' || location.hash === '#details';
   const set = o => { det.hidden = !o; btn.setAttribute('aria-expanded', o); btn.textContent = o ? 'Hide the details' : 'Show the details'; };
