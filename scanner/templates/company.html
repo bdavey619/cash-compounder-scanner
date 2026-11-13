@@ -21,11 +21,14 @@ __CSS__
 .scale .zero{position:absolute;top:38px;width:1px;height:18px;background:var(--faint)}
 .scale .span{position:absolute;top:46px;height:2px;background:var(--accent);opacity:.35}
 .scale .pt{position:absolute;top:0;transform:translateX(-50%);text-align:center;white-space:nowrap}
-.scale .pt b{font-size:20px}.scale .pt i{display:block;width:16px;height:16px;border-radius:50%;margin:6px auto 0;border:3px solid var(--card)}
-.scale .pt span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+.scale .pt b{font-size:var(--fs-callout)}.scale .pt i{display:block;width:16px;height:16px;border-radius:50%;margin:6px auto 0;border:3px solid var(--card)}
+.scale .pt span{display:block;font-size:var(--fs-label);color:var(--muted);margin-top:6px}
+.scale .pt.pl b,.scale .pt.pl span{padding-right:10px}.scale .pt.pr b,.scale .pt.pr span{padding-left:10px}
 .scale .pt.pl{transform:translateX(calc(-100% + 8px));text-align:right}.scale .pt.pl i{margin:6px 0 0 auto}
 .scale .pt.pr{transform:translateX(-8px);text-align:left}.scale .pt.pr i{margin:6px auto 0 0}
-.ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin:6px 10px 18px}
+:root{--fs-label:12px;--fs-value:13px;--fs-callout:18px}
+.ticks{position:relative;height:16px;font-size:var(--fs-label);color:var(--faint);margin:6px 10px 18px}
+.ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .verdict{background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.55;color:var(--ink)}
 .bars{display:grid;gap:14px;align-items:end;height:190px}
 .bars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
@@ -62,7 +65,7 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
 .why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
-.lead{margin:6px 0 10px;font-size:15.5px;line-height:1.55;color:var(--ink)}
+.lead{margin:6px 0 10px;font-size:15px;line-height:1.55;color:var(--ink)}
 .caveat{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
 .whyb{display:inline-flex;align-items:center;gap:4px;margin-top:12px;padding:0;border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;color:var(--accent);cursor:pointer}
 .whyb::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);margin-left:4px;transition:transform .15s}
@@ -75,33 +78,35 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 @media (prefers-color-scheme:dark){.lem{background:#2F2A14;border-left-color:#C9A300}.lem .lemh{color:#E3C75A}}
 .side .lem{font-size:13px}
 .lemline{display:block;margin-top:10px;font-size:15px;color:var(--ink2)}
-.needc{display:block;overflow:visible}.needc .gl{stroke:var(--line)}.needc .ax{font-size:11px;fill:var(--faint)}
+.needc{display:block;overflow:visible}.needc .gl{stroke:var(--line)}.needc .ax{font-size:var(--fs-label);fill:var(--faint)}
 .needc .hb0{fill:var(--accent-bg)}.needc .ref{stroke:var(--faint);stroke-dasharray:2 4}.needc .now{stroke:var(--border);stroke-dasharray:3 3}
 .needc .lp1{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}.needc .lp2{fill:none;stroke:var(--faint);stroke-width:2;stroke-dasharray:5 4}
-.needc .st{fill:var(--card);stroke:var(--accent);stroke-width:2}.needc .el{font-size:12px}.needc .el.acc{fill:var(--accent)}.needc .el.mut{fill:var(--muted)}
+.needc .st{fill:var(--card);stroke:var(--accent);stroke-width:2}.needc .el{font-size:var(--fs-value)}.needc .el.acc{fill:var(--accent)}.needc .el.mut{fill:var(--muted)}
 .hb{display:flex;flex-direction:column;gap:8px}
 .hbr{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:10px;font-size:13px}
 .hbr .hbn{grid-column:2/4;margin-top:-6px;font-size:11.5px;color:var(--faint)}
 .hbl{color:var(--muted)}.hbr b{text-align:right}
 .hbt{height:14px;background:var(--line);border-radius:4px;overflow:hidden}.hbt i{display:block;height:100%;border-radius:0 4px 4px 0}
 .hbt .b0{background:var(--ink2)}.hbt .b1{background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}.hbt .b2{background:var(--accent)}.hbt .b3{background:var(--faint)}.hbt .b4{background:var(--border)}
-.ladder{position:relative;height:150px;margin:6px 64px 0}
-.ladder .ln{position:absolute;left:0;right:0;top:56px;height:2px;background:var(--border)}
-.lp{position:absolute;transform:translateX(-50%);text-align:center;width:128px}
+.ladder{position:relative;height:128px;margin:10px 16px 4px}
+.ladder .ln{position:absolute;left:0;right:0;top:66px;height:2px;background:var(--border)}
+.lp{position:absolute;transform:translateX(-50%);text-align:center;width:120px}
 .lp i{display:block;width:14px;height:14px;border-radius:50%;margin:0 auto;border:3px solid var(--card)}
 .lp i.acc{background:var(--accent)}.lp i.b1{background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}.lp i.b3{background:var(--faint)}
-.lp b{display:block;font-size:15px}.lp span{display:block;font-size:11.5px;line-height:1.3;color:var(--muted)}
-.lp.up{bottom:87px}.lp.up b{color:var(--accent)}.lp.dn{top:50px}.lp.dn.low{padding-top:40px}.lp.dn.low i{margin-bottom:0}
-.lp.dn.low::before{content:"";position:absolute;left:50%;top:8px;height:40px;border-left:1px dashed var(--faint)}
-.lp.dn.low i{position:absolute;left:50%;top:0;transform:translateX(-50%)}
-.dv{display:grid;grid-template-columns:150px 1fr 56px;align-items:center;gap:10px;font-size:13px;margin-top:6px}
+.lp b{display:block;font-size:var(--fs-value);font-weight:600}.lp span{display:block;font-size:var(--fs-label);line-height:1.3;color:var(--muted)}
+.lp.up{bottom:53px}.ladder .lp.up{bottom:53px}.lp.up b{font-size:var(--fs-callout);color:var(--accent);line-height:1.2}.lp.up span{margin-bottom:2px}
+.lp.dn{top:60px}.lp.dn b{margin-top:2px}
+.lp.up.mut b{font-size:var(--fs-value);color:var(--ink);font-weight:600}
+.lp.ar{transform:translateX(calc(-100% + 7px));text-align:right}.lp.ar i{margin:0 0 0 auto}
+.lp.al{transform:translateX(-7px);text-align:left}.lp.al i{margin:0 auto 0 0}
+.dv{display:grid;grid-template-columns:130px 1fr 56px;align-items:center;gap:10px;font-size:var(--fs-label);margin-top:8px}.dv b{font-size:var(--fs-value);font-weight:600}
 .dvl{color:var(--muted)}.dv b{text-align:right}
 .dvt{position:relative;height:14px;background:var(--line);border-radius:4px}
 .dvt .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--faint)}
 .dvt i{position:absolute;top:0;bottom:0}.dvt i.neg{background:var(--down);border-radius:4px 0 0 4px}.dvt i.pos{background:var(--up);border-radius:0 4px 4px 0}
 table.pe{width:100%;border-collapse:collapse;font-size:14px}table.pe td{padding:5px 0;border-top:1px solid var(--line)}table.pe td:last-child{text-align:right}
 table.pe tr:first-child td{border-top:0}
-@media (max-width:600px){.hbr,.dv{grid-template-columns:110px 1fr 60px}.ladder{margin:6px 52px 0}}
+@media (max-width:600px){.hbr,.dv{grid-template-columns:96px 1fr 52px}.lp{width:110px}}
 @media (max-width:820px){.cue{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px}
 .cue.cheap{background:var(--accent-bg);color:var(--accent-ink)}.cue.mid{background:var(--chip);color:var(--ink2)}.cue.pricey{background:var(--warn-bg);color:var(--warn-ink)}
 </style>
@@ -241,7 +246,7 @@ function render(c, prev, next) {
       <section class="card sec">
         <h2>${plain ? 'What is the price betting on?' : 'What is the price assuming?'}</h2>
         <div class="scale" id="scale"></div>
-        <div class="ticks"><span>−10%</span><span>0%</span><span>+10%</span><span>+20%</span><span>+30%</span></div>
+        <div class="ticks" id="ticks"></div>
         <div class="verdict" id="verdict"></div>
         <div id="betwhy"></div>
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px" id="betlinks">
@@ -333,16 +338,25 @@ function update(c) {
   window.__cc = c;
   const f0 = c.bases[st.base].fcf, ev = c.mcap - c.net, rTot = st.r + (c.premium || 0);
   const g = implied(f0, ev, rTot, st.gt), rec = c.rec;
-  const pos = x => Math.max(0, Math.min(100, (x + 0.10) / 0.40 * 100));
+  // the scale runs from −10% to +30% unless this company's numbers fall outside it
+  const vals = [g, rec].filter(x => x != null && isFinite(x));
+  const lo = Math.max(-0.5, Math.min(-0.10, Math.floor((Math.min(...vals, 0) - 0.08) * 10) / 10));
+  const hi = Math.min(0.8, Math.max(0.30, Math.ceil((Math.max(...vals, 0) + 0.06) * 10) / 10));
+  const pos = x => Math.max(0, Math.min(100, (x - lo) / (hi - lo) * 100));
+  const tw = (document.getElementById('ticks') || {}).clientWidth || 600;
+  const tstep = [0.1, 0.2, 0.25, 0.5].find(st0 => st0 / (hi - lo) * tw >= 62) || 0.5, tks = [];
+  for (let t = Math.ceil(lo / tstep - 1e-9) * tstep; t <= hi + 1e-9; t += tstep) tks.push(t);
+  document.getElementById('ticks').innerHTML = tks.map(t => `<span style="left:${pos(t)}%${pos(t) > 97 ? ';transform:translateX(-100%)' : pos(t) < 3 ? ';transform:none' : ''}">${Math.abs(t) < 1e-9 ? '0%' : (t > 0 ? '+' : '−') + Math.round(Math.abs(t) * 100) + '%'}</span>`).join('');
   const gp = isFinite(g) ? pos(g) : (g > 0 ? 100 : 0), rp = rec == null ? null : pos(rec);
   const sw = document.getElementById('scale').clientWidth || 600;
   // when the two dots are close, push each label out to its own side so they don't overlap
   const split = rp != null && Math.abs(gp - rp) / 100 * sw < 110;
-  const side = (me, other) => !split ? '' : me < other || (me === other && me === gp) ? ' pl' : ' pr';
+  const edge = x => x > 88 ? ' pl' : x < 12 ? ' pr' : '';
+  const side = (me, other) => !split ? edge(me) : me < other || (me === other && me === gp) ? ' pl' : ' pr';
   document.getElementById('scale').innerHTML = `<div class="axis"></div><div class="zero" style="left:${pos(0)}%"></div>`
     + (rp != null ? `<div class="span" style="left:${Math.min(gp, rp)}%;width:${Math.abs(rp - gp)}%"></div>` : '')
     + `<div class="pt${side(gp, rp)}" style="left:${gp}%"><b class="acc">${pct(g)}</b><i style="background:var(--accent);box-shadow:0 0 0 1px var(--accent)"></i><span>${CC.L('impl')}</span></div>`
-    + (rp != null ? `<div class="pt${split ? (rp === gp ? ' pr' : side(rp, gp)) : ''}" style="left:${rp}%"><b class="muted">${pct(rec)}</b><i style="background:var(--faint);box-shadow:0 0 0 1px var(--faint)"></i><span>${CC.L('rec')}</span></div>` : '');
+    + (rp != null ? `<div class="pt${split ? (rp === gp ? ' pr' : side(rp, gp)) : edge(rp)}" style="left:${rp}%"><b class="muted">${pct(rec)}</b><i style="background:var(--faint);box-shadow:0 0 0 1px var(--faint)"></i><span>${CC.L('rec')}</span></div>` : '');
   const at = `At a ${pl(rTot, 2)} ${CC.mode === 'plain' ? 'return you’d demand' : 'required return'}${c.premium ? ` (including ${pl(c.premium, 1)} for ${c.premiumWhy.join(' and ')})` : ''}`;
   let v;
   if (!isFinite(g)) v = `${at}, the price can’t be explained by any plausible growth rate from this starting cash flow. Try another starting point.`;
@@ -428,7 +442,7 @@ function needChart(c, f0, g, gp, big) {
   // Past cash (bars) and the two paths ahead: what the price needs, and its own past pace.
   // Drawn at the box's real width so the text stays readable on a phone.
   const bw0 = (document.getElementById('need') || {}).clientWidth || 640, W = Math.max(300, Math.min(640, bw0)), narrow = W < 520;
-  const H = (c.hist || []).filter(h => h[1] != null), n = 10, Ht = narrow ? 210 : 230, L = narrow ? 40 : 46, R = narrow ? 86 : 112, T = 14, Bm = 26;
+  const H = (c.hist || []).filter(h => h[1] != null), n = 10, Ht = narrow ? 210 : 230, L = narrow ? 44 : 50, R = narrow ? 88 : 118, T = 14, Bm = 26;
   const need = [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + g, t));
   const pace = gp == null ? null : [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + gp, t));
   const top = Math.max(...need, ...(pace || []), ...H.map(h => h[1])) * 1.08;
@@ -445,15 +459,18 @@ function needChart(c, f0, g, gp, big) {
   const xl = H.map((h, k) => (step < 30 && k !== 0 && k !== H.length - 1) ? '' : `<text x="${X(k)}" y="${Ht - 8}" text-anchor="middle" class="ax">${h[0]}</text>`).join('')
     + [5, 10].map(t => `<text x="${X(nowK + t)}" y="${Ht - 8}" text-anchor="middle" class="ax">${YR + t}</text>`).join('');
   // end labels, nudged apart if they'd collide
-  let yN = Y(need[n]), yP = pace ? Y(pace[n]) : null;
-  if (yP != null && Math.abs(yN - yP) < 28) { if (yN <= yP) yP = yN + 28; else yN = yP + 28; }
-  const lab = (y, v, t, cls) => `<text x="${W - R + 8}" y="${y}" class="el ${cls}"><tspan font-weight="700">${money(v)}</tspan><tspan x="${W - R + 8}" dy="13">${t}</tspan></text>`;
+  const floorY = Y(0) - 16;   // keep end labels clear of the year labels
+  let yN = Math.min(Y(need[n]), floorY), yP = pace ? Math.min(Y(pace[n]), floorY) : null;
+  if (yP != null && Math.abs(yN - yP) < 30) {
+    if (yN <= yP) { yP = Math.min(yN + 30, floorY); yN = yP - 30; } else { yN = Math.min(yP + 30, floorY); yP = yN - 30; }
+  }
+  const lab = (y, v, t, cls) => `<text x="${W - R + 8}" y="${y}" class="el ${cls}"><tspan font-weight="700">${money(v)}</tspan><tspan x="${W - R + 8}" dy="15" font-size="12" font-weight="400">${t}</tspan></text>`;
   const hov = [...Array(nx)].map((_, k) => { const t = k - nowK, hist = k < H.length;
     const tip = hist ? `${H[k][0]}: ${money(H[k][1])} of spare cash` : `${YR + t}: price needs ${money(need[t])}` + (pace ? `; at its past pace ${money(pace[t])}` : '');
     return `<rect x="${X(k) - step / 2}" y="${T}" width="${step}" height="${Ht - T - Bm}" fill="transparent" data-tip="${tip}"/>`; }).join('');
   return `<svg viewBox="0 0 ${W} ${Ht}" width="100%" class="needc" role="img" aria-label="Spare cash so far and the path the price needs: ${money(need[n])} a year by ${YR + 10}${pace ? `, against ${money(pace[n])} at its past pace` : ''}.">
     ${g0}${bars}
-    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${L + 4}" y="${Y(big.fcf) - 5}" class="ax">${esc(narrow ? big.t : big.name)} today: ${money(big.fcf)}</text>` : ''}
+    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${Math.abs(Y(f0) - Y(big.fcf)) > 22 ? L + 4 : W - R - 4}" y="${Y(big.fcf) + (Math.abs(Y(f0) - Y(big.fcf)) > 22 ? -5 : 14)}" text-anchor="${Math.abs(Y(f0) - Y(big.fcf)) > 22 ? 'start' : 'end'}" class="ax">${esc(narrow ? big.t : big.name)} today: ${money(big.fcf)}</text>` : ''}
     <line x1="${X(nowK)}" x2="${X(nowK)}" y1="${T}" y2="${Y(0)}" class="now"/>
     ${pace ? `<path d="${path(pace)}" class="lp2"/>` : ''}<path d="${path(need)}" class="lp1"/>
     <circle cx="${X(nowK)}" cy="${Y(f0)}" r="4.5" class="st"/>
@@ -486,9 +503,12 @@ function mosHTML(c, f0, g, r, gt) {
   const ls = !k || c.rec == null ? '' : `Pay ${L$(c.mcap * k)} for a stand worth about <b>${L$(worth(c.rec))}</b> if it keeps growing.`;
   return `<p class="lead">${head}</p>${lemon(ls)}
     <div class="ladder"><div class="ln"></div>${pts.map(([lab, v, cls], k) => {
-      const low = k === 2 && pts.length === 3 && Math.abs(pos(v) - pos(pts[1][1])) < 24;
-      return k === 0 ? `<div class="lp up" style="left:${pos(v)}%"><b>$${v.toFixed(2)}</b><span>${lab}</span><i class="${cls}"></i></div>`
-        : `<div class="lp dn${low ? ' low' : ''}" style="left:${pos(v)}%"><i class="${cls}"></i><b>$${v.toFixed(0)}</b><span>${lab}</span></div>`; }).join('')}</div>
+      const thr = 125 / Math.max(240, (document.getElementById('mos') || {}).clientWidth || 600) * 100;   // label width, as % of the scale
+      const lift = k === 1 && pts.length === 3 && Math.abs(pos(v) - pos(pts[2][1])) < thr && Math.abs(pos(v) - pos(pts[0][1])) >= thr;
+      const al = pos(v) > 85 ? ' ar' : pos(v) < 15 ? ' al' : '';
+      return k === 0 ? `<div class="lp up${al}" style="left:${pos(v)}%"><b>$${v.toFixed(2)}</b><span>${lab}</span><i class="${cls}"></i></div>`
+        : lift ? `<div class="lp up mut${al}" style="left:${pos(v)}%"><b>$${v.toFixed(0)}</b><span>${lab}</span><i class="${cls}"></i></div>`
+        : `<div class="lp dn${al}" style="left:${pos(v)}%"><i class="${cls}"></i><b>$${v.toFixed(0)}</b><span>${lab}</span></div>`; }).join('')}</div>
     ${c.rec != null ? `<p class="caveat">“Past pace” covers only about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years and is capped at 20%.</p>` : ''}
     ${why('mos', `<p>${plain ? 'Investors like to buy for less than they think something is worth, so they’re OK even if they’re a bit wrong. That gap is called a “margin of safety”.' : 'Value per share from today’s cash at a given growth rate, discounted at your required return.'}</p><p>${txt}</p>${lemon(lm)}`)}`;
 }
