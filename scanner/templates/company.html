@@ -40,7 +40,7 @@ table.sens td.on{background:var(--accent);color:#fff;font-weight:700}
 @media (max-width:600px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.sec{padding:18px}}
 .plain{padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--accent);border-radius:0 12px 12px 0}
 .plain h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.plain p{margin:0;font-size:16.5px;line-height:1.65;color:var(--ink)}
+.plain p{margin:0;font-size:16.5px;line-height:1.65;color:var(--ink)}.plain .whyd p{font-size:14.5px;line-height:1.6;color:var(--ink2)}
 .mathlink{all:unset;cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);margin-top:6px;display:inline-block}
 .mathlink:hover{text-decoration:underline}.mathlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #math{padding:18px 22px;margin:0 0 20px;scroll-margin-top:16px}
@@ -62,8 +62,16 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
 .why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
-.lem{margin:10px 0 12px;padding:10px 14px;border-radius:10px;background:#FFF8DC;border-left:4px solid #E3B800;font-size:14px;line-height:1.55;color:var(--ink)}
-.lem .lemh{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8A6D00;margin-bottom:2px}
+.lead{margin:6px 0 10px;font-size:15.5px;line-height:1.55;color:var(--ink)}
+.caveat{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.whyb{display:inline-flex;align-items:center;gap:4px;margin-top:12px;padding:0;border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;color:var(--accent);cursor:pointer}
+.whyb::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);margin-left:4px;transition:transform .15s}
+.whyb[aria-expanded=true]::after{transform:rotate(-135deg) translateY(-1px)}
+.whyd{margin-top:8px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;line-height:1.6;color:var(--ink2)}
+.whyd p{margin:0 0 10px}.whyd p.faint{font-size:12.5px;color:var(--faint)}
+.plain .lem{margin-top:12px}
+.lem{margin:8px 0 12px;padding:8px 12px;border-radius:10px;background:#FFF8DC;border-left:4px solid #E3B800;font-size:14px;line-height:1.55;color:var(--ink)}
+.lem .lemh{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8A6D00;margin-right:4px}
 @media (prefers-color-scheme:dark){.lem{background:#2F2A14;border-left-color:#C9A300}.lem .lemh{color:#E3C75A}}
 .side .lem{font-size:13px}
 .lemline{display:block;margin-top:10px;font-size:15px;color:var(--ink2)}
@@ -122,6 +130,14 @@ function implied(f0, target, r, gt) {
 }
 
 function cue(c) { const N = COS.length; return c.rank <= N / 3 ? ['cheap', 'Cheap'] : c.rank <= 2 * N / 3 ? ['mid', 'Middle'] : ['pricey', 'Pricey']; }
+function shortSummary(c) {
+  const R = META.rates || {}, rf = R.rf, out = [], g = c.impl;
+  if (c.yld != null && c.yld <= 0) out.push(`<b>No spare cash</b> right now: its price is a bet on the future.`);
+  else if (c.yld != null) out.push(`<b>${pc(c.yld)}¢ back per $1</b> a year` + (rf ? (c.yld / rf >= 1.15 ? `, ${(c.yld / rf).toFixed(1)}× a safe bond’s ${(rf * 100).toFixed(1)}¢.` : c.yld / rf >= 0.85 ? `, about the same as a safe bond (${(rf * 100).toFixed(1)}¢).` : `, less than a safe bond’s ${(rf * 100).toFixed(1)}¢.`) : '.'));
+  if (g != null && isFinite(g) && c.rec != null)
+    out.push(`The price bets on <b>${pct(g, 0)} a year</b>; it has grown <b>${pct(c.rec, 0)}</b> lately. ` + (g < c.rec - 0.05 ? 'The market expects a slowdown.' : g > c.rec + 0.03 ? 'It needs things to go well.' : 'Fair if it keeps that up.'));
+  return out.join('<br>');
+}
 function plainSummary(c) {
   const R = META.rates || {}, rf = R.rf, out = [];
   if (c.yld != null && c.yld <= 0) out.push(`${esc(c.name)} isn’t producing spare cash right now: on our measure it used about <b>${Math.abs(pc(c.yld))}¢ more cash than it made</b> for every $1 you’d pay for the company. Its price is a bet on the future, not on today’s cash.`);
@@ -145,8 +161,6 @@ function plainSummary(c) {
   if (t.includes('Leveraged')) extra.push('it carries a lot of debt, which adds risk');
   if (t.includes('Fell sharply')) extra.push('its price dropped a lot recently');
   if (extra.length) out.push('Worth knowing: ' + extra.join('; ') + '.');
-  const k = lk(c);
-  if (k && c.mcap) out.push(`<span class="lemline">In <a href="learn.html">lemonade-stand</a> terms: shrink it to a stand that made $100 of spare cash last year, and you’d be paying about <b>${L$(c.mcap * k)}</b> for it. (The example stand cost $1,000.)</span>`);
   return out.join(' ');
 }
 
@@ -186,6 +200,7 @@ function whyBanner(c) {
 function render(c, prev, next) {
   if (cur !== c.t) st = { r: BASE_R, gt: GT0, base: c.defaultBase || 0 };
   const sameCo = cur === c.t; cur = c.t;
+  if (!sameCo) OPEN.clear();
   const plain = CC.mode === 'plain', L = CC.L, I = CC.info, N = COS.length, WR = wouldRank(c), cq = cue({ rank: WR });
   const R0 = META.rates || {};
   document.title = `${c.t} · ${c.name} · Cash Compounders`;
@@ -210,7 +225,9 @@ function render(c, prev, next) {
     </div>
   </div>
   ${whyBanner(c)}
-  <section class="card plain"><h2>In plain English</h2><p>${plainSummary(c)}</p></section>
+  <section class="card plain"><h2>In plain English</h2><p>${shortSummary(c)}</p>
+    ${lk(c) && c.mcap ? lemon(`A stand that made $100 last year would cost <b>${L$(c.mcap * lk(c))}</b>. The <a href="learn.html">example stand</a> cost $1,000.`) : ''}
+    ${why('sum', `<p>${plainSummary(c)}</p>`)}</section>
   <section class="tiles" aria-label="Key numbers" id="tiles">
     <div class="card tile"><div class="k">${L('yld')}${I('yld')}</div><div class="v">${plain && c.yld != null ? pc(c.yld) + '¢' : pl(c.yld)}</div><div class="d">${R0.rf && c.yld != null ? (c.yld / R0.rf).toFixed(1) + '× a safe bond · ' : ''}cheaper than ${Math.max(0, Math.round((N + 1 - WR) / N * 100))}% of the list</div><div class="d" style="display:none">${(c.basis === 'TTM' ? '12 months to ' : 'fiscal year to ') + new Date(c.end + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>
     <div class="card tile"><div class="k">${L('pfcf')}${I('pfcf')}</div><div class="v">${c.pfcf != null ? c.pfcf.toFixed(1) + (plain ? ' yrs' : '×') : '–'}</div><div class="d">${c.fcf > 0 ? money(c.fcf) + (plain ? ' of cash a year' : ' free cash flow') : (plain ? 'never, at today’s cash' : 'negative free cash flow')}</div></div>
@@ -223,15 +240,14 @@ function render(c, prev, next) {
     <div class="main">
       <section class="card sec">
         <h2>${plain ? 'What is the price betting on?' : 'What is the price assuming?'}</h2>
-        <p class="muted" style="margin:0;font-size:14px">${plain ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew per share over the last few years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p>
         <div class="scale" id="scale"></div>
         <div class="ticks"><span>−10%</span><span>0%</span><span>+10%</span><span>+20%</span><span>+30%</span></div>
         <div class="verdict" id="verdict"></div>
+        <div id="betwhy"></div>
         <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px" id="betlinks">
           <button class="mathlink" data-k="impl">Show the math: ${L('impl')}</button>
           <button class="mathlink" data-k="rec">Show the math: ${L('rec')}</button>
         </div>
-        <p class="faint" style="margin:12px 0 0;font-size:12.5px">${plain ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>
       </section>
       <section class="card sec" id="needsec"><h2>${plain ? 'What would need to be true' : 'What the price requires'}</h2><div id="need"></div></section>
       <section class="card sec" id="mossec"><h2>${plain ? 'What price leaves room for error?' : 'Margin of safety'}</h2><div id="mos"></div></section>
@@ -335,7 +351,12 @@ function update(c) {
   else if (rec != null && g > rec + 0.03) v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, faster than the ${pct(rec)} the business has delivered per share. The price already counts on acceleration.`;
   else v = `${at}, today’s price assumes <b>${pct(g)} a year</b>, roughly in line with the ${pct(rec)} the business has delivered per share. The price looks fair if that record holds.`;
   if (!(f0 > 0)) v = `This company’s starting cash flow is zero or negative, so no growth rate from it can explain the price. The price is a bet that it becomes a steady cash maker. Try another starting point if there is one.`;
-  document.getElementById('verdict').innerHTML = v;
+  const short = !(f0 > 0) ? 'No spare cash to start from, so no growth rate explains the price.'
+    : !isFinite(g) ? 'No sensible growth rate explains this price.'
+    : `Price bets on <b>${pct(g)} a year</b>` + (rec != null ? `; it has grown <b>${pct(rec)}</b>. ` + (g < rec - 0.05 ? 'The market expects a slowdown.' : g > rec + 0.03 ? 'It counts on faster growth.' : 'Fair if that holds.') : '.');
+  document.getElementById('verdict').innerHTML = short;
+  document.getElementById('betwhy').innerHTML = why('bet', `<p>${CC.mode === 'plain' ? 'Blue: how fast the company’s cash has to grow each year for the next 10 years for today’s price to make sense. Grey: how fast it actually grew per share over the last few years. Far apart means the market expects the future to look very different from the past.' : 'The yearly free-cash-flow growth over the next 10 years that today’s price requires, against what the business has delivered per share.'}</p><p>${v}</p>
+    <p class="faint">${CC.mode === 'plain' ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>`);
   document.getElementById('need').innerHTML = needHTML(c, f0, g, rTot, st.gt);
   document.getElementById('mos').innerHTML = mosHTML(c, f0, g, rTot, st.gt);
   document.getElementById('rtext').textContent = pl(st.r, 2) + (c.premium ? ' + ' + pl(c.premium, 1) : '');
@@ -355,7 +376,16 @@ function L$(x) {
   const a = Math.abs(x), r = a < 100 ? 5 : a < 1000 ? 10 : a < 10000 ? 50 : 500;
   return (x < 0 ? '−' : '') + '$' + (Math.round(a / r) * r).toLocaleString('en-US');
 }
-const lemon = h => CC.mode === 'plain' && h ? `<div class="lem"><span class="lemh">Lemonade-stand version</span>${h}</div>` : '';
+const lemon = h => CC.mode === 'plain' && h ? `<div class="lem"><span class="lemh">Lemonade stand</span> ${h}</div>` : '';
+// ---------- "Why?" toggles: each section shows its answer; the explanation is one tap away ----------
+const OPEN = new Set();
+const why = (id, html) => !html ? '' : `<button type="button" class="whyb" data-why="${id}" aria-expanded="${OPEN.has(id)}" aria-controls="why-${id}">${OPEN.has(id) ? 'Less' : (CC.mode === 'plain' ? 'Why?' : 'Details')}</button><div class="whyd" id="why-${id}"${OPEN.has(id) ? '' : ' hidden'}>${html}</div>`;
+document.addEventListener('click', e => {
+  const b = e.target.closest('.whyb'); if (!b) return;
+  const id = b.dataset.why, d = document.getElementById('why-' + id), o = d.hidden;
+  d.hidden = !o; b.setAttribute('aria-expanded', o); b.textContent = o ? 'Less' : (CC.mode === 'plain' ? 'Why?' : 'Details');
+  o ? OPEN.add(id) : OPEN.delete(id);
+});
 // ---------- Extra judgement aids ----------
 const YR = +META.asof.slice(0, 4);
 const hbar = (rows, mx) => `<div class="hb">${rows.map(([lab, v, cls, note]) => `<div class="hbr"><span class="hbl">${lab}</span>
@@ -385,8 +415,14 @@ function needHTML(c, f0, g, r, gt) {
         : `For that price to be fair, it needs to make about <b>${L$(c10 * k)} a year by ${YR + 10}</b>, ${c10 / f0 >= 1.8 ? `like running about ${Math.round(c10 / f0)} stands instead of one` : `about ${Math.round((c10 / f0 - 1) * 100)}% more than it makes in a normal year now`}.`
           + (past != null ? ` Growing like it has lately, it would make about ${L$(past * k)}.` : ''));
   }
-  return `<p style="margin:6px 0 10px;font-size:14.5px;line-height:1.6">${txt}</p>${lemon(lm)}${needChart(c, f0, g, past != null ? c.rec : null, c10 > (big ? big.fcf : 0) * 1.05 ? big : peer)}
-    `;
+  const head = g <= 0 ? `Needs its cash to <b>${g < 0 ? 'shrink ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. A low bar.`
+    : `Needs <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.` + (past != null ? (past >= c10 ? ' At its past pace, it gets there.' : ` At its past pace, it reaches ${money(past)}.`) : '');
+  const ls = !k ? '' : g <= 0 ? `A ${L$(c.mcap * k)} stand only has to keep selling the same lemonade.` : `A ${L$(c.mcap * k)} stand would need to make <b>${L$(c10 * k)} a year</b> by ${YR + 10}.`;
+  return `<p class="lead">${head}</p>${lemon(ls)}${needChart(c, f0, g, past != null ? c.rec : null, c10 > (big ? big.fcf : 0) * 1.05 ? big : peer)}
+    ${why('need', `<p>${txt}</p>${lemon(lm)}${needCaption(c, f0)}`)}`;
+}
+function needCaption(c, f0) {
+  return `<p class="faint">Bars: spare cash so far. Dot: the starting point${c.bases[st.base] ? ` (${esc(c.bases[st.base].label.split(':')[0].replace(/ \(.*\)/, ''))}, ${money(f0)})` : ''}. Lines change with “${CC.mode === 'plain' ? 'Try your own assumptions' : 'Assumptions'}”. Hover for each year.</p>`;
 }
 function needChart(c, f0, g, gp, big) {
   // Past cash (bars) and the two paths ahead: what the price needs, and its own past pace.
@@ -423,7 +459,7 @@ function needChart(c, f0, g, gp, big) {
     <circle cx="${X(nowK)}" cy="${Y(f0)}" r="4.5" class="st"/>
     ${lab(yN, need[n], 'price needs', 'acc')}${pace ? lab(yP, pace[n], narrow ? 'its past pace' : `past pace ${pct(gp, 0)}/yr`, 'mut') : ''}
     ${xl}${hov}</svg>
-    <div class="faint" style="font-size:12.5px;margin-top:4px">Bars: spare cash so far. Dot: the starting point${c.bases[st.base] ? ` (${esc(c.bases[st.base].label.split(':')[0].replace(/ \(.*\)/, ''))}, ${money(f0)})` : ''}. Lines change with “${CC.mode === 'plain' ? 'Try your own assumptions' : 'Assumptions'}”. Hover for each year.</div>`;
+`;
 }
 function mosHTML(c, f0, g, r, gt) {
   const plain = CC.mode === 'plain', sh = c.mcapRaw / c.price, net = c.net * 1e9;
@@ -445,13 +481,16 @@ function mosHTML(c, f0, g, r, gt) {
   const lm = !k ? '' : (c.rec != null ? `If the stand keeps growing like it has, all the cash it will ever make is worth about <b>${L$(worth(c.rec))}</b> to you today. You’d be paying ${L$(c.mcap * k)}. `
       + (worth(c.rec) >= c.mcap ? 'You’d get more than you pay for, a cushion in case things go a bit worse.' : 'You’d be paying more than that, so you’re counting on it doing even better than before.') : '')
     + ` If it never grew, the stand would be worth about ${L$(worth(0))}.`;
-  return `<p class="muted" style="margin:0 0 6px;font-size:13.5px">${plain ? 'Investors like to buy for less than they think something is worth, so they’re OK even if they’re a bit wrong. That gap is called a “margin of safety”.' : 'Value per share from today’s cash at a given growth rate, discounted at your required return.'}</p>
+  const head = pPast == null ? `Worth about <b>$${at(0).toFixed(2)}</b> a share if its cash never grows.`
+    : `Worth about <b>$${pPast.toFixed(2)}</b> at its past pace, ` + (pPast >= c.price ? `<b>${d(pPast).replace('+', '')} above</b> today’s $${c.price.toFixed(2)}.` : `<b>${d(pPast).replace('−', '')} below</b> today’s $${c.price.toFixed(2)}: no cushion.`);
+  const ls = !k || c.rec == null ? '' : `Pay ${L$(c.mcap * k)} for a stand worth about <b>${L$(worth(c.rec))}</b> if it keeps growing.`;
+  return `<p class="lead">${head}</p>${lemon(ls)}
     <div class="ladder"><div class="ln"></div>${pts.map(([lab, v, cls], k) => {
       const low = k === 2 && pts.length === 3 && Math.abs(pos(v) - pos(pts[1][1])) < 24;
       return k === 0 ? `<div class="lp up" style="left:${pos(v)}%"><b>$${v.toFixed(2)}</b><span>${lab}</span><i class="${cls}"></i></div>`
         : `<div class="lp dn${low ? ' low' : ''}" style="left:${pos(v)}%"><i class="${cls}"></i><b>$${v.toFixed(0)}</b><span>${lab}</span></div>`; }).join('')}</div>
-    <p style="margin:8px 0 0;font-size:14.5px;line-height:1.6">${txt}</p>${lemon(lm)}
-    <p class="faint" style="margin:10px 0 0;font-size:12.5px">“Its past” is the ${CC.L('rec').toLowerCase()} above, measured over only about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years and capped at 20%, so treat it as generous for fast growers.</p>`;
+    ${c.rec != null ? `<p class="caveat">“Past pace” covers only about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years and is capped at 20%.</p>` : ''}
+    ${why('mos', `<p>${plain ? 'Investors like to buy for less than they think something is worth, so they’re OK even if they’re a bit wrong. That gap is called a “margin of safety”.' : 'Value per share from today’s cash at a given growth rate, discounted at your required return.'}</p><p>${txt}</p>${lemon(lm)}`)}`;
 }
 function dropHTML(c) {
   const plain = CC.mode === 'plain', Q = c.fcfQ || [];
@@ -482,8 +521,17 @@ function dropHTML(c) {
       + (cc1 == null ? 'kept selling the same lemonade (no new results yet).' : cc1 > 0.02 ? `was actually selling more lemonade (its yearly cash went up ${pc(cc1)}%).` : cc1 >= 0 ? 'kept selling the same lemonade.' : `sold less lemonade (its yearly cash fell ${Math.abs(pc(cc1))}%).`)
       + (isFinite(gNow) && c.rec != null && gNow > c.rec + 0.03 ? ` Even at ${L$(P)}, you’re still paying for a much bigger stand later.` : isFinite(gNow) && c.rec != null && gNow < c.rec - 0.05 ? ` At ${L$(P)}, you’re paying for less growth than it has managed before.` : '');
   }
-  return `<p style="margin:6px 0 12px;font-size:14.5px;line-height:1.6">${txt}</p>${lemon(lm)}${bar(plain ? 'Share price' : 'Price vs. 52-wk high', pc1)}${cc1 != null ? bar(plain ? 'Its yearly cash' : 'TTM FCF, same stretch', cc1) : ''}
-    ${Q.length > 1 ? `<p class="faint" style="margin:10px 0 0;font-size:12.5px">12-month cash at each report: ${Q.map(q => `${fmtD(q.end, true)} ${money(q.fcf_bn)}`).join(' · ')}. “Before the high” = the latest period ending at least 40 days before it, roughly when its results would have been out.</p>` : ''}`;
+  let head;
+  if (pc1 > -0.10) head = `Within 10% of its 52-week high: no big drop to explain.`;
+  else {
+    const same = cc1 == null && then && now && then.end === now.end;
+    head = `<b>Down ${Math.abs(pc(pc1))}%</b> from its high. ` + (same ? 'No new results since, so it’s <b>mood, not news</b>.'
+      : cc1 == null ? '' : cc1 >= 0 ? `Its cash ${cc1 > 0.02 ? 'grew ' + pc(cc1) + '%' : 'held steady'}, so it’s <b>mood, not news</b>.` : `Its cash fell ${Math.abs(pc(cc1))}% too: <b>partly real news</b>.`);
+    if (isFinite(gHi) && isFinite(gNow)) head += `<br>The bet fell from ${pct(gHi, 0)} to <b>${pct(gNow, 0)} a year</b>` + (c.rec != null ? ` (past pace ${pct(c.rec, 0)}).` : '.');
+  }
+  const ls = !k || pc1 > -0.10 ? '' : `Same stand, new price: ${L$(c.mcap * k / (1 + pc1))} → <b>${L$(c.mcap * k)}</b>` + (cc1 == null ? ', same lemonade.' : cc1 > 0.02 ? ', selling more lemonade.' : cc1 >= 0 ? ', same lemonade.' : ', selling less lemonade.');
+  return `<p class="lead">${head}</p>${lemon(ls)}${bar(plain ? 'Share price' : 'Price vs. 52-wk high', pc1)}${cc1 != null ? bar(plain ? 'Its yearly cash' : 'TTM FCF, same stretch', cc1) : ''}
+    ${pc1 <= -0.10 || Q.length > 1 ? why('drop', `${pc1 <= -0.10 ? `<p>${txt}</p>${lemon(lm)}` : ''}${Q.length > 1 ? `<p class="faint">12-month cash at each report: ${Q.map(q => `${fmtD(q.end, true)} ${money(q.fcf_bn)}`).join(' · ')}. “Before the high” = the latest period ending at least 40 days before it, roughly when its results would have been out.</p>` : ''}`) : ''}`;
 }
 function peHTML(c) {
   const plain = CC.mode === 'plain';
@@ -491,18 +539,19 @@ function peHTML(c) {
   if (c.ni <= 0) return `<p style="margin:0;font-size:14px;line-height:1.55">It <b>lost money</b> (${money(c.ni)}) over the 12 months to ${fmtD(c.niEnd)}, so there’s no P/E. ${c.pfcf ? `On spare cash it costs ${c.pfcf.toFixed(1)}× a year’s cash.` : ''}</p>`;
   const rows = [[plain ? 'Price ÷ profit (P/E)' : 'P/E (trailing)', c.pe], [plain ? 'Price ÷ spare cash' : 'P/FCF', c.pfcf]];
   const gap = c.pfcf ? c.pfcf / c.pe : null;
-  let why = '';
-  if (gap != null && gap > 1.15) why = `Spare cash is lower than profit. Cash counts three things profit spreads out or skips: stock pay, money spent on buildings and equipment, and money tied up in inventory or in bills customers haven’t paid yet. Fast growers often tie up a lot in the last one. We lean on cash because it’s what owners can actually get.`;
-  else if (gap != null && gap < 0.87) why = `Spare cash is higher than profit, often because profit subtracts large non-cash charges (like wear-and-tear on equipment) that don’t use cash this year.`;
-  else if (gap != null) why = 'Profit and spare cash tell a similar story here.';
-  else why = 'It has profit but no spare cash: the profit is being spent (or tied up) before it reaches owners.';
+  let whyTxt = '';
+  if (gap != null && gap > 1.15) whyTxt = `Spare cash is lower than profit. Cash counts three things profit spreads out or skips: stock pay, money spent on buildings and equipment, and money tied up in inventory or in bills customers haven’t paid yet. Fast growers often tie up a lot in the last one. We lean on cash because it’s what owners can actually get.`;
+  else if (gap != null && gap < 0.87) whyTxt = `Spare cash is higher than profit, often because profit subtracts large non-cash charges (like wear-and-tear on equipment) that don’t use cash this year.`;
+  else if (gap != null) whyTxt = 'Profit and spare cash tell a similar story here.';
+  else whyTxt = 'It has profit but no spare cash: the profit is being spent (or tied up) before it reaches owners.';
   return `<table class="pe">${rows.map(([k, v]) => `<tr><td>${k}</td><td><b>${v != null ? v.toFixed(1) + '×' : '–'}</b></td></tr>`).join('')}
     <tr><td class="faint">${plain ? 'Profit, last 12 months' : 'Net income (TTM)'}</td><td class="faint">${money(c.ni)}</td></tr></table>
-    <p style="margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2)">${why}</p>
-    ${c.fcf > 0 ? lemon(c.ni > c.fcf * 1.15 ? `The stand’s books show ${L$(c.ni / c.fcf * 100)} of profit, but only $100 reached the cash box. The rest went to new equipment, lemons still in storage, customers who haven’t paid yet, or helpers paid in shares of the stand.`
+    <p class="lead" style="margin-top:10px">${gap == null ? 'Profit, but no spare cash.' : gap > 1.15 ? 'Profit runs ahead of cash.' : gap < 0.87 ? 'Cash runs ahead of profit.' : 'Profit and cash agree.'}</p>
+    ${c.fcf > 0 ? lemon(`Books show ${L$(c.ni / c.fcf * 100)} of profit; <b>$100</b> reached the cash box.`) : ''}
+    ${why('pe', `<p>${whyTxt}</p>${c.fcf > 0 ? lemon(c.ni > c.fcf * 1.15 ? `The stand’s books show ${L$(c.ni / c.fcf * 100)} of profit, but only $100 reached the cash box. The rest went to new equipment, lemons still in storage, customers who haven’t paid yet, or helpers paid in shares of the stand.`
       : c.ni < c.fcf * 0.87 ? `The books show only ${L$(c.ni / c.fcf * 100)} of profit, but $100 reached the cash box. The books subtract wear-and-tear on the stand that didn’t cost any cash this year.`
       : `The books and the cash box agree: about $100 either way.`) : ''}
-    <p class="faint" style="margin:8px 0 0;font-size:12px">Both are “years to earn back the price” if nothing changes. Lower is cheaper. Neither says anything about growth; that’s what the price’s bet is for.</p>`;
+    <p class="faint">Both are “years to earn back the price” if nothing changes. Lower is cheaper. Neither says anything about growth; that’s what the price’s bet is for.</p>`)}`;
 }
 // ---------- Show the math ----------
 let mathKey = null;
