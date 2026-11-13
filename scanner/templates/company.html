@@ -60,6 +60,11 @@ table.dcf tr.tot td{font-weight:700;border-top:2px solid var(--border)}
 .why{padding:18px 22px;margin-bottom:20px;border-left:4px solid var(--warn-ink);border-radius:0 12px 12px 0}
 .why h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-ink)}
 .why ul{margin:0 0 8px;padding-left:18px;font-size:15px;line-height:1.6}.why p{margin:0;font-size:13.5px}
+.lem{margin:10px 0 12px;padding:10px 14px;border-radius:10px;background:#FFF8DC;border-left:4px solid #E3B800;font-size:14px;line-height:1.55;color:var(--ink)}
+.lem .lemh{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8A6D00;margin-bottom:2px}
+@media (prefers-color-scheme:dark){.lem{background:#2F2A14;border-left-color:#C9A300}.lem .lemh{color:#E3C75A}}
+.side .lem{font-size:13px}
+.lemline{display:block;margin-top:10px;font-size:15px;color:var(--ink2)}
 .needc{display:block;overflow:visible}.needc .gl{stroke:var(--line)}.needc .ax{font-size:11px;fill:var(--faint)}
 .needc .hb0{fill:var(--accent-bg)}.needc .ref{stroke:var(--faint);stroke-dasharray:2 4}.needc .now{stroke:var(--border);stroke-dasharray:3 3}
 .needc .lp1{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}.needc .lp2{fill:none;stroke:var(--faint);stroke-width:2;stroke-dasharray:5 4}
@@ -100,7 +105,7 @@ const COS = __COMPANIES__;
 const META = __META__;
 const pct = (x, d = 1) => x == null || !isFinite(x) ? (x === Infinity ? '>200%' : '–') : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x * 100).toFixed(d) + '%';
 const pl = (x, d = 1) => x == null || !isFinite(x) ? '–' : (x * 100).toFixed(d) + '%';
-const money = b => b == null ? '–' : Math.abs(b) >= 1000 ? '$' + (b / 1000).toFixed(2) + 'T' : Math.abs(b) >= 100 ? '$' + b.toFixed(0) + 'B' : '$' + b.toFixed(Math.abs(b) < 10 ? 2 : 1) + 'B';
+const money = b => b == null || !isFinite(b) ? '–' : (b < 0 ? '−' : '') + (Math.abs(b) >= 1000 ? '$' + (Math.abs(b) / 1000).toFixed(2) + 'T' : Math.abs(b) >= 100 ? '$' + Math.abs(b).toFixed(0) + 'B' : Math.abs(b) >= 1 ? '$' + Math.abs(b).toFixed(Math.abs(b) < 10 ? 2 : 1) + 'B' : '$' + (Math.abs(b) * 1000).toFixed(Math.abs(b) < 0.01 ? 1 : 0) + 'M');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmtD = (d, short) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', short ? { month: 'short', year: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' }) : '–';
 const BASE_R = META.rules.REQUIRED_RETURN, GT0 = META.rules.TERMINAL_GROWTH || 0.03;
@@ -138,6 +143,8 @@ function plainSummary(c) {
   if (t.includes('Leveraged')) extra.push('it carries a lot of debt, which adds risk');
   if (t.includes('Fell sharply')) extra.push('its price dropped a lot recently');
   if (extra.length) out.push('Worth knowing: ' + extra.join('; ') + '.');
+  const k = lk(c);
+  if (k && c.mcap) out.push(`<span class="lemline">In <a href="learn.html">lemonade-stand</a> terms: shrink it to a stand that made $100 of spare cash last year, and you’d be paying about <b>${L$(c.mcap * k)}</b> for it. (The example stand cost $1,000.)</span>`);
   return out.join(' ');
 }
 
@@ -228,7 +235,7 @@ function render(c, prev, next) {
       <section class="card sec" id="mossec"><h2>${plain ? 'What price leaves room for error?' : 'Margin of safety'}</h2><div id="mos"></div></section>
       <section class="card sec"><h2>${plain ? 'The drop: news or mood?' : 'Price move vs. cash move'}</h2><div id="drop"></div></section>
       <section class="card sec">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>${plain ? 'Spare cash each year' : 'Free cash flow'}</h2><span class="muted" style="font-size:13px">$ billions · ${plain ? 'after paying for everything, including stock pay' : 'after stock-based comp'}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px"><h2>${plain ? 'Spare cash each year' : 'Free cash flow'}</h2><span class="muted" style="font-size:13px">${plain ? 'after paying for everything, including stock pay' : 'after stock-based comp'}</span></div>
         <div class="bars" id="bars"></div>
       </section>
       ${c.notes.length ? `<section class="card sec"><h2>Worth knowing</h2><ul class="notes" style="margin:10px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)">${c.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>` : ''}
@@ -276,7 +283,7 @@ function render(c, prev, next) {
   // free cash flow bars
   const H = c.hist, mx = Math.max(...H.map(h => Math.abs(h[1])), 0.001);
   const bars = document.getElementById('bars'); bars.style.gridTemplateColumns = `repeat(${H.length}, minmax(0,1fr))`;
-  bars.innerHTML = H.map((h, k) => `<div><span style="font-size:13px;font-weight:600" class="${h[1] < 0 ? 'down' : ''}">${money(h[1]).replace('B', '')}</span>
+  bars.innerHTML = H.map((h, k) => `<div><span style="font-size:13px;font-weight:600" class="${h[1] < 0 ? 'down' : ''}">${money(h[1])}</span>
     <i style="height:${Math.max(3, Math.round(Math.abs(h[1]) / mx * 140))}px;background:${h[1] < 0 ? 'var(--down)' : k === H.length - 1 ? 'var(--accent)' : 'var(--accent-bg)'}"></i><span class="muted" style="font-size:12px">${h[0]}</span></div>`).join('');
 
   // price trend
@@ -330,6 +337,16 @@ function update(c) {
   document.getElementById('sens').innerHTML = `<thead><tr><th scope="col" style="text-align:left;font-size:12px">Required ↓ · later growth →</th>${gs.map(x => `<th scope="col">${pl(x, 0)}</th>`).join('')}</tr></thead><tbody>`
     + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
 }
+// ---------- Lemonade-stand translations (plain English only) ----------
+// Shrink the company to a stand that made $100 of spare cash over the last 12 months; every other
+// figure scales by the same factor, so "you'd pay $3,300 for it" is just company value ÷ cash × $100.
+const lk = c => c.fcf > 0 ? 100 / c.fcf : null;
+function L$(x) {
+  if (x == null || !isFinite(x)) return '–';
+  const a = Math.abs(x), r = a < 100 ? 5 : a < 1000 ? 10 : a < 10000 ? 50 : 500;
+  return (x < 0 ? '−' : '') + '$' + (Math.round(a / r) * r).toLocaleString('en-US');
+}
+const lemon = h => CC.mode === 'plain' && h ? `<div class="lem"><span class="lemh">Lemonade-stand version</span>${h}</div>` : '';
 // ---------- Extra judgement aids ----------
 const YR = +META.asof.slice(0, 4);
 const hbar = (rows, mx) => `<div class="hb">${rows.map(([lab, v, cls, note]) => `<div class="hbr"><span class="hbl">${lab}</span>
@@ -340,14 +357,26 @@ function needHTML(c, f0, g, r, gt) {
   if (!isFinite(g)) return `<p class="muted">${g > 0 ? 'The price needs more growth than any sensible rate, so there’s no clear picture to draw.' : 'The price is below the value of today’s cash even if it shrinks fast.'}</p>`;
   const c5 = f0 * Math.pow(1 + g, 5), c10 = f0 * Math.pow(1 + g, 10), mult = c10 / f0;
   const past = c.rec != null ? f0 * Math.pow(1 + c.rec, 10) : null;
-  const big = COS.filter(x => x.t !== c.t && x.fcf > 0).sort((a, b) => b.fcf - a.fcf)[0];
+  const others = COS.filter(x => x.t !== c.t && x.fcf > 0), big = others.slice().sort((a, b) => b.fcf - a.fcf)[0];
+  const near = others.length ? others.reduce((a, b) => Math.abs(Math.log(b.fcf / c10)) < Math.abs(Math.log(a.fcf / c10)) ? b : a) : null;
+  const peer = near && Math.abs(Math.log(near.fcf / c10)) < Math.log(1.5) ? near : null;
   const rev = c.m && c.m.revenue ? c.m.revenue / 1e9 : null, rev10 = rev ? rev * Math.pow(1 + g, 10) : null;
   let txt = g <= 0 ? `Today’s price only needs ${esc(c.name)}’s spare cash to <b>${g < 0 ? 'shrink about ' + Math.abs(pc(g)) + '% a year' : 'hold steady'}</b>. If it simply keeps making ${money(f0)} a year, the price looks low.`
     : `For today’s price to make sense, ${esc(c.name)}’s spare cash has to grow from ${money(f0)} to about <b>${money(c10)} a year by ${YR + 10}</b>, ${mult.toFixed(1)}× today.`
       + (rev10 ? ` If it keeps the same share of each sales dollar, sales would have to reach about <b>${money(rev10)} a year</b>, up from ${money(rev)}.` : '')
-      + (big && c10 > big.fcf * 1.05 ? ` For scale, the biggest cash maker on our list (${esc(big.name)}) makes ${money(big.fcf)} a year today.` : '');
+      + (big && c10 > big.fcf * 1.05 ? ` For scale, that’s more than the biggest cash maker on our list (${esc(big.name)}) makes today: ${money(big.fcf)}.`
+         : peer && g > 0 ? ` For scale, that’s about what ${esc(peer.name)} makes today (${money(peer.fcf)}).` : '');
   if (past != null && g > 0) txt += past >= c10 ? ` If it kept growing like its recent past, it would get there.` : ` Even at its recent pace (${pct(c.rec, 0)} a year, which few companies keep up for a decade), it would reach about ${money(past)}, short of what the price needs.`;
-  return `<p style="margin:6px 0 10px;font-size:14.5px;line-height:1.6">${txt}</p>${needChart(c, f0, g, past != null ? c.rec : null, big)}
+  const k = lk(c);
+  let lm = '';
+  if (k) {
+    lm = `You pay ${L$(c.mcap * k)} for a stand that made $100 last year. `
+      + (c.baseKind !== 'latest' && f0 < c.fcf ? (c.baseKind === 'avg3' ? `Its cash jumps around from year to year, so we start from its 3-year average, about ${L$(f0 * k)}. ` : `Last year was unusually good, so we start from a normal year, about ${L$(f0 * k)}. `) : '')
+      + (g <= 0 ? 'That price is fair even if the stand never sells an extra cup.'
+        : `For that price to be fair, it needs to make about <b>${L$(c10 * k)} a year by ${YR + 10}</b>, ${c10 / f0 >= 1.8 ? `like running about ${Math.round(c10 / f0)} stands instead of one` : `about ${Math.round((c10 / f0 - 1) * 100)}% more than it makes in a normal year now`}.`
+          + (past != null ? ` Growing like it has lately, it would make about ${L$(past * k)}.` : ''));
+  }
+  return `<p style="margin:6px 0 10px;font-size:14.5px;line-height:1.6">${txt}</p>${lemon(lm)}${needChart(c, f0, g, past != null ? c.rec : null, c10 > (big ? big.fcf : 0) * 1.05 ? big : peer)}
     `;
 }
 function needChart(c, f0, g, gp, big) {
@@ -355,7 +384,8 @@ function needChart(c, f0, g, gp, big) {
   const H = (c.hist || []).filter(h => h[1] != null), n = 10, W = 640, Ht = 230, L = 46, R = 112, T = 14, Bm = 26;
   const need = [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + g, t));
   const pace = gp == null ? null : [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + gp, t));
-  const top = Math.max(...need, ...(pace || []), ...H.map(h => h[1]), big ? big.fcf : 0) * 1.05;
+  const top = Math.max(...need, ...(pace || []), ...H.map(h => h[1])) * 1.08;
+  if (big && big.fcf > top) big = null;   // only draw a comparison that fits this company's own scale
   const nx = H.length + n, step = (W - L - R) / Math.max(1, nx - 1);
   const X = k => L + k * step, Y = v => T + (1 - Math.max(0, v) / top) * (Ht - T - Bm);
   const nowK = H.length - 1, nice = [1, 2, 2.5, 5, 10], mag = Math.pow(10, Math.floor(Math.log10(top / 3)));
@@ -376,7 +406,7 @@ function needChart(c, f0, g, gp, big) {
     return `<rect x="${X(k) - step / 2}" y="${T}" width="${step}" height="${Ht - T - Bm}" fill="transparent" data-tip="${tip}"/>`; }).join('');
   return `<svg viewBox="0 0 ${W} ${Ht}" width="100%" class="needc" role="img" aria-label="Spare cash so far and the path the price needs: ${money(need[n])} a year by ${YR + 10}${pace ? `, against ${money(pace[n])} at its past pace` : ''}.">
     ${g0}${bars}
-    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${L + 4}" y="${Y(big.fcf) - 5}" class="ax">${esc(big.t)} today, the list’s biggest: ${money(big.fcf)}</text>` : ''}
+    ${big ? `<line x1="${L}" x2="${W - R}" y1="${Y(big.fcf)}" y2="${Y(big.fcf)}" class="ref"/><text x="${L + 4}" y="${Y(big.fcf) - 5}" class="ax">${esc(big.name)} today: ${money(big.fcf)}</text>` : ''}
     <line x1="${X(nowK)}" x2="${X(nowK)}" y1="${T}" y2="${Y(0)}" class="now"/>
     ${pace ? `<path d="${path(pace)}" class="lp2"/>` : ''}<path d="${path(need)}" class="lp1"/>
     <circle cx="${X(nowK)}" cy="${Y(f0)}" r="4.5" class="st"/>
@@ -400,12 +430,16 @@ function mosHTML(c, f0, g, r, gt) {
     ? `If ${esc(c.name)} keeps growing like its past, the cash is worth about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. today. That gap is your cushion: you’d still do fine if things go somewhat worse than its past.`
     : `To leave room for error you’d want to pay less than what the cash is worth. Even assuming it keeps growing like its past, we get about <b>$${pPast.toFixed(2)} a share</b>, ${d(pPast)} vs. today. So at today’s price there’s no cushion: you need it to beat its own record.`;
   txt += ` If its cash never grew again, it would be worth about $${at(0).toFixed(2)}.`;
+  const k = lk(c), worth = x => (pv(f0, x, r, gt) + c.net) * k;
+  const lm = !k ? '' : (c.rec != null ? `If the stand keeps growing like it has, all the cash it will ever make is worth about <b>${L$(worth(c.rec))}</b> to you today. You’d be paying ${L$(c.mcap * k)}. `
+      + (worth(c.rec) >= c.mcap ? 'You’d get more than you pay for, a cushion in case things go a bit worse.' : 'You’d be paying more than that, so you’re counting on it doing even better than before.') : '')
+    + ` If it never grew, the stand would be worth about ${L$(worth(0))}.`;
   return `<p class="muted" style="margin:0 0 6px;font-size:13.5px">${plain ? 'Investors like to buy for less than they think something is worth, so they’re OK even if they’re a bit wrong. That gap is called a “margin of safety”.' : 'Value per share from today’s cash at a given growth rate, discounted at your required return.'}</p>
     <div class="ladder"><div class="ln"></div>${pts.map(([lab, v, cls], k) => {
       const low = k === 2 && pts.length === 3 && Math.abs(pos(v) - pos(pts[1][1])) < 24;
       return k === 0 ? `<div class="lp up" style="left:${pos(v)}%"><b>$${v.toFixed(2)}</b><span>${lab}</span><i class="${cls}"></i></div>`
         : `<div class="lp dn${low ? ' low' : ''}" style="left:${pos(v)}%"><i class="${cls}"></i><b>$${v.toFixed(0)}</b><span>${lab}</span></div>`; }).join('')}</div>
-    <p style="margin:8px 0 0;font-size:14.5px;line-height:1.6">${txt}</p>
+    <p style="margin:8px 0 0;font-size:14.5px;line-height:1.6">${txt}</p>${lemon(lm)}
     <p class="faint" style="margin:10px 0 0;font-size:12.5px">“Its past” is the ${CC.L('rec').toLowerCase()} above, measured over only about ${c.m && c.m.yrs ? c.m.yrs.toFixed(1) : '2–3'} years and capped at 20%, so treat it as generous for fast growers.</p>`;
 }
 function dropHTML(c) {
@@ -429,7 +463,15 @@ function dropHTML(c) {
     if (isFinite(gHi) && isFinite(gNow)) txt += ` The drop matters only if it makes the bet reasonable: at the high, the price needed about <b>${pct(gHi, 0)} a year</b>; now it needs <b>${pct(gNow, 0)}</b>${c.rec != null ? `, against a past pace of ${pct(c.rec, 0)}` : ''}.`
       + (c.rec != null && gNow > c.rec + 0.03 ? ' A lower price isn’t the same as a cheap one.' : c.rec != null && gNow < c.rec - 0.05 ? ' Now the price asks for less than its record.' : '');
   }
-  return `<p style="margin:6px 0 12px;font-size:14.5px;line-height:1.6">${txt}</p>${bar(plain ? 'Share price' : 'Price vs. 52-wk high', pc1)}${cc1 != null ? bar(plain ? 'Its yearly cash' : 'TTM FCF, same stretch', cc1) : ''}
+  const k = lk(c);
+  let lm = '';
+  if (k && pc1 <= -0.10) {
+    const P = c.mcap * k, hi = P / (1 + pc1);
+    lm = `It’s as if the stand’s asking price fell from ${L$(hi)} to ${L$(P)} while it `
+      + (cc1 == null ? 'kept selling the same lemonade (no new results yet).' : cc1 > 0.02 ? `was actually selling more lemonade (its yearly cash went up ${pc(cc1)}%).` : cc1 >= 0 ? 'kept selling the same lemonade.' : `sold less lemonade (its yearly cash fell ${Math.abs(pc(cc1))}%).`)
+      + (isFinite(gNow) && c.rec != null && gNow > c.rec + 0.03 ? ` Even at ${L$(P)}, you’re still paying for a much bigger stand later.` : isFinite(gNow) && c.rec != null && gNow < c.rec - 0.05 ? ` At ${L$(P)}, you’re paying for less growth than it has managed before.` : '');
+  }
+  return `<p style="margin:6px 0 12px;font-size:14.5px;line-height:1.6">${txt}</p>${lemon(lm)}${bar(plain ? 'Share price' : 'Price vs. 52-wk high', pc1)}${cc1 != null ? bar(plain ? 'Its yearly cash' : 'TTM FCF, same stretch', cc1) : ''}
     ${Q.length > 1 ? `<p class="faint" style="margin:10px 0 0;font-size:12.5px">12-month cash at each report: ${Q.map(q => `${fmtD(q.end, true)} ${money(q.fcf_bn)}`).join(' · ')}. “Before the high” = the latest period ending at least 40 days before it, roughly when its results would have been out.</p>` : ''}`;
 }
 function peHTML(c) {
@@ -446,6 +488,9 @@ function peHTML(c) {
   return `<table class="pe">${rows.map(([k, v]) => `<tr><td>${k}</td><td><b>${v != null ? v.toFixed(1) + '×' : '–'}</b></td></tr>`).join('')}
     <tr><td class="faint">${plain ? 'Profit, last 12 months' : 'Net income (TTM)'}</td><td class="faint">${money(c.ni)}</td></tr></table>
     <p style="margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink2)">${why}</p>
+    ${c.fcf > 0 ? lemon(c.ni > c.fcf * 1.15 ? `The stand’s books show ${L$(c.ni / c.fcf * 100)} of profit, but only $100 reached the cash box. The rest went to new equipment, lemons still in storage, customers who haven’t paid yet, or helpers paid in shares of the stand.`
+      : c.ni < c.fcf * 0.87 ? `The books show only ${L$(c.ni / c.fcf * 100)} of profit, but $100 reached the cash box. The books subtract wear-and-tear on the stand that didn’t cost any cash this year.`
+      : `The books and the cash box agree: about $100 either way.`) : ''}
     <p class="faint" style="margin:8px 0 0;font-size:12px">Both are “years to earn back the price” if nothing changes. Lower is cheaper. Neither says anything about growth; that’s what the price’s bet is for.</p>`;
 }
 // ---------- Show the math ----------
