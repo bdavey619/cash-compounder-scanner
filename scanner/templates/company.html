@@ -44,27 +44,7 @@ table.sens th{font-weight:500;color:var(--muted)}table.sens td{padding:8px;borde
 table.sens td.on{background:var(--accent);color:#fff;font-weight:700}
 .notes li{margin:0 0 8px}
 @media (max-width:1000px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.afold,.msrc{display:none}
-@media (max-width:600px){
-  /* phones: flat sections divided by hairlines instead of boxed cards */
-  #page .card.sec,#page .card.plain,#page .card.why{background:none;border:0;border-radius:0;box-shadow:none;padding:20px 0;border-top:1px solid var(--line)}
-  #page .card.plain{border-left:0;padding-top:4px;border-top:0}
-  .main,.side,.cols{gap:0}.sec h2,.side .sec h2{font-size:16px}
-  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0 0 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .tile{background:none;border:0;border-radius:0;padding:12px 6px 10px}.tile:nth-child(3n+1){padding-left:0}
-  .tile .k{font-size:11.5px;line-height:1.3;min-height:2.6em}.tile .v{font-size:19px}.tile .d{display:none}.tile .k .info{display:none}
-  .tilehint{margin:-6px 0 6px;font-size:12px}
-  .sec .lem{display:none}.sec .whyd .lem{display:block}
-  .verdict{padding:10px 12px}
-  .bars{height:140px!important;margin-bottom:30px}#spark{max-height:70px}
-  #page .card.plain,#page .zones{margin-bottom:0}.plain .whyb{margin-top:8px}.tilehint{margin-bottom:0}
-  .side > .sec:first-child{border-top:1px solid var(--line)!important}
-  .srcs{display:none!important}.msrc{display:inline}footer.foot{flex-direction:column;gap:8px}
-  .afold{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:none;padding:0;font:inherit;font-weight:700;color:var(--ink);cursor:pointer}
-  .afold::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:4px}
-  .assump.open .afold::after{transform:rotate(-135deg)}.adesk{display:none}
-  .assump:not(.open) .abody{display:none}.assump .abody{margin-top:10px}
-}
+@media (max-width:600px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.sec{padding:18px}}
 .plain{padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--accent);border-radius:0 12px 12px 0}
 .plain h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .plain p{margin:0;font-size:16.5px;line-height:1.65;color:var(--ink)}.plain .whyd p{font-size:14.5px;line-height:1.6;color:var(--ink2)}
@@ -324,9 +304,8 @@ function render(c, prev, next) {
         <svg viewBox="0 0 300 90" width="100%" role="img" id="spark"></svg>
       </section>
       <section class="card sec"><h2 style="margin-bottom:10px" data-wi>${plain ? 'Profit vs. cash' : 'P/E vs. P/FCF'}</h2><div id="pe"></div></section>
-      <section class="card sec assump">
-        <h2 style="margin-bottom:4px"><button type="button" class="afold" aria-expanded="false">${plain ? 'Try your own assumptions' : 'Assumptions'}</button><span class="adesk">${plain ? 'Try your own assumptions' : 'Assumptions'}</span></h2>
-        <div class="abody">
+      <section class="card sec">
+        <h2 style="margin-bottom:4px">${plain ? 'Try your own assumptions' : 'Assumptions'}</h2>
         ${plain ? '<p class="muted" style="margin:0 0 12px;font-size:12.5px">Move these and watch the blue “price’s bet” change.</p>' : '<div style="height:8px"></div>'}
         <label class="sl" for="base"><span>${plain ? 'Cash to start from' : 'Starting cash flow'}</span></label>
         <select id="base" style="width:100%;margin:4px 0 14px">${c.bases.map((b, k) => `<option value="${k}">${esc(b.label)} · ${money(b.fcf)}</option>`).join('')}</select>
@@ -337,9 +316,8 @@ function render(c, prev, next) {
         <input id="gt" type="range" min="1" max="4" step="0.5">
         <button class="btn" id="reset" style="margin-top:12px;height:32px;font-size:13px">Reset</button>
         <div id="senswrap"></div>
-        </div>
       </section>
-      <section class="card sec srcs" style="font-size:14px">
+      <section class="card sec" style="font-size:14px">
         <h2 style="margin-bottom:10px">${plain ? 'Read the source' : 'Filings'}</h2>
         <div style="display:flex;flex-direction:column;gap:8px">
           <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=10-&count=40">10-K and 10-Q reports ↗</a>
@@ -349,9 +327,7 @@ function render(c, prev, next) {
       </section>
     </aside>
   </div>
-  <footer class="foot"><span>Educational research, not investment advice. Figures from the company’s SEC filings and the ${new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} close.</span><span class="msrc">Filings: <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=10-&count=40">10-K/10-Q</a> · <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=8-K&count=40">8-K</a> · <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${c.cik}&type=4&owner=include&count=40">Form 4</a></span><a href="method.html">How these numbers are calculated</a></footer>`;
-  const af = page.querySelector('.afold');
-  if (af) af.onclick = () => { const s = af.closest('.assump'), o = !s.classList.contains('open'); s.classList.toggle('open', o); af.setAttribute('aria-expanded', o); };
+  <footer class="foot"><span>Educational research, not investment advice. Figures from the company’s SEC filings and the ${new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} close.</span><a href="method.html">How these numbers are calculated</a></footer>`;
 
   const tileKeys = ['yld', 'pfcf', 'margin', 'roc', 'shares', 'net'];
   document.querySelectorAll('#tiles .tile').forEach((t, k) => { if (tileKeys[k]) t.insertAdjacentHTML('beforeend', `<button class="mathlink tilebtn" data-k="${tileKeys[k]}"><span class="sr-only">Show the math for ${CC.L(tileKeys[k])}</span></button>`); });
@@ -599,7 +575,7 @@ function needChart(c, f0, g, gp, big) {
   // Past cash (bars) and the two paths ahead: what the price needs, and its own past pace.
   // Drawn at the box's real width so the text stays readable on a phone.
   const bw0 = (document.getElementById('need') || {}).clientWidth || 640, W = Math.max(300, Math.min(640, bw0)), narrow = W < 520;
-  const H = (c.hist || []).filter(h => h[1] != null), n = 10, Ht = narrow ? 180 : 230, L = narrow ? 44 : 50, R = narrow ? 88 : 118, T = 14, Bm = 26;
+  const H = (c.hist || []).filter(h => h[1] != null), n = 10, Ht = narrow ? 210 : 230, L = narrow ? 44 : 50, R = narrow ? 88 : 118, T = 14, Bm = 26;
   const need = [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + g, t));
   const pace = gp == null ? null : [...Array(n + 1)].map((_, t) => f0 * Math.pow(1 + gp, t));
   const top = Math.max(...need, ...(pace || []), ...H.map(h => h[1])) * 1.08;
