@@ -1,7 +1,7 @@
 {
  "meta": {
   "asof": "2026-11-14",
-  "generated": "2026-11-14 17:20 UTC",
+  "generated": "2026-11-14 18:16 UTC",
   "config": {
    "COMMODITY_SIC": [
     [
@@ -69,7 +69,7 @@
    "price_missing": 0,
    "quality": 186,
    "financials_excluded": 54,
-   "lookup": 1404,
+   "lookup": 1406,
    "triggered": 16,
    "modest": 34,
    "shortlist": 6,
