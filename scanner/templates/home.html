@@ -29,7 +29,7 @@ table.rank td:nth-child(3){max-width:150px;overflow:hidden;text-overflow:ellipsi
 .cards{display:none;flex-direction:column;gap:8px}
 .cardrow{display:flex;align-items:center;gap:12px;padding:10px 12px;color:var(--ink);text-decoration:none}
 .cardrow:hover{text-decoration:none;background:var(--hover)}
-@media (max-width:820px){.tblbox{display:none}.cards{display:flex}.bar .r{width:100%}.bar .r input{flex:1;min-width:0;width:auto!important}
+@media (max-width:820px){.tblbox{display:none}.cards{display:flex}.bar .r{width:100%}.bar .r input{flex:1 1 120px;min-width:0;width:auto!important}.bar .r select{flex:1 1 120px;min-width:0}.bar .r label[for=sector]{display:none}
 .bar .l{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px;padding:2px 16px;width:calc(100% + 32px);scrollbar-width:none}.bar .l::-webkit-scrollbar{display:none}
 .bar .l .chip{flex:none;white-space:nowrap}}
 .isnt{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px}
@@ -47,24 +47,29 @@ table.rank td:nth-child(3){max-width:150px;overflow:hidden;text-overflow:ellipsi
 @media (max-width:600px){.mkt{padding:16px}.mtiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mt{padding:8px 10px}.mt .k{font-size:11.5px;line-height:1.3}.mt .v{font-size:18px}.mt .d{font-size:11.5px}}
 .cue{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px}
 .cue.cheap{background:var(--accent-bg);color:var(--accent-ink)}.cue.mid{background:var(--chip);color:var(--ink2)}.cue.pricey{background:var(--warn-bg);color:var(--warn-ink)}
+.sv{padding:20px 22px;margin-bottom:16px}.sq{margin:0;font-size:12.5px;font-weight:600;color:var(--muted)}
+.sa{margin:8px 0 12px;font-size:19px;font-weight:600;line-height:1.35;color:var(--ink)}.sv .sa{font-size:22px;margin:8px 0 8px}
+.ss{margin:10px 0 0;font-size:13px;color:var(--muted)}.sv .ss{font-size:14px}
+.story{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}.sc{padding:18px 20px}
+.sbr{display:grid;grid-template-columns:112px 1fr 44px;align-items:center;gap:10px;font-size:13px;margin:8px 0}.sbr.on span:first-child{font-weight:700}.sbr b{text-align:right;font-weight:700}
+.sbt{position:relative;height:12px;background:var(--line);border-radius:3px}.sbt .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--faint)}
+.sbt i{position:absolute;top:0;bottom:0}.sbt i.neg{background:var(--down);border-radius:3px 0 0 3px}.sbt i.pos{background:var(--up);border-radius:0 3px 3px 0}
+.lh{margin:0 0 10px;font-size:19px}
+.deepbtn{display:flex;justify-content:space-between;align-items:center;width:100%;margin:20px 0 16px;padding:16px 20px;border:1px solid var(--border);border-radius:12px;background:var(--card);font:inherit;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.deepbtn::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 12px;flex:none}
+.deepbtn[aria-expanded=true]::after{transform:rotate(-135deg);margin-bottom:-2px}
+.cardrow .cue{font-size:11.5px;padding:2px 8px}
+@media (max-width:1000px){.story{grid-template-columns:1fr;gap:12px;margin-bottom:20px}}
+@media (max-width:600px){.sv{padding:18px}.sv .sa{font-size:19.5px}.sa{font-size:17.5px}.sc{padding:16px 18px}.sbr{grid-template-columns:104px 1fr 42px}}
 </style>
 <script>__MODEJS__</script>
 </head>
 <body>
 __NAV__
 <main class="wrap">
-  <div class="head">
-    <div>
-      <h1 class="h1" id="h1"></h1>
-      <p class="lede" id="lede"></p>
-    </div>
-    <a href="results.csv" style="font-size:14px;font-weight:500">Download CSV</a>
-  </div>
-
-  <section class="kpis" aria-label="Key numbers" id="kpis"></section>
-  <div class="card isnt" id="isnt"></div>
-  <div class="card note" id="regime" style="margin-top:12px"></div>
-  <section class="card mkt" id="market" style="margin-top:12px" aria-labelledby="mkt-h"></section>
+  <section class="card sv" id="verdict"></section>
+  <div class="story" id="story"></div>
+  <h2 class="lh" id="listh"></h2>
 
   <div class="bar">
     <div class="l" role="group" aria-label="Lists" id="chips"></div>
@@ -81,6 +86,15 @@ __NAV__
     <div class="tblbox"><table class="rank"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
     <div class="cards" id="cards" style="padding:8px"></div>
     <div class="tblfoot"><span id="footnote"></span><button class="btn" id="more" style="height:34px;font-size:13px"></button></div>
+  </div>
+
+  <button type="button" class="deepbtn" id="aboutbtn" aria-expanded="false" aria-controls="about"><span>About this list: the rules, key numbers, history and download</span></button>
+  <div id="about" hidden>
+    <div class="head" style="margin-bottom:12px"><div><h1 class="h1" id="h1" style="font-size:22px"></h1><p class="lede" id="lede"></p></div><a href="results.csv" style="font-size:14px;font-weight:500">Download CSV</a></div>
+    <section class="kpis" aria-label="Key numbers" id="kpis"></section>
+    <div class="card isnt" id="isnt"></div>
+    <div class="card note" id="regime" style="margin-top:12px"></div>
+    <section class="card mkt" id="market" style="margin-top:12px" aria-labelledby="mkt-h"></section>
   </div>
 
   <footer class="foot">
@@ -105,7 +119,55 @@ const state = { list: 'leaders', sort: 'yld', dir: -1, sector: '', q: '', all: f
 try { const s = JSON.parse(sessionStorage.getItem('cc-home') || '{}'); Object.assign(state, s); } catch (e) {}
 const save = () => { try { sessionStorage.setItem('cc-home', JSON.stringify(state)); } catch (e) {} };
 
+// ---------- The story: a verdict and three questions, then the list ----------
+const absLabel = c => {
+  const g = c.impl, rec = c.rec;
+  if (!(c.yld > 0) || g == null || !isFinite(g)) return null;
+  return g <= 0 ? ['cheap', 'Cheap even with no growth'] : rec == null ? ['mid', 'Needs growth'] : g <= Math.max(0, rec) + 0.03 ? ['mid', 'Fair if growth holds'] : ['pricey', 'Needs to beat its record'];
+};
+function renderStory() {
+  const M = META.market || {}, rf = R.rf, my = M.median_yield, Hh = M.hist, c = x => (x * 100).toFixed(1) + '¢';
+  const vsBond = my == null || rf == null ? '' : my < rf * 0.95 ? 'Right now, a safe bond pays more than the typical one.' : my > rf * 1.05 ? 'Right now, the typical one pays more than a safe bond.' : 'Right now, the typical one pays about what a safe bond does.';
+  document.getElementById('verdict').innerHTML = `<p class="sq">Today · ${new Date(META.asof + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+    <p class="sa">${n(COS.length)} businesses make lots of spare cash. ${vsBond}</p>
+    <p class="ss">Ranked by how much cash you get back each year for every $1 you pay. New here? <a href="learn.html">Start here</a>.</p>`;
+  const cards = [];
+  // 1. rates
+  if (G && G.hi && G.lo) {
+    const cut = (G.cutoff * 100).toFixed(0), P = x => Math.round(Math.abs(x * 100));
+    const a = G.high ? `Historically, yes. When bonds pay over ${cut}%, the most-cash group beat the least by ${P(G.hi.mean)}% a year.`
+      : `Historically, no. When bonds pay under ${cut}%, the most-cash group did ${P(G.lo.mean)}% a year worse than the least.`;
+    const mx = Math.max(Math.abs(G.hi.mean), Math.abs(G.lo.mean)) * 2.1;
+    const bar = (k, x, on) => `<div class="sbr${on ? ' on' : ''}"><span>${k}</span><span class="sbt dv"><span class="z"></span><i class="${x < 0 ? 'neg' : 'pos'}" style="${x < 0 ? 'right:50%' : 'left:50%'};width:${(Math.abs(x) / mx * 100).toFixed(1)}%"></i></span><b class="${x < 0 ? 'down' : 'up'}">${x > 0 ? '+' : '−'}${P(x)}%</b></div>`;
+    cards.push(`<section class="card sc"><p class="sq">1 · Is this a good time for cash-rich stocks?</p><p class="sa">${a}</p>
+      ${bar(`Bonds over ${cut}%`, G.hi.mean, G.high)}${bar(`Bonds under ${cut}%`, G.lo.mean, !G.high)}
+      <p class="ss">Today a bond pays ${(G.rf * 100).toFixed(1)}%. A pattern since ${G.start}, not a promise. <a href="backtest/">How we know</a></p></section>`);
+  }
+  // 2. the market
+  if (my != null) {
+    let a = '';
+    if (Hh) { const p = Hh.pct_cheaper_than; a = p < 0.25 ? 'Expensive by its own history.' : p > 0.75 ? 'Cheap by its own history.' : 'Normal for stocks.'; }
+    a += rf == null ? '' : my < rf * 0.95 ? ' Pricey next to bonds.' : my > rf * 1.05 ? ' Cheap next to bonds.' : ' About even with bonds.';
+    cards.push(`<section class="card sc"><p class="sq">${cards.length + 1} · Is the market expensive?</p><p class="sa">${a.trim()}</p>
+      ${Hh ? `<div id="mchart2"></div><p class="ss">Blue: the typical stock’s cash per $1 (${c(my)} today). Grey: a safe bond (${c(rf)}).</p>` : ''}</section>`);
+  }
+  // 3. is the list working?
+  const tg = (T.groups || []).find(g => g.group === 'yield'), td = tg && tg.h && tg.h.todate;
+  const started = T.started ? new Date(T.started + 'T12:00:00') : null, months = started ? (Date.now() - started) / 2.63e9 : 0;
+  let a3, s3 = '';
+  if (td && td.n) {
+    const pts = Math.abs(td.avg * 100).toFixed(1), side = td.avg >= 0 ? 'ahead of' : 'behind';
+    a3 = months < 6 ? `Too early to tell: ${td.n} picks so far, ${pts} pts ${side} the S&amp;P 500.` : `${td.n} picks so far, ${pts} pts ${side} the S&amp;P 500 on average.`;
+    s3 = `Every pick is logged the day it appears and checked after 1, 3, 6 and 12 months. <a href="track.html">Track record</a>`;
+  } else { a3 = 'Tracking started recently. The first results are on the way.'; s3 = '<a href="track.html">Track record</a>'; }
+  cards.push(`<section class="card sc"><p class="sq">${cards.length + 1} · Is this list working so far?</p><p class="sa">${a3}</p><p class="ss">${s3}</p></section>`);
+  document.getElementById('story').innerHTML = cards.join('');
+  if (Hh) chartMarket(Hh, my, rf, 'mchart2', true);
+  const lead = COS.filter(c => c.lists.leaders).length;
+  document.getElementById('listh').textContent = state.list === 'leaders' ? `The ${lead} that give the most cash per $1` : 'The companies';
+}
 function renderTop() {
+renderStory();
 const plain = CC.mode === 'plain';
 document.getElementById('h1').textContent = plain ? 'Companies that make the most cash for their price' : 'Quality companies, ranked by cash per dollar';
 document.getElementById('isnt').innerHTML = plain
@@ -171,8 +233,9 @@ function drawMarket() {
   if (H) chartMarket(H, my, rf);
 }
 const median = a => { const s = a.slice().sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
-function chartMarket(H, my, rf) {
-  const el = document.getElementById('mchart'), W = Math.max(300, Math.min(900, el.clientWidth || 600)), Ht = W < 520 ? 170 : 190;
+function chartMarket(H, my, rf, id = 'mchart', small = false) {
+  const el = document.getElementById(id); if (!el) return;
+  const W = Math.max(280, Math.min(900, el.clientWidth || 600)), Ht = small ? 130 : W < 520 ? 170 : 190;
   const L = 38, R = 64, T = 10, B = 24, ds = H.dates.concat([META.asof]), ys = H.median_yield.concat([my]), rs = (H.rf || []).concat([rf]);
   const top = Math.ceil(Math.max(...ys, ...rs.filter(x => x != null)) * 100 + 0.5) / 100, n = ds.length;
   const X = i => L + i / (n - 1) * (W - L - R), Y = v => T + (1 - v / top) * (Ht - T - B);
@@ -189,7 +252,8 @@ function chartMarket(H, my, rf) {
     ${rf != null ? `<text x="${W - R + 8}" y="${Y(rf) + (Math.abs(Y(rf) - Y(my)) < 16 ? (Y(rf) > Y(my) ? 16 : -8) : 4)}" class="el mut">bond ${(rf * 100).toFixed(1)}¢</text>` : ''}${tip}</svg>`;
 }
 drawMarket();
-let mt; window.addEventListener('resize', () => { clearTimeout(mt); mt = setTimeout(drawMarket, 150); });
+let mt; window.addEventListener('resize', () => { clearTimeout(mt); mt = setTimeout(() => { drawMarket(); const M = META.market || {}; if (M.hist) chartMarket(M.hist, M.median_yield, R.rf, 'mchart2', true); }, 150); });
+document.getElementById('aboutbtn').onclick = () => { const d = document.getElementById('about'), b = document.getElementById('aboutbtn'), o = d.hidden; d.hidden = !o; b.setAttribute('aria-expanded', o); if (o) drawMarket(); };
 
 const LISTS = [['leaders', c => c.lists.leaders], ['all', c => true], ['drop', c => c.lists.drop], ['gap', c => c.lists.gap], ['insiders', c => c.lists.insiders]];
 const COLS = [['rank', c => c.rank, 1], ['t', c => c.t, 1], ['sector', c => c.sector, 1], ['yld', c => c.yld, -1], ['pfcf', c => c.pfcf, 1],
@@ -248,15 +312,16 @@ function render() {
   document.getElementById('cards').innerHTML = rs.map(c => `<a class="card cardrow" href="company.html#${c.t}">
       <span class="faint" style="width:22px;font-size:12px">${c.rank}</span>
       <span style="flex:1;min-width:0"><span style="font-weight:700">${c.t}</span> <span class="muted" style="font-size:13px">${esc(c.name)}</span>
-        <span style="display:block;font-size:12px" class="muted">${CC.mode === 'plain' ? `price bets on <b class="acc">${pct(c.impl)}</b>/yr · past ${pct(c.rec)}/yr` : `P/FCF ${c.pfcf != null ? c.pfcf.toFixed(1) + '×' : '–'} · price implies <b class="acc">${pct(c.impl)}</b> vs ${pct(c.rec)}`}</span></span>
+        <span style="display:block;margin-top:5px">${(l => l ? `<span class="cue ${l[0]}">${l[1]}</span>` : '')(absLabel(c))}</span></span></span>
       <span style="text-align:right"><b style="font-size:17px">${CC.mode === 'plain' && c.yld != null ? Math.round(c.yld * 100) + '¢' : pl(c.yld)}</b><span class="faint" style="display:block;font-size:11px">${CC.mode === 'plain' ? 'cash per $1' : 'FCF yield'}</span></span></a>`).join('');
   const lst = LISTS.find(l => l[0] === state.list);
   document.getElementById('footnote').innerHTML = CC.mode === 'plain'
-    ? `Showing ${rs.length} of ${all.length} · tap a company to see what its numbers mean · <b class="acc">Price's bet</b> = how fast the company’s cash has to grow each year for today’s price to make sense`
+    ? `Showing ${rs.length} of ${all.length} · tap a company for its story`
     : `Showing ${rs.length} of ${all.length} · ${CC.L(lst[0]).toLowerCase()} · <b class="acc">Price implies</b> = the yearly free-cash-flow growth over 10 years that today's price requires, at a ${pl(META.rules.REQUIRED_RETURN, 2)} required return`;
   const more = document.getElementById('more');
   more.style.display = all.length > TOPN ? '' : 'none';
   more.textContent = state.all ? 'Show top ' + TOPN : 'Show all ' + all.length;
+  const lh = document.getElementById('listh'); if (lh) lh.textContent = state.list === 'leaders' ? `The ${all.length} that give the most cash per $1` : (CC.L(state.list) || 'The companies');
 }
 renderTop();
 render();
