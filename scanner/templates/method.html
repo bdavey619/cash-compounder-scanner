@@ -11,7 +11,17 @@ __CSS__
 .funnel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}
 .step{padding:16px 18px}.step .v{font-size:26px;font-weight:700;letter-spacing:-.02em}.step .l{font-size:13px;font-weight:600;margin:2px 0 4px}.step .d{font-size:13px;color:var(--muted);line-height:1.45}
 .step.on{background:var(--accent);border-color:var(--accent)}.step.on .v,.step.on .l,.step.on .d{color:#fff}
-.sec{padding:22px 24px;margin-bottom:16px}.sec h2{margin:0 0 10px;font-size:18px}
+.sv{padding:20px 22px;margin-bottom:16px}.sq{margin:0;font-size:12.5px;font-weight:600;color:var(--muted)}
+.sa{margin:8px 0 12px;font-size:21px;font-weight:600;line-height:1.35;color:var(--ink)}.ss{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
+.how{margin:0 0 4px;padding-left:22px;font-size:15px;line-height:1.55;color:var(--ink2)}.how li{margin:6px 0}.how b{color:var(--ink)}
+.sv .funnel{margin:16px 0 12px}
+.sec{padding:0;margin-bottom:12px}.sec h2{margin:0;font-size:17px}
+.sec summary{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;list-style:none}
+.sec summary::-webkit-details-marker{display:none}
+.sec summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 12px;flex:none}
+.sec[open] summary::after{transform:rotate(-135deg);margin-bottom:-2px}
+.sec > :not(summary){margin-left:22px!important;margin-right:22px!important}.sec > :last-child{margin-bottom:20px!important}
+@media (max-width:600px){.sv .funnel .d{display:none}.sv .funnel .step{padding:12px 14px}.sv .funnel .v{font-size:22px}.sv{padding:18px}.sa{font-size:18.5px}.sec summary{padding:16px 18px}.sec > :not(summary){margin-left:18px!important;margin-right:18px!important}}
 .sec dl{display:grid;grid-template-columns:220px 1fr;gap:10px 20px;margin:0;font-size:14.5px;line-height:1.55}
 .sec dt{font-weight:600}.sec dd{margin:0;color:var(--ink2)}
 @media (max-width:820px){.funnel{grid-template-columns:1fr 1fr}.sec dl{grid-template-columns:1fr}.sec dt{margin-top:8px}}
@@ -20,16 +30,25 @@ __CSS__
 <body>
 __NAV__
 <main class="wrap">
-  <h1 class="h1">Method</h1>
-  <p class="lede">A great business is only a great investment at the right price. This finds the businesses that reliably turn revenue into cash, ranks them by how much cash you get per dollar, and shows what growth each price assumes. It is a starting point for research, not a list of things to buy.</p>
+  <section class="card sv">
+    <p class="sq">Method · in one minute</p>
+    <p class="sa">Find the businesses that reliably make spare cash, rank them by how much you get per $1, and show what growth each price is betting on.</p>
+    <ol class="how">
+      <li><b>Start with every US company</b> that files with the SEC.</li>
+      <li><b>Keep the strong cash makers:</b> at least 15¢ of every $1 of sales left over as spare cash, and spare cash every year.</li>
+      <li><b>Rank them by cash back per $1</b> you’d pay for the whole company.</li>
+      <li><b>Work out each price’s bet:</b> how fast its cash must grow for the price to be fair, next to how fast it really grew.</li>
+    </ol>
   <div class="funnel" id="funnel"></div>
-
-  <section class="card sec"><h2>Who makes the cut</h2><dl id="rules"></dl></section>
-  <section class="card sec"><h2>The numbers on each company</h2><dl id="defs"></dl></section>
-  <section class="card sec"><h2>What the backtest found</h2>
-    <p style="margin:0;font-size:14.5px;line-height:1.6;color:var(--ink2)">Replaying the rules at every month-end since 2014, using only what was knowable at the time: buying quality companies right after a sharp drop was a lottery ticket (a few big winners, a typical pick that lagged), and a sharp drop without a valuation gap was a reliable loser. Ranking by free-cash-flow yield worked when the 10-year Treasury yield was above 3% and failed when it was below, which is why the rate environment is shown on the home page. The high-rate months are mostly one stretch, 2022 onward, so treat that as a bet, not a law. <a href="backtest/">See the full backtest</a></p>
+  <p class="ss">A starting point for research, not a list of things to buy. Tap any section below for the details.</p>
   </section>
-  <section class="card sec"><h2>Judging a price, not just a company</h2>
+
+  <details class="card sec"><summary><h2>Who makes the cut</h2></summary><dl id="rules"></dl></details>
+  <details class="card sec"><summary><h2>The numbers on each company</h2></summary><dl id="defs"></dl></details>
+  <details class="card sec"><summary><h2>What the backtest found</h2></summary>
+    <p style="margin:0;font-size:14.5px;line-height:1.6;color:var(--ink2)">Replaying the rules at every month-end since 2014, using only what was knowable at the time: buying quality companies right after a sharp drop was a lottery ticket (a few big winners, a typical pick that lagged), and a sharp drop without a valuation gap was a reliable loser. Ranking by free-cash-flow yield worked when the 10-year Treasury yield was above 3% and failed when it was below, which is why the rate environment is shown on the home page. The high-rate months are mostly one stretch, 2022 onward, so treat that as a bet, not a law. <a href="backtest/">See the full backtest</a></p>
+  </details>
+  <details class="card sec"><summary><h2>Judging a price, not just a company</h2></summary>
     <ul style="margin:0;padding-left:18px;font-size:14.5px;line-height:1.6;color:var(--ink2)">
       <li><b>What would need to be true:</b> the price’s bet turned into dollars. Today’s starting cash grown at the implied rate for 5 and 10 years, the sales that would take at today’s margin, next to where the company’s own past pace would get it and a company on the list that already makes about that much cash today.</li>
       <li><b>Margin of safety:</b> the value per share of today’s cash if it grows at the company’s past pace, and if it never grows, both discounted at the same required return. A price below the first leaves a cushion; above it, the company has to beat its own record.</li>
@@ -37,15 +56,15 @@ __NAV__
       <li><b>Profit vs. cash:</b> trailing P/E (company value ÷ the last 12 months’ net income) beside P/FCF. We don’t use forward P/E: it rests on one year of analysts’ forecasts, and free sources of those can’t be shown on a public site.</li>
       <li><b>Any company:</b> every US company with $500M+ of sales and a recent price is valued the same way and can be looked up, with the reasons it isn’t on the list.</li>
     </ul>
-  </section>
-  <section class="card sec"><h2>Blind spots</h2>
+  </details>
+  <details class="card sec"><summary><h2>Blind spots</h2></summary>
     <ul style="margin:0;padding-left:18px;font-size:14.5px;line-height:1.6;color:var(--ink2)">
       <li>The screen can’t tell a temporary problem from a permanent one. That judgment is yours.</li>
       <li>Companies whose filings don’t use standard tags for cash flow or share counts can be missing or, rarely, misread. Each company page links to its filings so you can check.</li>
       <li>Free cash flow doesn’t mean the same thing for banks, lenders, insurers and real-estate companies, so they’re excluded.</li>
       <li>The growth record looks back only 2–3 years; a business that just changed shape (a spin-off, a big acquisition) can look odd.</li>
     </ul>
-  </section>
+  </details>
   <p class="faint" style="font-size:13px">Data: SEC EDGAR company facts (10-K and 10-Q), SEC submissions and Form 4 filings, daily closing prices, and the 10-year Treasury yield. Updated every weekday after the close. Source code: <a href="https://github.com/bdavey619/cash-compounder-scanner">GitHub</a>.</p>
   <footer class="foot"><span>Educational research, not investment advice.</span></footer>
 </main>
