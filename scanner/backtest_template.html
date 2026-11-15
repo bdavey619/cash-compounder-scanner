@@ -24,6 +24,18 @@
   }
 }
 *{box-sizing:border-box}
+.sv{padding:20px 22px;margin-bottom:16px}.sq{margin:0;font-size:12.5px;font-weight:600;color:var(--text-muted)}
+.sa{margin:8px 0 12px;font-size:19px;font-weight:600;line-height:1.35;color:var(--text-primary)}.sv .sa{font-size:22px;margin:8px 0 6px}
+.ss{margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--text-muted)}.sv .ss{font-size:14px}
+.story{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}.story .card{margin:0}.sc{padding:18px 20px}
+.hb{display:grid;grid-template-columns:120px 1fr 42px;align-items:center;gap:10px;font-size:13px;margin:8px 0}.hb b{text-align:right}
+.hbt{position:relative;height:12px;background:var(--grid);border-radius:3px}.hbt .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--text-muted)}
+.hbt i{position:absolute;top:0;bottom:0}.hbt i.neg{background:var(--dn);border-radius:3px 0 0 3px}.hbt i.pos{background:var(--up);border-radius:0 3px 3px 0}
+.deepbtn{display:flex;justify-content:space-between;align-items:center;width:100%;margin:4px 0 20px;padding:16px 20px;border:1px solid var(--border);border-radius:12px;background:var(--card);font:inherit;font-size:15px;font-weight:600;color:var(--text-primary);cursor:pointer;text-align:left}
+.deepbtn::after{content:"";width:8px;height:8px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);transform:rotate(45deg);margin:0 4px 4px 12px;flex:none}
+.deepbtn[aria-expanded=true]::after{transform:rotate(-135deg);margin-bottom:-2px}
+@media (max-width:1000px){.story{grid-template-columns:1fr;gap:12px}}
+@media (max-width:600px){.sv{padding:18px}.sv .sa{font-size:19.5px}.sa{font-size:17.5px}.sc{padding:16px 18px}.hb{grid-template-columns:112px 1fr 40px}}
 .sbr{display:grid;grid-template-columns:minmax(200px,340px) 1fr;gap:14px;align-items:center;font-size:14px;margin:8px 0}
 @media (max-width:640px){.sbr{grid-template-columns:1fr;gap:4px;margin:12px 0}}
 body{margin:0;background:var(--surface);color:var(--text-primary);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif}
@@ -77,17 +89,18 @@ __NAVCSS__
 <body>
 __NAV__
 <div class="wrap">
-  <h1>Backtest: would the screen have worked?</h1>
+  <section class="card sv"><p class="sq">Backtest · every month since <span id="start2"></span></p><p class="sa" id="vd"></p><p class="ss" id="vds"></p></section>
+  <div class="story">
+    <section class="card sc"><p class="sq">1 · Did the most-cash companies beat the least?</p><p class="sa" id="a1"></p><div id="v1"></div><p class="ss" id="s1"></p></section>
+    <section class="card sc"><p class="sq">2 · Does buying the dip work?</p><p class="sa" id="a2"></p><div id="v2"></div><p class="ss">Typical stock over the next 12 months, vs. the S&amp;P 500.</p></section>
+    <section class="card sc"><p class="sq">3 · How would $1 have grown?</p><p class="sa" id="a3"></p><div id="v3"></div><p class="ss" id="s3"></p></section>
+  </div>
+  <button id="detailsbtn" class="deepbtn" type="button" aria-expanded="false" aria-controls="details"><span>Dig deeper: every group, fifth, year and case</span></button>
+  <div id="details" hidden>
+  <h1 style="font-size:22px">Backtest: would the screen have worked?</h1>
   <p class="lede">Every month-end since <span id="start"></span>, the same rules as today's scan were applied using only what was knowable that day: SEC numbers already filed, that day's prices, that day's 10-year Treasury yield. Then each flagged stock was measured against the S&amp;P 500 over the next 3, 6 and 12 months.</p>
   <p class="asof" id="asof"></p>
-
-  <div class="card" id="short">
-    <h2>The short version</h2>
-    <p class="answer" id="shorttext" style="margin-bottom:16px"></p>
-    <div id="shortbars"></div>
-    <p class="sub" style="margin:14px 0 0">These are averages over many companies and months. They describe what tended to happen, not what will happen to any one stock.</p>
-  </div>
-  <div style="text-align:center;margin:0 0 20px"><button id="detailsbtn" type="button" aria-expanded="false" style="height:42px;padding:0 18px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--text-primary);font:inherit;font-weight:600;cursor:pointer">Show the details</button></div>
+  <div class="card" id="short" hidden><p id="shorttext"></p><div id="shortbars"></div></div>
   <div id="details" hidden>
   <div class="card"><p class="answer" id="answer"></p></div>
 
@@ -151,6 +164,45 @@ const fmtMonth = d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:
 document.getElementById('start').textContent = fmtMonth(D.meta.start);
 document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fmtMonth(D.meta.start)} to ${fmtMonth(D.meta.end)} · ${D.meta.company_months.toLocaleString()} company-months in the quality universe · ${D.meta.ever_quality.toLocaleString()} companies passed quality at some point · run ${D.meta.generated}`;
 
+// The story: a verdict and three answers
+(function(){
+  const F = (D.baskets && D.baskets.factors || []).find(f => f.id === 'fcf_yield');
+  const cutv = D.baskets && D.baskets.cutoff || 0.03, cut = Math.round(cutv * 100);
+  const reg = F && F.h['12m'] && F.h['12m'].regime && F.h['12m'].regime.level[cutv.toFixed(3)];
+  const drop = G.trigger_only && G.trigger_only.h['12m'], gd = G.gap_trigger && G.gap_trigger.h['12m'];
+  const P = x => Math.round(Math.abs(x * 100)), yr = new Date(D.meta.start + 'T12:00:00').getFullYear();
+  document.getElementById('start2').textContent = yr;
+  const bar = (k, x) => `<div class="hb"><span>${k}</span><span class="hbt"><span class="z"></span><i class="${x < 0 ? 'neg' : 'pos'}" style="${x < 0 ? 'right:50%' : 'left:50%'};width:${Math.min(50, Math.abs(x) / mx * 50).toFixed(1)}%"></i></span><b class="${x < 0 ? 'dn' : 'up'}">${x > 0 ? '+' : '−'}${P(x)}%</b></div>`;
+  let mx = Math.max(...[reg && reg.high && reg.high.mean, reg && reg.low && reg.low.mean, drop && drop.median, gd && gd.median].filter(x => x != null).map(Math.abs), 0.05) * 1.05;
+  document.getElementById('vd').textContent = reg ? `Sometimes. Cash-rich stocks won when bonds paid over ${cut}%, and lost when they paid less. Buying the dip lost.` : 'Mixed results.';
+  document.getElementById('vds').textContent = `${D.meta.months} months, using only what people knew at the time, then checking the next 12 months. A pattern, not a promise.`;
+  if (reg && reg.high && reg.low) {
+    document.getElementById('a1').textContent = `Yes when bonds paid over ${cut}%: by ${P(reg.high.mean)}% a year. No when they paid less: ${P(reg.low.mean)}% a year worse.`;
+    document.getElementById('v1').innerHTML = bar(`Bonds over ${cut}%`, reg.high.mean) + bar(`Bonds under ${cut}%`, reg.low.mean);
+    document.getElementById('s1').textContent = `Top fifth vs. bottom fifth by cash per $1. The ${reg.high.months} high-rate months are mostly 2022 onward.`;
+  }
+  if (drop) {
+    document.getElementById('a2').textContent = `No. After a sharp drop, the typical stock trailed the market by ${P(drop.median)}% over the next year.`;
+    document.getElementById('v2').innerHTML = bar('Dropped sharply', drop.median) + (gd ? bar('Dropped and looked cheap', gd.median) : '');
+  }
+  const S = D.growth.series, end = k => S[k][S[k].length - 1];
+  if (S.quality && S.spy) {
+    const rq = end('quality') / end('spy');
+    document.getElementById('a3').textContent = `${rq > 1.15 ? 'Ahead of the market' : rq < 0.87 ? 'Behind the market' : 'About the same as the market'}: $1 in the strong cash businesses grew to $${end('quality').toFixed(2)}; in the S&P 500, $${end('spy').toFixed(2)}.`;
+    const ds = D.growth.dates, el = document.getElementById('v3'), W = Math.max(260, Math.min(560, el.clientWidth || 320)), Ht = 130, L = 4, R = 64;
+    const top = Math.max(...S.quality, ...S.spy) * 1.05, X = i => L + i / (ds.length - 1) * (W - L - R), Y = v => 8 + (1 - v / top) * (Ht - 30);
+    const path = a => a.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+    let yq = Y(end('quality')) + 4, ys = Y(end('spy')) + 4; if (Math.abs(yq - ys) < 16) { if (yq <= ys) ys = yq + 16; else yq = ys + 16; }
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" width="100%" style="display:block;overflow:visible" role="img" aria-label="Growth of $1 since ${yr}">
+      <line x1="${L}" x2="${W - R}" y1="${Ht - 22}" y2="${Ht - 22}" stroke="var(--grid)"/>
+      <path d="${path(S.spy)}" fill="none" stroke="var(--s-spy)" stroke-width="1.6" stroke-dasharray="4 3"/><path d="${path(S.quality)}" fill="none" stroke="var(--s-gap_trigger)" stroke-width="2.2"/>
+      <text x="${W - R + 6}" y="${yq}" font-size="12" font-weight="700" fill="var(--s-gap_trigger)">$${end('quality').toFixed(2)}</text>
+      <text x="${W - R + 6}" y="${ys}" font-size="12" fill="var(--text-muted)">$${end('spy').toFixed(2)} S&amp;P</text>
+      <text x="${L}" y="${Ht - 6}" font-size="12" fill="var(--text-muted)">${yr}</text><text x="${W - R}" y="${Ht - 6}" font-size="12" fill="var(--text-muted)" text-anchor="end">${new Date(D.meta.end + 'T12:00:00').getFullYear()}</text></svg>`;
+    document.getElementById('s3').textContent = `Blue: all strong cash businesses. Grey: the S&P 500. Each month’s picks held for ${D.meta.hold_months} months.`;
+  }
+})();
+
 // The short version, in plain words
 (function(){
   const F = (D.baskets && D.baskets.factors || []).find(f => f.id === 'fcf_yield');
@@ -173,7 +225,7 @@ document.getElementById('asof').textContent = `${D.meta.months} month-ends, ${fm
     return `<div class="sbr"><span>${l}</span><div style="position:relative;height:26px;background:linear-gradient(var(--grid),var(--grid)) center/2px 100% no-repeat"><div style="position:absolute;top:3px;height:20px;left:${left}%;width:${w}%;border-radius:5px;background:${v >= 0 ? css('--s-gap_trigger') : css('--dn')};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'};padding:0 8px">${(v > 0 ? '+' : '−') + a(v)}</div></div></div>`; }).join('');
   const btn = document.getElementById('detailsbtn'), det = document.getElementById('details');
   const open = location.hash === '#ratecard' || location.hash === '#details';
-  const set = o => { det.hidden = !o; btn.setAttribute('aria-expanded', o); btn.textContent = o ? 'Hide the details' : 'Show the details'; };
+  const set = o => { det.hidden = !o; btn.setAttribute('aria-expanded', o); };
   btn.onclick = () => set(det.hidden); set(open);
   if (open && location.hash === '#ratecard') setTimeout(() => document.getElementById('ratecard').scrollIntoView(), 50);
 })();
