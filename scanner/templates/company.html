@@ -96,6 +96,26 @@ background:var(--accent-bg);color:var(--accent-ink);font-size:14px;box-shadow:0 
 .ztk{position:relative;height:16px;margin-top:3px;font-size:var(--fs-label);color:var(--muted)}.ztk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .ztk .edge{transform:none;color:var(--faint)}.ztk .edge.r{right:0}.ztk .edge.l{left:0}
 .zc{font-weight:700}.zc.cheap{color:var(--accent-ink)}.zc.mid{color:var(--ink2)}.zc.pricey{color:var(--warn-ink)}
+.sv{padding:20px 22px;margin-bottom:16px}.svh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sv .h1{margin:0;font-size:30px;line-height:1.1}.svn{font-size:13px;color:var(--muted);margin-top:4px}.svp{text-align:right;flex:none}.svp .px{font-size:28px;font-weight:700;line-height:1.1}
+.sa{margin:12px 0 0;font-size:19px;font-weight:600;line-height:1.35;color:var(--ink)}.sv .sa{font-size:20px;margin-top:14px}
+.svpills{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.svpills .cue{font-size:12.5px;padding:3px 10px}
+.story{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
+.sc{padding:18px 20px}.sq{margin:0;font-size:12.5px;font-weight:600;color:var(--muted)}.sc .sa{margin:6px 0 14px}.ss{margin:10px 0 0;font-size:13px;color:var(--muted)}
+.sbr{display:grid;grid-template-columns:110px 1fr 46px;align-items:center;gap:10px;font-size:13px;margin:7px 0}.sbr .b{font-weight:700}.sbr b{text-align:right;font-weight:700}.sbr b.mu{font-weight:400;color:var(--muted)}
+.sbt{position:relative;height:12px;background:var(--line);border-radius:3px;overflow:hidden}.sbt i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.sbt i.me{background:var(--accent)}.sbt i.ot{background:var(--faint)}
+.sbt.dv{overflow:visible}.sbt.dv .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--faint)}.sbt.dv i.neg{background:var(--down);border-radius:3px 0 0 3px}.sbt.dv i.pos{background:var(--up);left:50%;border-radius:0 3px 3px 0}
+.sch{display:block;overflow:visible}.sch .ax0{stroke:var(--line)}.sch .pn{fill:none;stroke:var(--accent);stroke-width:2.5}.sch .pp{fill:none;stroke:var(--faint);stroke-width:2;stroke-dasharray:5 4}
+.sch .st{fill:var(--card);stroke:var(--accent);stroke-width:2}.sch text{font-size:12px}.sch .vn{fill:var(--accent);font-weight:700;font-size:13px}.sch .nl{fill:var(--accent)}.sch .vp{fill:var(--ink2);font-weight:700;font-size:13px}.sch .pl2,.sch .lb{fill:var(--faint)}
+.sch .zc{fill:var(--accent-bg)}.sch .zm{fill:var(--chip)}.sch .zp{fill:var(--warn-bg)}.sch .tc{fill:var(--accent-ink);font-weight:700}.sch .tm{fill:var(--ink2);font-weight:700}.sch .tp{fill:var(--warn-ink);font-weight:700}
+.sch .now{stroke:var(--ink);stroke-width:2.5}.sch .tn{fill:var(--ink);font-weight:700}
+.minib{display:flex;align-items:flex-end;gap:8px;height:110px}.minib>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;font-size:11.5px}
+.minib i{display:block;width:100%;background:var(--accent-bg);border-radius:3px 3px 0 0}.minib i.last{background:var(--accent)}.minib i.neg{background:var(--down)}.minib em{font-style:normal;color:var(--faint)}
+.deepbtn{display:flex;justify-content:space-between;align-items:center;width:100%;margin:0 0 16px;padding:16px 20px;border:1px solid var(--border);border-radius:12px;background:var(--card);font:inherit;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.deepbtn::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 12px;flex:none}
+.deepbtn[aria-expanded=true]::after{transform:rotate(-135deg);margin-bottom:-2px}
+@media (max-width:760px){.story{grid-template-columns:1fr;gap:12px;margin-bottom:12px}.sv{margin-bottom:12px;padding:18px}.sc{padding:16px 18px}.sv .h1{font-size:26px}.svp .px{font-size:24px}.sa{font-size:17.5px}.sv .sa{font-size:18.5px}.sbr{grid-template-columns:100px 1fr 44px}}
 .lead{margin:6px 0 10px;font-size:15px;line-height:1.55;color:var(--ink)}
 .caveat{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
 .whyb{display:inline-flex;align-items:center;gap:4px;margin-top:12px;padding:0;border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;color:var(--accent);cursor:pointer}
@@ -247,22 +267,11 @@ function render(c, prev, next) {
   page.innerHTML = `
   <div class="crumbs"><span><a href="index.html">Today</a> <span aria-hidden="true">›</span> ${esc(c.name)}</span>
     <span>${prev ? `<a href="#${prev.t}">‹ ${prev.t}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="#${next.t}">${next.t} ›</a>` : ''} <span class="faint">by ${plain ? 'cash per $1' : 'FCF yield'}</span></span></div>
-  <div class="top">
-    <div class="tl">
-      <div class="tn"><h1 class="h1">${c.t}</h1><span class="nm">${esc(c.name)}</span></div>
-      <div class="ts">${esc(c.sector)} · ${plain ? 'worth' : 'market cap'} ${money(c.mcap)}</div>
-    </div>
-    <div class="tr"><div class="px">$${c.price.toFixed(2)}</div>
-      <div class="ts"><span class="${c.m1 <= -0.10 ? 'down' : ''}" style="font-weight:600">${pct(c.m1)}</span> from 1-month high</div></div>
-  </div>
-  <div class="tpills">
-    ${c.onList === false ? `<span class="tag warn">Not on the list</span>` : ''}
-    ${c.yld != null && c.yld > 0 ? `<span class="cue ${cq[0]}" tabindex="0" data-tip="Against the other ${N} strong cash businesses on cash back per $1: cheap = top third, pricey = bottom third.">${cq[1]} ${plain ? 'vs. the list' : 'relative'} · #${WR} of ${N}</span>` : ''}
-    <span class="cue" id="abscue" tabindex="0" data-tip="On its own: cheap = the price is fair even if its cash never grows; fair = it needs less growth than its record; pricey = it needs to beat its record."></span>
-    ${tags}
-  </div>
+  ${storyHTML(c)}
   ${whyBanner(c)}
-  <div class="wib" id="wib" hidden></div>
+  <button type="button" class="deepbtn" id="deepbtn" aria-expanded="false" aria-controls="deep"><span>Dig deeper: the numbers, the math and your own assumptions</span></button>
+  <div id="deep" hidden>
+  <div class="tpills" style="margin-top:4px">${tags}</div>
   <section class="card plain"><h2 data-wi>In plain English</h2><p id="sump">${shortSummary(c)}</p>
     <div id="sumlem">${lk(c) && c.mcap ? lemon(`A stand that made $100 last year would cost <b>${L$(c.mcap * lk(c))}</b>. The <a href="learn.html">example stand</a> cost $1,000.`) : ''}</div>
     ${why('sum', `<p>${plainSummary(c)}</p>`)}</section>
@@ -275,7 +284,6 @@ function render(c, prev, next) {
     <div class="card tile"><div class="k">${c.net < 0 ? (plain ? 'Debt minus cash' : 'Net debt') : (plain ? 'Cash minus debt' : 'Net cash')}${I('net')}</div><div class="v">${money(Math.abs(c.net))}</div><div class="d">${plain && c.net < 0 && c.fcf > 0 ? `about ${(-c.net / c.fcf).toFixed(1)} years of cash` : netNote}</div></div>
   </section>
   <p class="tilehint">${plain ? 'Tap any number to see how it’s worked out.' : 'Click a tile for the calculation.'}</p>
-  <section class="card sec zones" aria-labelledby="zh"><h2 id="zh">${plain ? `What price would make ${esc(c.name.split(/[ ,]/)[0])} cheap?` : 'Price zones'}</h2><div id="zones"></div></section>
   <div class="cols">
     <div class="main">
       <section class="card sec">
@@ -327,8 +335,12 @@ function render(c, prev, next) {
       </section>
     </aside>
   </div>
+  </div>
   <footer class="foot"><span>Educational research, not investment advice. Figures from the company’s SEC filings and the ${new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} close.</span><a href="method.html">How these numbers are calculated</a></footer>`;
 
+  storyCharts(c);
+  const db = document.getElementById('deepbtn');
+  db.onclick = () => { const d = document.getElementById('deep'), o = d.hidden; d.hidden = !o; db.setAttribute('aria-expanded', o); if (o) update(window.__cc || c); };
   const tileKeys = ['yld', 'pfcf', 'margin', 'roc', 'shares', 'net'];
   document.querySelectorAll('#tiles .tile').forEach((t, k) => { if (tileKeys[k]) t.insertAdjacentHTML('beforeend', `<button class="mathlink tilebtn" data-k="${tileKeys[k]}"><span class="sr-only">Show the math for ${CC.L(tileKeys[k])}</span></button>`); });
   mathKey = null;
@@ -405,7 +417,7 @@ function update(c0, fromZone) {
     <p class="faint">${CC.mode === 'plain' ? 'Past growth' : 'Growth record'}: the lower of free cash flow per share (${pct(c.fps)}/yr) and revenue per share (${pct(c.rps)}/yr) ${c.m && c.m.first_fy ? 'from ' + fmtD(c.m.first_fy, true) + ' to ' + fmtD(c.m.end, true) : 'over the last few years'}, capped at ${Math.round((META.rules.TRACK_CAP || .2) * 100)}%.</p>`);
   document.getElementById('need').innerHTML = needHTML(c, f0, g, rTot, st.gt);
   document.getElementById('pe').innerHTML = peHTML(c);
-  if (fromZone) zonesSet(ZP != null ? ZP : c0.price); else zonesRender(c0, c0.bases[st.base].fcf, rTot, st.gt);
+  if (document.getElementById('zones')) { if (fromZone) zonesSet(ZP != null ? ZP : c0.price); else zonesRender(c0, c0.bases[st.base].fcf, rTot, st.gt); }
   whatIfChrome(c0, c, g);
   document.getElementById('mos').innerHTML = mosHTML(c, f0, g, rTot, st.gt);
   document.getElementById('rtext').textContent = pl(st.r, 2) + (c.premium ? ' + ' + pl(c.premium, 1) : '');
@@ -417,6 +429,145 @@ function update(c0, fromZone) {
   document.getElementById('sens').innerHTML = `<thead><tr><th scope="col" style="text-align:left;font-size:12px">Required ↓ · later growth →</th>${gs.map(x => `<th scope="col">${pl(x, 0)}</th>`).join('')}</tr></thead><tbody>`
     + rs.map((r, a) => `<tr><th scope="row" style="text-align:left">${pl(r + (c.premium || 0), 1)}</th>` + gs.map(x => `<td class="${a === 1 && Math.abs(x - st.gt) < 1e-9 ? 'on' : ''}">${pct(implied(f0, ev, r + (c.premium || 0), x))}</td>`).join('') + '</tr>').join('') + '</tbody>';
 }
+// ---------- The story: five cards a friend can scroll in 20 seconds ----------
+function storyFacts(c) {
+  const ys = COS.map(x => x.yld).filter(x => x != null).sort((a, b) => b - a), N = ys.length;
+  const c1 = ys[Math.floor(N / 3) - 1], c2 = ys[Math.floor(2 * N / 3) - 1];
+  const f0 = c.bases[c.defaultBase || 0].fcf, g = c.impl, rec = c.rec, R = META.rates || {}, M = META.market || {};
+  const rel = c.yld > 0 ? (c.yld >= c1 ? 'cheap' : c.yld >= c2 ? 'mid' : 'pricey') : null;
+  const abs = !(f0 > 0) || g == null || !isFinite(g) ? null : g <= 0 ? 'cheap' : rec == null ? 'mid' : g <= Math.max(0, rec) + 0.03 ? 'fair' : 'pricey';
+  return { N, c1, c2, f0, g, rec, rf: R.rf, typ: M.median_yield, rel, abs,
+    cheapAt: c.yld > 0 ? c.price * c.yld / c1 : null, midAt: c.yld > 0 ? c.price * c.yld / c2 : null };
+}
+function storyHTML(c) {
+  const F = storyFacts(c), $ = v => '$' + (v >= 10 ? Math.round(v).toLocaleString('en-US') : v.toFixed(2)), P = x => Math.round(x * 100);
+  const { g, rec } = F;
+  // the one-line verdict
+  let head;
+  if (!(c.yld > 0)) head = 'Not making spare cash yet. The price is a bet on the future.';
+  else if (g == null || !isFinite(g)) head = 'Its price is hard to explain from its cash.';
+  else if (g <= 0) head = 'Priced as if its cash will never grow.';
+  else if (rec == null) head = `Priced for its cash to grow ${P(g)}% a year.`;
+  else if (g > rec + 0.03) head = 'Priced for more growth than it has ever delivered.';
+  else if (g < rec - 0.05) head = 'Priced for less growth than it has been delivering.';
+  else head = `Priced for ${g >= 0.10 ? 'strong ' : ''}growth, about what it has been delivering.`;
+  if (c.onList !== false && c.yld > 0) head = 'A strong cash business. ' + head;
+  const relP = { cheap: ['cheap', 'Cheap vs. other companies'], mid: ['mid', 'Middle of the pack'], pricey: ['pricey', 'Pricey vs. other companies'] }[F.rel];
+  const absP = { cheap: ['cheap', 'Cheap even with no growth'], fair: ['mid', 'Fair if growth holds'], mid: ['mid', 'Needs growth'], pricey: ['pricey', 'Needs to beat its record'] }[F.abs];
+  const pill = x => x ? `<span class="cue ${x[0]}">${x[1]}</span>` : '';
+  const $p2 = v => '$' + (v >= 100 ? Math.round(v).toLocaleString('en-US') : v.toFixed(2));
+  const verdict = `<section class="card sc sv">
+    <div class="svh"><div><h1 class="h1">${c.t}</h1><div class="svn">${esc(c.name)} · ${esc(c.sector)}</div></div>
+      <div class="svp"><div class="px">${$p2(c.price)}</div><div class="svn">${c.m1 != null && c.m1 <= -0.10 ? `<span class="down">${pct(c.m1, 0)}</span> this month` : `worth ${money(c.mcap)}`}</div></div></div>
+    <p class="sa">${head}</p><div class="svpills">${c.onList === false ? '<span class="tag warn">Not on the list</span>' : ''}${pill(relP)}${pill(absP)}</div></section>`;
+  // 1. what you get for $1
+  let a1;
+  if (!(c.yld > 0)) a1 = 'Nothing yet: it uses more cash than it makes.';
+  else { const r = F.rf ? c.yld / F.rf : null; a1 = `${pc(c.yld)}¢ of cash a year. ` + (r == null ? '' : r >= 1.15 ? `More than a bond pays.` : r >= 0.85 ? 'About what a bond pays.' : 'Less than a bond pays.'); }
+  const c1 = `<section class="card sc"><p class="sq">1 · What do you get for each $1 you pay?</p><p class="sa">${a1}</p><div id="sc1"></div></section>`;
+  // 2. what the price is betting on
+  let a2, s2 = '';
+  if (!(F.f0 > 0) || g == null || !isFinite(g)) a2 = 'There’s no spare cash to grow yet, so no growth rate explains the price.';
+  else if (g <= 0) { a2 = `Nothing much: its cash could ${g < 0 ? 'shrink ' + Math.abs(P(g)) + '% a year' : 'stay flat'} and today’s price would still be fair.`; }
+  else { a2 = `Cash growing ${P(g)}% a year for 10 years.` + (rec != null ? ` It’s done ${P(rec)}%.` : ''); s2 = rec == null ? '' : g <= rec + 0.03 ? 'If it keeps its pace, today’s price is fair.' : 'It would have to grow faster than it has.'; }
+  const c2 = `<section class="card sc"><p class="sq">2 · So what is the price betting on?</p><p class="sa">${a2}</p><div id="sc2"></div>${s2 ? `<p class="ss">${s2}</p>` : ''}</section>`;
+  // 3. at what price would it be cheap?
+  let a3;
+  if (!(c.yld > 0)) a3 = 'No price is cheap on its cash until it makes some.';
+  else if (F.rel === 'cheap') a3 = `It’s cheap today, and stays cheap up to about ${$(F.cheapAt)}.`;
+  else if (F.rel === 'mid') a3 = `Under ${$(F.cheapAt)} it would be cheap. Above ${$(F.midAt)}, pricey.`;
+  else a3 = `Under ${$(F.midAt)} it’s middle of the pack. Under ${$(F.cheapAt)}, cheap.`;
+  const c3 = `<section class="card sc"><p class="sq">3 · At what price would it be cheap?</p><p class="sa">${a3}</p><div id="sc3"></div>${c.yld > 0 ? `<p class="ss">Compared with the other ${F.N - (c.onList === false ? 0 : 1)} companies’ cash per $1.</p>` : ''}</section>`;
+  // 4. the drop, or how the cash has grown
+  const d = dropFacts(c);
+  let c4;
+  if (d.dropped) {
+    const a4 = d.cash == null ? `Price fell ${Math.abs(P(d.price))}% from its high.` : d.cash >= -0.02 ? `Mood, not news. Price fell ${Math.abs(P(d.price))}%; its cash ${d.cash > 0.02 ? 'grew ' + P(d.cash) + '%' : 'didn’t'}.` : `Partly news. Price fell ${Math.abs(P(d.price))}%, and its cash fell ${Math.abs(P(d.cash))}% too.`;
+    c4 = `<section class="card sc"><p class="sq">4 · Why did it drop?</p><p class="sa">${a4}</p><div id="sc4"></div></section>`;
+  } else {
+    const H = (c.hist || []).filter(h => h[1] != null), h0 = H[0], h1 = H[H.length - 1];
+    const a4 = h0 && h1 ? (h1[1] > h0[1] ? `From ${money(h0[1])} to ${money(h1[1])} a year.` : `From ${money(h0[1])} to ${money(h1[1])} a year: not growing.`) : 'Not enough history.';
+    c4 = `<section class="card sc"><p class="sq">4 · How has its cash grown?</p><p class="sa">${a4}</p><div id="sc4"></div></section>`;
+  }
+  return `${verdict}<div class="story">${c1}${c2}${c3}${c4}</div>`;
+}
+function dropFacts(c) {
+  const Q = c.fcfQ || [];
+  if (c.hi52 == null || c.offHigh == null || c.offHigh > -0.10) return { dropped: false };
+  const lag = d => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - 40); return x.toISOString().slice(0, 10); };
+  const then = Q.filter(q => q.end <= lag(c.hi52Date)).pop(), now = Q[Q.length - 1];
+  const cash = then && now ? (then.end === now.end ? 0 : then.fcf_bn > 0 ? now.fcf_bn / then.fcf_bn - 1 : null) : null;
+  return { dropped: true, price: c.offHigh, cash };
+}
+function storyCharts(c) {
+  const F = storyFacts(c), w = id => { const e = document.getElementById(id); return e ? Math.max(260, Math.min(560, e.clientWidth || 320)) : 0; };
+  const T = (x, y, t, cls, anc) => `<text x="${x}" y="${y}" class="${cls}"${anc ? ` text-anchor="${anc}"` : ''}>${t}</text>`;
+  // 1. bars: this company vs the typical company vs a safe bond
+  let e = document.getElementById('sc1');
+  if (e && c.yld > 0) {
+    const rows = [[esc(c.t), c.yld, 'me'], ['Typical stock', F.typ, 'ot'], ['Safe bond', F.rf, 'ot']].filter(r => r[1] != null);
+    const mx = Math.max(...rows.map(r => r[1])) * 1.05;
+    e.innerHTML = rows.map(([k, v, cls]) => `<div class="sbr"><span class="${cls === 'me' ? 'b' : ''}">${k}</span><span class="sbt"><i class="${cls}" style="width:${(v / mx * 100).toFixed(1)}%"></i></span><b class="${cls === 'me' ? '' : 'mu'}">${(v * 100).toFixed(1)}¢</b></div>`).join('');
+  }
+  // 2. the cash path the price needs vs its past pace
+  e = document.getElementById('sc2');
+  if (e && F.f0 > 0 && F.g != null && isFinite(F.g)) {
+    const W = w('sc2'), Ht = 132, L = 8, R = 92, n = 10, need = [...Array(n + 1)].map((_, t) => F.f0 * Math.pow(1 + F.g, t));
+    const pace = F.rec != null ? [...Array(n + 1)].map((_, t) => F.f0 * Math.pow(1 + F.rec, t)) : null;
+    const top = Math.max(...need, ...(pace || []), F.f0) * 1.08, X = t => L + t / n * (W - L - R), Y = v => 10 + (1 - Math.max(0, v) / top) * (Ht - 34);
+    const path = a => a.map((v, t) => `${t ? 'L' : 'M'}${X(t).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+    let yN = Y(need[n]) + 4, yP = pace ? Y(pace[n]) + 4 : null;
+    if (yP != null) {   // keep the two end labels 30px apart and above the axis
+      const up = Math.min(yN, yP), dn = Math.max(yN, yP), lo2 = Math.min(Math.max(dn, up + 30), Ht - 40), hi2 = lo2 - 30 < up ? lo2 - 30 : up;
+      if (yN <= yP) { yN = hi2; yP = lo2; } else { yP = hi2; yN = lo2; }
+    } else yN = Math.min(yN, Ht - 40);
+    e.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" width="100%" class="sch" role="img" aria-label="Cash needs to go from ${money(F.f0)} to ${money(need[n])} by ${YR + 10}${pace ? `; at its past pace it reaches ${money(pace[n])}` : ''}.">
+      <line x1="${L}" x2="${W - R}" y1="${Ht - 24}" y2="${Ht - 24}" class="ax0"/>
+      ${pace ? `<path d="${path(pace)}" class="pp"/>` : ''}<path d="${path(need)}" class="pn"/>
+      <circle cx="${X(0)}" cy="${Y(F.f0)}" r="4" class="st"/>
+      ${T(W - R + 8, yN, money(need[n]), 'vn')}${T(W - R + 8, yN + 14, 'price needs', 'nl')}
+      ${pace ? T(W - R + 8, yP, money(pace[n]), 'vp') + T(W - R + 8, yP + 14, 'its past pace', 'pl2') : ''}
+      ${T(L, Ht - 6, 'today ' + money(F.f0), 'lb')}${T(W - R, Ht - 6, YR + 10, 'lb', 'end')}</svg>`;
+  }
+  // 3. a price ruler: where cheap, middle and pricey begin, with today's price marked
+  e = document.getElementById('sc3');
+  if (e && c.yld > 0) {
+    const W = w('sc3'), P = c.price, lo = Math.max(0, Math.min(F.cheapAt * 0.6, P * 0.5)), hi = Math.max(F.midAt * 1.25, P * 1.3);
+    const X = v => Math.max(0, Math.min(W, (v - lo) / (hi - lo) * W)), $ = v => '$' + (v >= 100 ? Math.round(v) : v.toFixed(v >= 10 ? 0 : 2));
+    const x1 = X(F.cheapAt), x2 = X(F.midAt), xp = X(P); const lab = (x0, x1_, t, cls) => {
+      const need = t.length * 6.5 + 8, fits = (a, b) => b - a > need;
+      if (!fits(x0, x1_)) return '';
+      let cx = (x0 + x1_) / 2;
+      if (Math.abs(cx - xp) < need / 2 + 6) {   // today's line would cross the name: use the wider side of it
+        const L1 = [x0, Math.min(x1_, xp - 4)], R1 = [Math.max(x0, xp + 4), x1_];
+        const best = (L1[1] - L1[0]) >= (R1[1] - R1[0]) ? L1 : R1;
+        if (!fits(best[0], best[1])) return '';
+        cx = (best[0] + best[1]) / 2;
+      }
+      return T(cx, 47, t, cls, 'middle');
+    };
+    e.innerHTML = `<svg viewBox="0 0 ${W} 92" width="100%" class="sch" role="img" aria-label="Cheap under ${$(F.cheapAt)}, middle up to ${$(F.midAt)}, pricey above; today ${$(P)}.">
+      <rect x="0" y="32" width="${x1}" height="22" rx="4" class="zc"/><rect x="${x1}" y="32" width="${Math.max(0, x2 - x1)}" height="22" class="zm"/><rect x="${x2}" y="32" width="${Math.max(0, W - x2)}" height="22" rx="4" class="zp"/>
+      ${lab(0, x1, 'Cheap', 'tc')}${lab(x1, x2, 'Middle', 'tm')}${lab(x2, W, 'Pricey', 'tp')}
+      <line x1="${xp}" x2="${xp}" y1="18" y2="60" class="now"/>
+      ${T(Math.min(W - 4, Math.max(4, xp)), 12, 'today ' + $(P), 'tn', xp > W - 50 ? 'end' : xp < 50 ? 'start' : 'middle')}
+      ${x1 > 14 && x1 < W - 14 ? T(x1, 74, $(F.cheapAt), 'lb', 'middle') : ''}${x2 > 14 && x2 < W - 14 && x2 - x1 > 34 ? T(x2, 74, $(F.midAt), 'lb', 'middle') : ''}
+      ${T(0, 89, $(lo), 'lb')}${T(W, 89, $(hi), 'lb', 'end')}</svg>`;
+  }
+  // 4. price move vs cash move, or the cash history
+  e = document.getElementById('sc4');
+  if (e) {
+    const d = dropFacts(c);
+    if (d.dropped) {
+      const bar = (k, x) => `<div class="sbr"><span>${k}</span><span class="sbt dv"><span class="z"></span>${x != null && Math.abs(x) > 0.005 ? `<i class="${x < 0 ? 'neg' : 'pos'}" style="${x < 0 ? 'right:50%' : 'left:50%'};width:${Math.min(50, Math.abs(x) * 100).toFixed(1)}%"></i>` : ''}</span><b class="${x < 0 ? 'down' : ''}">${x == null ? '–' : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(Math.round(x * 100)) + '%'}</b></div>`;
+      e.innerHTML = bar('Share price', d.price) + bar('Yearly cash', d.cash);
+    } else {
+      const H = (c.hist || []).filter(h => h[1] != null), mx = Math.max(...H.map(h => Math.abs(h[1])), 0.001);
+      e.innerHTML = `<div class="minib">${H.map((h, k) => `<div><span class="${h[1] < 0 ? 'down' : ''}">${money(h[1])}</span><i style="height:${Math.max(3, Math.round(Math.abs(h[1]) / mx * 70))}px" class="${h[1] < 0 ? 'neg' : k === H.length - 1 ? 'last' : ''}"></i><em>${h[0]}</em></div>`).join('')}</div>`;
+    }
+  }
+}
+let storyT; window.addEventListener('resize', () => { clearTimeout(storyT); storyT = setTimeout(() => { if (window.__cc) storyCharts(window.__cc); }, 150); });
 // ---------- Lemonade-stand translations (plain English only) ----------
 // Shrink the company to a stand that made $100 of spare cash over the last 12 months; every other
 // figure scales by the same factor, so "you'd pay $3,300 for it" is just company value ÷ cash × $100.
