@@ -8,53 +8,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 __CSS__
-.learn{max-width:880px;margin:0 auto}
-.intro{font-size:18px;line-height:1.6;color:var(--ink2);margin:0 0 28px}
-.step{padding:28px 30px;margin-bottom:20px}
-.step .num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:15px;margin-right:10px}
-.step h2{display:flex;align-items:center;margin:0 0 12px;font-size:22px;letter-spacing:-.01em}
-.step p{font-size:16.5px;line-height:1.65;color:var(--ink2);margin:0 0 14px}
-.step p b{color:var(--ink)}
-.big{font-size:34px;font-weight:700;letter-spacing:-.02em}
-.split{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
-.split > *{flex:1 1 300px;min-width:0}
-.play{background:var(--accent-soft);border-radius:12px;padding:18px 20px;margin-top:6px}
-.play label{display:flex;justify-content:space-between;font-size:14px;color:var(--ink2);font-weight:500}
-.play input[type=range]{width:100%;accent-color:var(--accent);margin:8px 0 4px}
-.cmp{display:grid;grid-template-columns:150px 1fr 64px;gap:8px 12px;align-items:center;font-size:14px;margin-top:14px}
-.cmp .b{height:18px;border-radius:5px}
-.out{font-size:17px;line-height:1.55;margin:14px 0 0;color:var(--ink)}
-.yrs{display:flex;align-items:flex-end;gap:6px;height:120px;margin-top:14px}
-.yrs i{flex:1;background:var(--accent);border-radius:4px 4px 0 0;min-height:3px}
-.hist{display:grid;grid-template-columns:1fr;gap:14px;margin-top:8px}
-.hrow{display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:center;font-size:14.5px}
-.hrow .track{position:relative;height:28px;background:linear-gradient(var(--line),var(--line)) center/2px 100% no-repeat}
-.hrow .bar{position:absolute;top:4px;height:20px;border-radius:5px;display:flex;align-items:center;font-size:12.5px;font-weight:700;padding:0 8px;white-space:nowrap}
-.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.learn{max-width:720px;margin:0 auto}
+.sv{padding:20px 22px;margin-bottom:14px}.sc{padding:20px 22px;margin-bottom:14px}
+.sq{margin:0;font-size:12.5px;font-weight:600;color:var(--muted)}
+.sa{margin:8px 0 14px;font-size:20px;font-weight:600;line-height:1.35;color:var(--ink)}.sv .sa{font-size:26px;margin-bottom:4px;letter-spacing:-.01em}
+.ss{margin:12px 0 0;font-size:14px;line-height:1.55;color:var(--muted)}.ss b{color:var(--ink)}
+.vis svg{display:block;max-width:420px;margin:0 auto}
+.sbr{display:grid;grid-template-columns:116px 1fr 48px;align-items:center;gap:10px;font-size:13.5px;margin:9px 0}.sbr.on span:first-child{font-weight:700}
+.sbr b{text-align:right;font-weight:700}.sbr .mu{color:var(--muted);font-weight:400}
+.sbt{position:relative;height:14px;background:var(--line);border-radius:3px}.sbt i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.sbt i.me{background:var(--accent)}.sbt i.ot{background:var(--faint)}.sbt .ref{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink2)}
+.sbt.dv .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--faint)}.sbt.dv i.neg{left:auto;background:var(--down);border-radius:3px 0 0 3px}.sbt.dv i.pos{background:var(--up);border-radius:0 3px 3px 0}
+.yrs{display:flex;align-items:flex-end;gap:6px;height:100px}.yrs>div{flex:1;display:flex;align-items:flex-end;height:100%}
+.yrs i{display:block;width:100%;background:var(--accent-bg);border-radius:3px 3px 0 0}.yrs i.now{background:var(--accent)}.yrs>div:last-child i{background:var(--accent)}
+.yl{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:6px}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 0}
 .cta a{display:inline-flex;align-items:center;height:44px;padding:0 18px;border-radius:10px;font-weight:600;text-decoration:none}
 .cta a.p{background:var(--accent);color:#fff}.cta a.s{border:1px solid var(--border);color:var(--ink);background:var(--card)}
-.legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:6px}
-.legend div{background:var(--bg);border-radius:10px;padding:14px 16px;font-size:14px;line-height:1.5;color:var(--ink2)}
-.legend b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
-@media (max-width:720px){.step{padding:22px 18px}.hrow{grid-template-columns:1fr}.legend{grid-template-columns:1fr}.cmp{grid-template-columns:110px 1fr 56px}}
+@media (max-width:600px){.sv,.sc{padding:16px 18px;margin-bottom:12px}.sa{font-size:18px}.sv .sa{font-size:22px}}
 </style>
 </head>
 <body>
 __NAV__
 <main class="wrap"><div class="learn">
-  <h1 class="h1" style="font-size:34px">What is a company actually worth?</h1>
-  <p class="intro">Four ideas, explained with a lemonade stand, are all you need to read this site. It takes about four minutes.</p>
+  <section class="card sv">
+    <p class="sq">Start here · about a minute</p>
+    <p class="sa">What is a company worth? Four ideas, one lemonade stand.</p>
+  </section>
 
-  <section class="card step" aria-labelledby="s1">
-    <h2 id="s1"><span class="num">1</span>A business is worth the cash it makes for its owners</h2>
-    <div class="split">
-      <div>
-        <p>Your lemonade stand sells <b>$500</b> of lemonade a year. Lemons, sugar and cups cost <b>$250</b>. You pay a friend <b>$150</b> to help.</p>
-        <p>What’s left, <b>$100</b>, is spare cash the owner could take home. Investors call this <b>free cash flow</b>. Real companies work exactly the same way, just with billions instead of hundreds.</p>
-        <p style="margin:0">To make this site’s list, a company has to keep at least <b>15¢ of every $1 of sales</b> as spare cash over the last 12 months, and have made spare cash in each of the last three years. Your stand keeps 20¢ ($100 ÷ $500), so it would make it. On each company page, this is the number called <b>“Cash kept per $1 of sales.”</b></p>
-      </div>
-      <div>
-        <svg viewBox="0 0 370 210" width="100%" role="img" aria-label="A lemonade stand. Of $500 in sales, $250 goes to supplies, $150 to a helper, and $100 is spare cash.">
+  <section class="card sc">
+    <p class="sq">1 · What makes a business worth something?</p>
+    <p class="sa">The spare cash it makes for its owners.</p>
+    <div class="vis"><svg viewBox="0 0 370 210" width="100%" role="img" aria-label="A lemonade stand. Of $500 in sales, $250 goes to supplies, $150 to a helper, and $100 is spare cash.">
           <rect x="40" y="70" width="150" height="80" rx="6" fill="#F6D365"/>
           <rect x="40" y="70" width="150" height="14" fill="#E9B949"/>
           <path d="M30 70 L60 30 L170 30 L200 70 Z" fill="#E86A5A"/>
@@ -68,58 +53,32 @@ __NAV__
             <rect x="222" y="112" width="22" height="48" rx="3" fill="#C2C9D6"/><text x="250" y="140" fill="currentColor">$150 helper</text>
             <rect x="222" y="162" width="22" height="32" rx="3" fill="#1F4FD1"/><text x="250" y="182" fill="currentColor" font-weight="700">$100 spare cash</text>
           </g>
-        </svg>
-      </div>
-    </div>
+        </svg></div>
+    <p class="ss">Sell $500 of lemonade, pay $250 for supplies and $150 for help: <b>$100</b> is left. Investors call it free cash flow. Every company on the list keeps at least 15¢ of each $1 of sales this way.</p>
   </section>
 
-  <section class="card step" aria-labelledby="s2">
-    <h2 id="s2"><span class="num">2</span>Cash back per $1: is the price a good deal?</h2>
-    <p>Now imagine <b>you’re the buyer</b>. The owner offers you the whole stand for <b>$1,000</b>. If you buy it, the stand’s <b>$100</b> of spare cash each year is now yours: <b>10¢ back for every $1</b> you paid. That’s its <b>cash yield</b>, or “cash back per $1.”</p>
-    <p>Is 10¢ good? Compare it with the safest option: lending to the US government with a 10-year bond, which pays about <b><span class="rf"></span></b> a year with almost no risk. A business is riskier than a bond (lemons could get expensive, a rival could open next door), so it should pay you more.</p>
-    <div class="play">
-      <label for="p1"><span>Price you pay for the stand</span><b id="p1v"></b></label>
-      <input id="p1" type="range" min="500" max="4000" step="50" value="1000">
-      <div class="cmp">
-        <span>Lemonade stand</span><div><div class="b" id="b1" style="background:var(--accent)"></div></div><b id="y1"></b>
-        <span>Safe 10-year bond</span><div><div class="b" id="b2" style="background:var(--faint)"></div></div><b id="y2"></b>
-      </div>
-      <p class="out" id="o1"></p>
-    </div>
+  <section class="card sc">
+    <p class="sq">2 · Is the price a good deal?</p>
+    <p class="sa">Pay $1,000 for the stand and its $100 a year is 10¢ back for every $1. A safe bond pays <span class="rfc"></span>.</p>
+    <div id="v2"></div>
+    <p class="ss">The more you pay, the less cash you get back per $1. Every company page starts with this number.</p>
   </section>
 
-  <section class="card step" aria-labelledby="s3">
-    <h2 id="s3"><span class="num">3</span>The price is a bet on the future</h2>
-    <p>Why would anyone pay <b>$3,000</b> for a stand that makes $100 a year? Only if they expect it to make a lot <i>more</i> later: a second stand, higher prices, more customers. So every price contains a hidden bet about how fast the cash will grow.</p>
-    <p>This site works that bet out backwards. We ask: <b>how fast would the cash have to grow every year for the next 10 years to make today’s price fair?</b> Then we compare that with how fast the company actually grew in the past.</p>
-    <div class="play">
-      <label for="p2"><span>Price you pay for the stand</span><b id="p2v"></b></label>
-      <input id="p2" type="range" min="600" max="6000" step="50" value="3000">
-      <p class="out" id="o2"></p>
-      <div class="yrs" id="yrs" aria-hidden="true"></div>
-      <div class="faint" style="font-size:12px;display:flex;justify-content:space-between;margin-top:4px"><span>Year 1 cash</span><span>Year 10 cash, if the bet comes true</span></div>
-    </div>
-    <p style="margin:16px 0 0">When the price’s bet is far <b>below</b> the company’s past growth, the market expects things to get worse. Sometimes it’s right. Sometimes it’s too gloomy, and that’s where opportunities can hide.</p>
+  <section class="card sc">
+    <p class="sq">3 · Then why would anyone pay $3,000?</p>
+    <p class="sa" id="a3"></p>
+    <div id="v3"></div>
+    <p class="ss">Every price hides a bet like this. Each company page shows the bet next to how fast the business really grew.</p>
   </section>
 
-  <section class="card step" aria-labelledby="s4">
-    <h2 id="s4"><span class="num">4</span>What history says (and what it doesn’t)</h2>
-    <p>We replayed these rules every month since <span class="start">2014</span>, using only information people had at the time, then checked what happened over the next year. Three things stood out:</p>
-    <div class="hist" id="hist"></div>
-    <p style="margin-top:18px"><b>The big caveat:</b> most of the high-rate years are 2022 to now, so this is closer to one long stretch than many separate tests. Treat it as a pattern worth knowing, not a promise.</p>
-    <p style="margin:0"><b>What this site can’t tell you:</b> whether a company’s problems are temporary or permanent. It shows you which businesses make lots of cash and what their prices are betting on. Deciding whether the bet is wrong is your job, and it’s a list for research, not a list of stocks to buy.</p>
+  <section class="card sc">
+    <p class="sq">4 · Does any of this work?</p>
+    <p class="sa" id="a4"></p>
+    <div id="v4"></div>
+    <p class="ss">Tested month by month since <span class="start">2014</span>, using only what people knew at the time. Most high-rate months are 2022 onward, so it’s a pattern, not a promise. It also can’t tell you whether a company’s problems are temporary.</p>
   </section>
 
-  <section class="card step" aria-labelledby="s5">
-    <h2 id="s5">How to read the list</h2>
-    <div class="legend">
-      <div><b>Cash back per $1</b>Step 2. Higher means you get more of the company’s cash for your money.</div>
-      <div><b>Price’s bet</b>Step 3. How fast the cash must grow each year for the price to make sense.</div>
-      <div><b>Past growth</b>How fast it actually grew per share over the last 2–3 years. Compare it with the price’s bet.</div>
-    </div>
-    <p style="margin:16px 0 14px">Tap the little <span class="info" style="cursor:default">i</span> next to any number on the site for a one-line definition, or switch to <b>Pro</b> at the top for the finance terms.</p>
-    <div class="cta"><a class="p" href="index.html">See today’s list</a><a class="s" href="company.html#HRB">Look at one company</a></div>
-  </section>
+  <div class="cta"><a class="p" href="index.html">See today’s list</a><a class="s" href="company.html#NVDA">See one company</a></div>
   <footer class="foot"><span>Educational research, not investment advice.</span><a href="method.html">The full method</a></footer>
 </div></main>
 <script>
@@ -130,54 +89,39 @@ document.querySelectorAll('.rf').forEach(e => e.textContent = (rf * 100).toFixed
 if (G.start) document.querySelectorAll('.start').forEach(e => e.textContent = G.start);
 const money = x => '$' + Math.round(x).toLocaleString();
 
-// step 2: cash yield vs the bond
-const p1 = document.getElementById('p1');
-function s2() {
-  const price = +p1.value, y = 100 / price, mx = Math.max(0.2, rf);
-  document.getElementById('p1v').textContent = money(price);
-  document.getElementById('b1').style.width = Math.min(100, y / mx * 100) + '%';
-  document.getElementById('b2').style.width = (rf / mx * 100) + '%';
-  document.getElementById('y1').textContent = (y * 100).toFixed(1) + '%';
-  document.getElementById('y2').textContent = (rf * 100).toFixed(1) + '%';
-  const mult = y / rf;
-  document.getElementById('o1').innerHTML = `At ${money(price)} you get <b>${Math.round(y * 100)}¢ back for every $1</b> each year, ` +
-    (mult >= 1.2 ? `about <b>${mult.toFixed(1)}× the bond</b>. If the stand keeps making $100, that’s a good deal.` :
-     mult >= 0.85 ? `about the same as the bond, with more risk. Only worth it if the stand will grow.` :
-     `<b>less than the bond pays</b>. You’d only do this if you expect the stand’s cash to grow a lot. That’s step 3.`);
-}
-p1.oninput = s2; s2();
+document.querySelectorAll('.rfc').forEach(e => e.textContent = (rf * 100).toFixed(1) + '¢');
+// 2: cash back per $1 at three prices, against the bond
+(function () {
+  const rows = [[1000, 'Pay $1,000'], [2000, 'Pay $2,000'], [3000, 'Pay $3,000']], mx = 0.105;
+  document.getElementById('v2').innerHTML = rows.map(([p, k]) => { const y = 100 / p;
+    return `<div class="sbr${p === 1000 ? ' on' : ''}"><span>${k}</span><span class="sbt"><i class="me" style="width:${(y / mx * 100).toFixed(1)}%"></i><span class="ref" style="left:${(rf / mx * 100).toFixed(1)}%"></span></span><b>${(y * 100).toFixed(1)}¢</b></div>`; }).join('')
+    + `<div class="sbr"><span class="mu">Safe bond</span><span class="sbt"><i class="ot" style="width:${(rf / mx * 100).toFixed(1)}%"></i></span><b class="mu">${(rf * 100).toFixed(1)}¢</b></div>`;
+})();
 
-// step 3: what growth the price is betting on
+// 3: the growth a $3,000 price is betting on
 function pv(g) { let v = 0, f = 100; for (let t = 1; t <= 10; t++) { f *= 1 + g; v += f / Math.pow(1 + req, t); } return v + f * (1 + gt) / (req - gt) / Math.pow(1 + req, 10); }
 function implied(price) { let lo = -0.5, hi = 1.5; for (let i = 0; i < 80; i++) { const m = (lo + hi) / 2; if (pv(m) < price) lo = m; else hi = m; } return (lo + hi) / 2; }
-const p2 = document.getElementById('p2');
-function s3() {
-  const price = +p2.value, g = implied(price);
-  document.getElementById('p2v').textContent = money(price);
-  const yr10 = 100 * Math.pow(1 + g, 9);
-  document.getElementById('o2').innerHTML = `Paying ${money(price)} only makes sense if the stand’s cash ` +
-    (g >= 0 ? `<b>grows about ${(g * 100).toFixed(1)}% every year</b> for 10 years, from $100 to about ${money(yr10)}.` :
-              `<b>shrinks about ${Math.abs(g * 100).toFixed(1)}% every year</b> for 10 years. The buyer must expect the stand to slowly fade.`) +
-    ` <span class="muted" style="font-size:14px">(That assumes you want about ${(req * 100).toFixed(0)}% a year for your money: the bond rate plus a bit extra for the risk.)</span>`;
-  const vals = Array.from({ length: 10 }, (_, k) => 100 * Math.pow(1 + g, k)), mx = Math.max(...vals, 100);
-  document.getElementById('yrs').innerHTML = vals.map(v => `<i style="height:${Math.max(3, v / mx * 116)}px"></i>`).join('');
-}
-p2.oninput = s3; s3();
-
-// step 4: three findings
 (function () {
-  const rows = [];
-  const pts = x => (x > 0 ? '+' : '−') + Math.abs(x * 100).toFixed(0) + '%';
+  const g = implied(3000), y10 = 100 * Math.pow(1 + g, 10);
+  document.getElementById('a3').innerHTML = `They’re betting it grows. At $3,000 the stand’s cash has to grow about ${Math.round(g * 100)}% a year for 10 years, from $100 to about ${money(y10)}.`;
+  const vals = Array.from({ length: 11 }, (_, k) => 100 * Math.pow(1 + g, k)), mx = Math.max(...vals);
+  document.getElementById('v3').innerHTML = `<div class="yrs">${vals.map((v, k) => `<div><i style="height:${Math.max(4, v / mx * 96)}px" class="${k === 0 ? 'now' : ''}"></i></div>`).join('')}</div>
+    <div class="yl"><span>Today $100</span><span>Year 10 ${money(y10)}</span></div>`;
+})();
+
+// 4: what history says
+(function () {
+  const P = x => Math.round(Math.abs(x * 100)), rows = [];
   if (G.hi && G.lo) {
-    rows.push([`When safe bonds paid <b>over ${(G.cutoff * 100).toFixed(0)}%</b> (like now): most cash per $1 vs least`, G.hi.mean, 'a year better']);
-    rows.push([`When bonds paid <b>under ${(G.cutoff * 100).toFixed(0)}%</b>: most cash per $1 vs least`, G.lo.mean, 'a year worse']);
+    document.getElementById('a4').textContent = G.high
+      ? `Often, when bonds pay well. Since ${G.start}, with bonds over ${(G.cutoff * 100).toFixed(0)}% (like now), the most-cash companies beat the least by about ${P(G.hi.mean)}% a year.`
+      : `Not lately. With bonds under ${(G.cutoff * 100).toFixed(0)}% (like now), the most-cash companies did about ${P(G.lo.mean)}% a year worse than the least.`;
+    rows.push([`Bonds over ${(G.cutoff * 100).toFixed(0)}%`, G.hi.mean], [`Bonds under ${(G.cutoff * 100).toFixed(0)}%`, G.lo.mean]);
   }
-  if (G.drop_only_median != null) rows.push([`Buying a strong business <b>just because its price dropped</b>: the typical result vs the market`, G.drop_only_median, 'over the next year']);
-  const mx = Math.max(0.12, ...rows.map(r => Math.abs(r[1])));
-  document.getElementById('hist').innerHTML = rows.map(([label, v, word]) => {
-    const w = Math.abs(v) / mx * 50, left = v >= 0 ? 50 : 50 - w;
-    return `<div class="hrow"><span>${label}</span><div class="track"><div class="bar" style="left:${left}%;width:${w}%;background:${v >= 0 ? 'var(--accent)' : 'var(--down)'};color:#fff;justify-content:${v >= 0 ? 'flex-start' : 'flex-end'}">${pts(v)}</div></div></div>`;
-  }).join('') + `<div class="faint" style="font-size:12.5px">Bars show the difference in return per year. Centre line = no difference.</div>`;
+  if (G.drop_only_median != null) rows.push(['Buying the dip', G.drop_only_median]);
+  const mx = Math.max(...rows.map(r => Math.abs(r[1]))) * 2.1;
+  document.getElementById('v4').innerHTML = rows.map(([k, x]) => `<div class="sbr"><span>${k}</span><span class="sbt dv"><span class="z"></span><i class="${x < 0 ? 'neg' : 'pos'}" style="${x < 0 ? 'right:50%' : 'left:50%'};width:${(Math.abs(x) / mx * 100).toFixed(1)}%"></i></span><b class="${x < 0 ? 'down' : 'up'}">${x > 0 ? '+' : '−'}${P(x)}%</b></div>`).join('')
+    + `<p class="ss" style="margin-top:4px">Extra return per year vs. the comparison group. “Buying the dip” is the typical result vs. the S&amp;P 500.</p>`;
 })();
 </script>
 </body>
