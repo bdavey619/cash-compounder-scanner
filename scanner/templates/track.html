@@ -17,19 +17,42 @@ table.trk tr:nth-child(2){border-top:0}table.trk td{display:flex;justify-content
 table.trk td:first-child{display:block;padding:4px 18px 6px}table.trk td[data-h]::before{content:attr(data-h);color:var(--muted);font-size:13px}
 table.trk td .cv{text-align:right}table.trk td.nil .v{display:none}table.trk td.nil .s{font-size:13px}}
 .v{font-weight:700;font-size:16px}.s{font-size:12px;color:var(--muted)}
+.sv{padding:20px 22px;margin-bottom:16px}.sq{margin:0;font-size:12.5px;font-weight:600;color:var(--muted)}
+.sa{margin:8px 0 12px;font-size:19px;font-weight:600;line-height:1.35;color:var(--ink)}.sv .sa{font-size:22px;margin:8px 0 6px}
+.ss{margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}.sv .ss{font-size:14px}
+.story{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}.sc{padding:18px 20px}
+.hb{display:grid;grid-template-columns:150px 1fr 44px;align-items:center;gap:10px;font-size:13px;margin:8px 0}.hb b{text-align:right}.hb .nn{font-style:normal;color:var(--faint);font-size:11.5px}
+.hbt{position:relative;height:12px;background:var(--line);border-radius:3px}.hbt .z{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--faint)}
+.hbt i{position:absolute;top:0;bottom:0}.hbt i.neg{background:var(--down);border-radius:3px 0 0 3px}.hbt i.pos{background:var(--up);border-radius:0 3px 3px 0}
+.tl{position:relative;height:84px;margin:28px 12px 0}.tlb{position:absolute;left:0;right:0;top:10px;height:6px;border-radius:3px;background:var(--line)}.tlb i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.tm{position:absolute;top:4px;transform:translateX(-50%)}.tm b{display:block;width:16px;height:16px;margin:0 auto;border-radius:50%;background:var(--card);border:2px solid var(--border)}.tm.done b{border-color:var(--accent);background:var(--accent)}
+.tm em{display:block;margin-top:6px;font-style:normal;font-size:11.5px;line-height:1.3;color:var(--muted);text-align:center;white-space:nowrap}.tm em.l{transform:translateX(30%)}.tm em.r{transform:translateX(-30%)}
+.tnow{position:absolute;top:-22px;transform:translateX(-50%);font-size:11.5px;font-weight:700;color:var(--accent)}
+.deepbtn{display:flex;justify-content:space-between;align-items:center;width:100%;margin:4px 0 20px;padding:16px 20px;border:1px solid var(--border);border-radius:12px;background:var(--card);font:inherit;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left}
+.deepbtn::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px 12px;flex:none}
+.deepbtn[aria-expanded=true]::after{transform:rotate(-135deg);margin-bottom:-2px}
+@media (max-width:760px){.story{grid-template-columns:1fr;gap:12px}.sv{padding:18px}.sv .sa{font-size:19.5px}.sa{font-size:17.5px}.sc{padding:16px 18px}.hb{grid-template-columns:132px 1fr 40px}}
 </style>
 </head>
 <body>
 __NAV__
 <main class="wrap">
-  <h1 class="h1">Track record</h1>
+  <section class="card sv"><p class="sq">Track record · live since <span id="since"></span></p><p class="sa" id="vd"></p><p class="ss">Every pick is logged the day it appears and compared with the S&amp;P 500, dividends included. Results are frozen once measured; nothing is back-filled.</p></section>
+  <div class="story">
+    <section class="card sc"><p class="sq">1 · How are the picks doing so far?</p><p class="sa" id="a1"></p><div id="v1"></div><p class="ss">Average gap vs. the S&amp;P 500 since each pick was logged.</p></section>
+    <section class="card sc"><p class="sq">2 · When will we know?</p><p class="sa" id="a2"></p><div id="v2"></div><p class="ss">One month says little. Twelve months starts to mean something.</p></section>
+  </div>
+  <button type="button" class="deepbtn" id="deepbtn" aria-expanded="false" aria-controls="deep"><span>Dig deeper: every list at every horizon, and the full log</span></button>
+  <div id="deep" hidden>
+  <h1 class="h1" style="font-size:22px">Track record</h1>
   <p class="lede" id="lede"></p>
-  <div class="card" style="margin-top:22px;overflow-x:auto"><table class="trk" id="trk"></table></div>
+  <div class="card" style="margin-top:16px;overflow-x:auto"><table class="trk" id="trk"></table></div>
   <div class="card note" style="margin-top:16px">
     <span style="flex:1 1 520px">Every list is logged at that day’s close and measured against the S&amp;P 500, dividends included, at 1, 3, 6 and 12 months. A result is frozen once measured and nothing is back-filled, so the record can’t flatter itself. The same company isn’t re-logged in the same list within 30 days. Early numbers are mostly noise: judge it at 6–12 months.</span>
     <a href="track/track_record.csv" style="font-weight:500;white-space:nowrap">Download the full log (CSV)</a>
   </div>
   <p class="muted" style="font-size:14px;margin-top:16px">For the 12-year look back, see the <a href="backtest/">backtest</a>.</p>
+  </div>
   <footer class="foot"><span>Educational research, not investment advice.</span></footer>
 </main>
 <script>
@@ -46,6 +69,35 @@ const cell = (x, h) => !x || !x.n ? `<td class="nil" data-h="${h}"><div class="c
   : `<td data-h="${h}"><div class="cv"><span class="v ${x.avg > 0 ? 'up' : x.avg < 0 ? 'down' : ''}">${x.avg > 0 ? '+' : x.avg < 0 ? '−' : ''}${Math.abs(x.avg * 100).toFixed(1)} pts</span><div class="s">${x.n} picks · ${Math.round(x.beat * 100)}% beat</div></div></td>`;
 document.getElementById('trk').innerHTML = '<tr><th>List</th>' + H.map(h => `<th>${h[1]}</th>`).join('') + '</tr>' +
   G.map(g => `<tr><td><b>${(names[g.group] || [g.group])[0]}</b><div class="s">${(names[g.group] || ['', ''])[1]} · ${g.n} logged</div></td>${H.map(h => cell(g.h[h[0]], h[1])).join('')}</tr>`).join('');
+// the story
+(function () {
+  const yl = (G.find(g => g.group === 'yield') || {}), td = yl.h && yl.h.todate, P = x => Math.abs(x * 100).toFixed(1);
+  const st = T.started ? new Date(T.started + 'T12:00:00') : null, days = st ? Math.round((Date.now() - st) / 864e5) : 0;
+  document.getElementById('since').textContent = fd(T.started);
+  document.getElementById('vd').textContent = !T.started ? 'Tracking starts with the next daily run.'
+    : days < 180 ? `Too early to tell. Tracking started ${days} days ago${T.next ? `; the first ${T.next.h.replace('m', '-month')} results arrive ${fd(T.next.date)}` : ''}.`
+    : td && td.n ? `${td.avg >= 0 ? 'Ahead of' : 'Behind'} the market so far, by ${P(td.avg)} pts on average.` : 'Results are coming in.';
+  if (td && td.n) {
+    const close = Math.abs(td.avg) < 0.01;
+    document.getElementById('a1').textContent = `${close ? 'About even with the market' : td.avg > 0 ? 'Ahead of the market' : 'Behind the market'}: the ${td.n} most-cash picks are ${P(td.avg)} pts ${td.avg >= 0 ? 'ahead' : 'behind'}, and ${Math.round(td.beat * 100)}% of them are beating it.`;
+    const rows = G.filter(g => g.h && g.h.todate && g.h.todate.n), mx = Math.max(...rows.map(g => Math.abs(g.h.todate.avg)), 0.01) * 1.1;
+    document.getElementById('v1').innerHTML = rows.map(g => { const x = g.h.todate.avg;
+      return `<div class="hb"><span>${(names[g.group] || [g.group])[0]} <i class="nn">${g.h.todate.n}</i></span><span class="hbt"><span class="z"></span><i class="${x < 0 ? 'neg' : 'pos'}" style="${x < 0 ? 'right:50%' : 'left:50%'};width:${(Math.abs(x) / mx * 50).toFixed(1)}%"></i></span><b class="${x < 0 ? 'down' : 'up'}">${x > 0 ? '+' : x < 0 ? '−' : ''}${P(x)}</b></div>`; }).join('');
+  } else document.getElementById('a1').textContent = 'No results yet.';
+  // timeline: start, today, and each horizon's first reading
+  if (st) {
+    const add = m => { const d = new Date(st); d.setMonth(d.getMonth() + m); return d; };
+    const marks = [[0, 'Start'], [1, '1 month'], [3, '3 months'], [6, '6 months'], [12, '12 months']].map(([m, k]) => [add(m), k]);
+    const nextM = marks.find(([d]) => d > Date.now());
+    document.getElementById('a2').textContent = nextM ? `First ${nextM[1]} results ${nextM[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. The full 12-month picture by ${marks[4][0].toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}.` : 'All horizons are now being measured.';
+    const end = marks[4][0], X = d => Math.max(0, Math.min(100, (d - st) / (end - st) * 100));
+    document.getElementById('v2').innerHTML = `<div class="tl"><div class="tlb"><i style="width:${X(Date.now()).toFixed(1)}%"></i></div>
+      ${marks.map(([d, k], i) => `<span class="tm${d <= Date.now() ? ' done' : ''}" style="left:${X(d).toFixed(1)}%"><b></b>${i === 0 ? '' : `<em class="${i === 4 ? 'r' : ''}">${k}<br>${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</em>`}</span>`).join('')}
+      <span class="tnow" style="left:${X(Date.now()).toFixed(1)}%">today</span></div>`;
+  }
+  const db = document.getElementById('deepbtn');
+  db.onclick = () => { const d = document.getElementById('deep'), o = d.hidden; d.hidden = !o; db.setAttribute('aria-expanded', o); };
+})();
 </script>
 </body>
 </html>
