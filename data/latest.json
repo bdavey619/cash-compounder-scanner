@@ -1,7 +1,7 @@
 {
  "meta": {
-  "asof": "2026-11-14",
-  "generated": "2026-11-14 18:16 UTC",
+  "asof": "2026-11-15",
+  "generated": "2026-11-15 19:25 UTC",
   "config": {
    "COMMODITY_SIC": [
     [
@@ -69,7 +69,7 @@
    "price_missing": 0,
    "quality": 186,
    "financials_excluded": 54,
-   "lookup": 1406,
+   "lookup": 1408,
    "triggered": 16,
    "modest": 34,
    "shortlist": 6,
@@ -721,7 +721,7 @@
   },
   "track": {
    "started": "2026-11-09",
-   "asof": "2026-11-14",
+   "asof": "2026-11-15",
    "n": 201,
    "groups": [
     {
@@ -855,7 +855,7 @@
    }
   },
   "changes": {
-   "prev_date": "2026-11-13",
+   "prev_date": "2026-11-14",
    "new": {
     "yield": [],
     "shortlist": [],
