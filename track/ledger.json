@@ -4586,7 +4586,7 @@
 ],
 "lists":{
 "prev":{
-"date":"2026-11-25",
+"date":"2026-11-26",
 "yield":[
 "ADBE",
 "AGX",
@@ -4627,7 +4627,6 @@
 "WSC"
 ],
 "shortlist":[
-"AGX",
 "HALO",
 "INTU",
 "LOPE",
@@ -4636,6 +4635,7 @@
 ],
 "watchlist":[
 "ADBE",
+"AGX",
 "ALSN",
 "AYI",
 "BKNG",
@@ -4668,10 +4668,10 @@
 "ZBH"
 ],
 "triggered":[
-"ACIW",
 "ADI",
 "AMAT",
-"CRM",
+"ANET",
+"AVGO",
 "DGII",
 "EXPE",
 "FTNT",
@@ -4681,12 +4681,11 @@
 "NTNX",
 "NVDA",
 "STX",
-"TXN",
 "VRT"
 ]
 },
 "cur":{
-"date":"2026-11-26",
+"date":"2026-11-27",
 "yield":[
 "ADBE",
 "AGX",

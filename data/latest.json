@@ -1,7 +1,7 @@
 {
  "meta": {
-  "asof": "2026-11-26",
-  "generated": "2026-11-26 05:09 UTC",
+  "asof": "2026-11-27",
+  "generated": "2026-11-27 05:11 UTC",
   "config": {
    "COMMODITY_SIC": [
     [
@@ -721,7 +721,7 @@
   },
   "track": {
    "started": "2026-11-09",
-   "asof": "2026-11-26",
+   "asof": "2026-11-27",
    "n": 219,
    "groups": [
     {
@@ -855,29 +855,18 @@
    }
   },
   "changes": {
-   "prev_date": "2026-11-25",
+   "prev_date": "2026-11-26",
    "new": {
     "yield": [],
     "shortlist": [],
-    "watchlist": [
-     "AGX"
-    ],
-    "triggered": [
-     "ANET",
-     "AVGO"
-    ]
+    "watchlist": [],
+    "triggered": []
    },
    "dropped": {
     "yield": [],
-    "shortlist": [
-     "AGX"
-    ],
+    "shortlist": [],
     "watchlist": [],
-    "triggered": [
-     "ACIW",
-     "CRM",
-     "TXN"
-    ]
+    "triggered": []
    }
   },
   "regime": {
@@ -4026,9 +4015,7 @@
    "ticker": "AGX",
    "name": "ARGAN INC",
    "cik": 100591,
-   "new_in": [
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1351,
    "fcf_base_bn": 0.2372,
    "base_kind": "normalized",
@@ -14680,9 +14667,7 @@
    "ticker": "ANET",
    "name": "Arista Networks, Inc.",
    "cik": 1596532,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0184,
    "fcf_base_bn": 2.6243,
    "base_kind": "normalized",
@@ -14939,9 +14924,7 @@
    "ticker": "AVGO",
    "name": "Broadcom Inc.",
    "cik": 1730168,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0215,
    "fcf_base_bn": 30.921,
    "base_kind": "latest",
@@ -19311,9 +19294,7 @@
    "ticker": "AGX",
    "name": "ARGAN INC",
    "cik": 100591,
-   "new_in": [
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1351,
    "fcf_base_bn": 0.2372,
    "base_kind": "normalized",
@@ -27319,9 +27300,7 @@
    "ticker": "AVGO",
    "name": "Broadcom Inc.",
    "cik": 1730168,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0215,
    "fcf_base_bn": 30.921,
    "base_kind": "latest",
@@ -33130,9 +33109,7 @@
    "ticker": "ANET",
    "name": "Arista Networks, Inc.",
    "cik": 1596532,
-   "new_in": [
-    "triggered"
-   ],
+   "new_in": [],
    "fcf_yield": 0.0184,
    "fcf_base_bn": 2.6243,
    "base_kind": "normalized",
@@ -43168,7 +43145,7 @@
    "implied_g_ttm": 0.0681,
    "gap": 0.0234,
    "insider_buyers": [],
-   "insider_value": 503,
+   "insider_value": 0,
    "flag_drop": false,
    "flag_cluster": false,
    "flag_gap": false,
@@ -47432,74 +47409,74 @@
    "name": "Autodesk, Inc.",
    "cik": 769397,
    "new_in": [],
-   "fcf_yield": 0.0414,
-   "fcf_base_bn": 1.5695,
+   "fcf_yield": 0.043,
+   "fcf_base_bn": 1.6314,
    "base_kind": "normalized",
    "math": {
     "basis": "TTM",
-    "end": "2026-07-31",
-    "ocf": 2896000000,
-    "capex": 57000000,
+    "end": "2026-10-31",
+    "ocf": 2975000000,
+    "capex": 61000000,
     "sbc": 706000000,
-    "revenue": 7790000000,
+    "revenue": 8097000000,
     "rev_estimated": false,
     "parts": {
      "ocf": {
       "fy": 2452000000,
       "fy_end": "2026-01-31",
-      "ytd": 1468000000,
+      "ytd": 1986000000,
       "ytd_start": "2026-02-01",
-      "ytd_end": "2026-07-31",
-      "prior": 1024000000,
+      "ytd_end": "2026-10-31",
+      "prior": 1463000000,
       "prior_start": "2025-02-01",
-      "prior_end": "2025-07-31"
+      "prior_end": "2025-10-31"
      },
      "capex": {
       "fy": 43000000,
       "fy_end": "2026-01-31",
-      "ytd": 31000000,
+      "ytd": 44000000,
       "ytd_start": "2026-02-01",
-      "ytd_end": "2026-07-31",
-      "prior": 17000000,
+      "ytd_end": "2026-10-31",
+      "prior": 26000000,
       "prior_start": "2025-02-01",
-      "prior_end": "2025-07-31"
+      "prior_end": "2025-10-31"
      },
      "sbc": {
       "fy": 788000000,
       "fy_end": "2026-01-31",
-      "ytd": 339000000,
+      "ytd": 525000000,
       "ytd_start": "2026-02-01",
-      "ytd_end": "2026-07-31",
-      "prior": 421000000,
+      "ytd_end": "2026-10-31",
+      "prior": 607000000,
       "prior_start": "2025-02-01",
-      "prior_end": "2025-07-31"
+      "prior_end": "2025-10-31"
      },
      "rev": {
       "fy": 7206000000,
       "fy_end": "2026-01-31",
-      "ytd": 3980000000,
+      "ytd": 6140000000,
       "ytd_start": "2026-02-01",
-      "ytd_end": "2026-07-31",
-      "prior": 3396000000,
+      "ytd_end": "2026-10-31",
+      "prior": 5249000000,
       "prior_start": "2025-02-01",
-      "prior_end": "2025-07-31"
+      "prior_end": "2025-10-31"
      }
     },
-    "cash": 4098000000,
-    "cash_date": "2026-07-31",
-    "sti": 57000000,
-    "sti_date": "2026-07-31",
-    "ltd": 2500000000,
-    "ltd_date": "2026-07-31",
-    "equity": 3383000000,
-    "equity_date": "2026-07-31",
-    "shares": 209000000.0,
-    "shares_date": "2026-08-21",
+    "cash": 1677000000,
+    "cash_date": "2026-10-31",
+    "sti": 36000000,
+    "sti_date": "2026-10-31",
+    "ltd": 3476000000,
+    "ltd_date": "2026-10-31",
+    "equity": 3819000000,
+    "equity_date": "2026-10-31",
+    "shares": 208000000.0,
+    "shares_date": "2026-11-19",
     "shares_src": "cover page of the latest filing",
     "first_fy": "2024-01-31",
     "first_fcf": 579000000,
     "first_rev": 5497000000,
-    "yrs": 2.4969199178644765,
+    "yrs": 2.74880219028063,
     "sh_first": 216000000,
     "sh_last": 215000000,
     "sh_first_fy": "2024-01-31",
@@ -47547,7 +47524,7 @@
     "margin_avg": 0.2014804366540307,
     "margin_years": 6
    },
-   "mcap": 51579108596.80176,
+   "mcap": 51332318603.515625,
    "sector": "Software & internet",
    "sic_desc": "Services-Prepackaged Software",
    "price": 246.79,
@@ -47560,30 +47537,25 @@
    "flag_drawdown": false,
    "earnings_in_window": "2026-11-24",
    "off_52w_high": -0.2045,
-   "mcap_bn": 51.58,
-   "fcf_bn": 2.133,
+   "mcap_bn": 51.33,
+   "fcf_bn": 2.208,
    "fy_end": "2026-01-31",
    "fcf_basis": "TTM",
-   "fcf_period_end": "2026-07-31",
+   "fcf_period_end": "2026-10-31",
    "fy_fcf_bn": 1.621,
    "fcf_avg3_bn": 1.028,
    "volatile": false,
    "peak_margin": true,
    "margin_avg": 0.2015,
    "margin_years": 6,
-   "fcf_norm_bn": 1.57,
-   "p_fcf": 24.2,
-   "pe": 31.4,
-   "ni_bn": 1.642,
-   "ni_end": "2026-07-31",
+   "fcf_norm_bn": 1.631,
+   "p_fcf": 23.2,
+   "pe": 27.6,
+   "ni_bn": 1.862,
+   "ni_end": "2026-10-31",
    "hi52": 310.25,
    "hi52_date": "2025-12-02",
    "fcf_q": [
-    {
-     "end": "2025-04-30",
-     "fcf_bn": 0.872,
-     "rev_bn": 6.347
-    },
     {
      "end": "2025-07-31",
      "fcf_bn": 1.096,
@@ -47608,33 +47580,38 @@
      "end": "2026-07-31",
      "fcf_bn": 2.133,
      "rev_bn": 7.79
+    },
+    {
+     "end": "2026-10-31",
+     "fcf_bn": 2.208,
+     "rev_bn": 8.097
     }
    ],
    "why_not": null,
-   "fcf_margin_raw": 0.2738,
-   "net_cash_bn": 1.66,
-   "fcf_margin": 0.2738,
-   "cash_roc": 0.3626,
-   "fcf_cagr": 0.6858,
-   "rev_cagr": 0.1498,
-   "fcf_ps_cagr": 0.6897,
-   "rev_ps_cagr": 0.1525,
+   "fcf_margin_raw": 0.2727,
+   "net_cash_bn": -1.76,
+   "fcf_margin": 0.2727,
+   "cash_roc": 0.3027,
+   "fcf_cagr": 0.6274,
+   "rev_cagr": 0.1513,
+   "fcf_ps_cagr": 0.6311,
+   "rev_ps_cagr": 0.154,
    "share_cagr": -0.0023,
    "sbc_bn": 0.706,
-   "sbc_pct_rev": 0.0906,
+   "sbc_pct_rev": 0.0872,
    "risk_premium": 0.0,
    "risk_why": [],
    "required_return": 0.0885,
-   "ref_g": 0.1525,
-   "implied_g": 0.1069,
-   "implied_g_ttm": 0.067,
-   "gap": -0.0456,
+   "ref_g": 0.154,
+   "implied_g": 0.1099,
+   "implied_g_ttm": 0.0706,
+   "gap": -0.044,
    "insider_buyers": [],
    "insider_value": 0,
    "flag_drop": false,
    "flag_cluster": false,
    "flag_gap": false,
-   "score": 5.27,
+   "score": 5.12,
    "spark": [
     203.5,
     205.26,
@@ -47749,8 +47726,8 @@
      "ttm": false
     },
     {
-     "fy_end": "2026-07-31",
-     "fcf_bn": 2.133,
+     "fy_end": "2026-10-31",
+     "fcf_bn": 2.208,
      "ttm": true
     }
    ]
@@ -79557,9 +79534,7 @@
    "ticker": "AGX",
    "name": "ARGAN INC",
    "cik": 100591,
-   "new_in": [
-    "watchlist"
-   ],
+   "new_in": [],
    "fcf_yield": 0.1351,
    "fcf_base_bn": 0.2372,
    "base_kind": "normalized",
